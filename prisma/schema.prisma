@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  draft
+  processed
+  ready
+  failed
+}
+
+enum StageStatus {
+  not_started
+  in_progress
+  completed
+}
+
+model Project {
+  id               String         @id @default(cuid())
+  title            String
+  audioPath        String
+  audioOriginalName String
+  audioMimeType    String
+  audioDurationMs  Int?
+  status           ProjectStatus  @default(draft)
+  rawExtractedText String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  sourceImages     SourceImage[]
+  segments         Segment[]
+}
+
+model SourceImage {
+  id           String   @id @default(cuid())
+  projectId    String
+  imagePath    String
+  originalName String
+  mimeType     String
+  sortOrder    Int
+  ocrText      String?
+  createdAt    DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Segment {
+  id         String          @id @default(cuid())
+  projectId  String
+  index      Int
+  title      String?
+  text       String
+  audioPath  String
+  startMs    Int?
+  endMs      Int?
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  progress   StageProgress[]
+  recordings Recording[]
+
+  @@unique([projectId, index])
+}
+
+model StageProgress {
+  id             String      @id @default(cuid())
+  segmentId      String
+  stage          Int
+  status         StageStatus @default(not_started)
+  dictationInput String?
+  studyNotes     String?
+  textVisible    Boolean?
+  completedAt    DateTime?
+  updatedAt      DateTime    @updatedAt
+  segment        Segment     @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, stage])
+}
+
+model Recording {
+  id         String   @id @default(cuid())
+  segmentId  String
+  stage      Int
+  filePath   String
+  durationMs Int?
+  createdAt  DateTime @default(now())
+  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+}
