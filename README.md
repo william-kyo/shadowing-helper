@@ -24,7 +24,8 @@ Planned next:
 
 ```bash
 npm install
-cp .env.example .env.local
+cp .env.example .env
+# Fill in required values in .env (GROQ_API_KEY is required for transcription)
 npm run prisma:generate
 npm run prisma:migrate -- --name init
 npm run dev
@@ -33,8 +34,17 @@ npm run dev
 Then open:
 - http://localhost:3000
 
+## Required environment variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | SQLite path (already set in `.env.example`) |
+| `STORAGE_ROOT` | Local storage root (already set in `.env.example`) |
+| `GROQ_API_KEY` | **Required.** Get free key at https://console.groq.com/keys |
+
 ## Notes
 
 - Secrets must stay in `.env.local` and must not be committed.
+- `.env` is gitignored — use `.env.example` as a template.
 - Uploaded files are stored under `storage/projects/`.
 - SQLite database is configured through `DATABASE_URL`.
