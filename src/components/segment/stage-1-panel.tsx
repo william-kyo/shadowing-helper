@@ -80,13 +80,15 @@ export function Stage1Panel({
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label className="text-sm font-medium text-zinc-700">スクリプト</label>
-              <button
-                onClick={handleTranscribe}
-                disabled={isTranscribing}
-                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isTranscribing ? '文字起こし中…' : '自動生成'}
-              </button>
+              {!initialText && (
+                <button
+                  onClick={handleTranscribe}
+                  disabled={isTranscribing}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isTranscribing ? '文字起こし中…' : '自動生成'}
+                </button>
+              )}
             </div>
             {transcribeMsg && (
               <p className="mb-2 text-xs text-indigo-600">{transcribeMsg}</p>
