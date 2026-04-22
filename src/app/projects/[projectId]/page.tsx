@@ -84,7 +84,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                   <img
                     src={`/api/projects/${project.id}/images/${image.id}`}
                     alt={image.originalName}
-                    className="w-full h-48 object-cover rounded-2xl border border-zinc-200 shadow-sm"
+                    className="w-full h-auto rounded-2xl border border-zinc-200 shadow-sm"
                   />
                   <p className="text-xs text-zinc-500 text-center">{image.originalName}</p>
                 </div>
