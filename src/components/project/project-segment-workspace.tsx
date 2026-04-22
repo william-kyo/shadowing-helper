@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 
 import { ManualSegmentForm } from '@/components/project/manual-segment-form'
 
@@ -23,6 +23,15 @@ type ProjectSegmentWorkspaceProps = {
   initialSegments: SegmentListItem[]
 }
 
+async function deleteSegment(segmentId: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = await res.json()
+    return { success: false, error: data.error ?? '削除に失敗しました。' }
+  }
+  return { success: true }
+}
+
 export function ProjectSegmentWorkspace({
   projectId,
   audioSrc,
@@ -32,6 +41,25 @@ export function ProjectSegmentWorkspace({
 }: ProjectSegmentWorkspaceProps) {
   const router = useRouter()
   const [segments, setSegments] = useState(initialSegments)
+
+  function handleDeleteSegment(segmentId: string) {
+    const seg = segments.find((s) => s.id === segmentId)
+    if (!seg || !confirm(`セグメント「${seg.title ?? seg.index + 1}」を削除しますか？`)) {
+      return
+    }
+    // eslint-disable-next-line no-restricted-globals
+    fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          alert(data.error)
+        } else {
+          setSegments((prev) => prev.filter((s) => s.id !== segmentId))
+          router.refresh()
+        }
+      })
+      .catch(() => alert('削除に失敗しました。'))
+  }
 
   return (
     <section className="grid gap-6">
@@ -86,10 +114,10 @@ export function ProjectSegmentWorkspace({
         ) : (
           <ul className="grid gap-3">
             {segments.map((segment) => (
-              <li key={segment.id}>
+              <li key={segment.id} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
                 <Link
                   href={`/projects/${projectId}/segments/${segment.id}`}
-                  className="flex flex-col rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50"
+                  className="flex-1"
                 >
                   <div className="font-medium text-zinc-950">
                     {segment.index + 1}. {segment.title ?? 'Untitled segment'}
@@ -98,6 +126,12 @@ export function ProjectSegmentWorkspace({
                     {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms / stage 初期化: {segment.progressCount}
                   </div>
                 </Link>
+                <button
+                  onClick={() => handleDeleteSegment(segment.id)}
+                  className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                >
+                  削除
+                </button>
               </li>
             ))}
           </ul>

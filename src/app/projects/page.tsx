@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 
 import { db } from '@/lib/db'
+import { ProjectList } from '@/components/project/project-list'
 
 export default async function ProjectsPage() {
   const projects = await db.project.findMany({
@@ -26,45 +27,17 @@ export default async function ProjectsPage() {
           </Link>
         </div>
 
-        {projects.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-sm leading-7 text-zinc-600">
-            まだプロジェクトがありません。トップページから音声と台本画像をアップロードしてください。
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {projects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`} className="block">
-                <article className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm transition hover:border-zinc-900/20 hover:shadow-md">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="grid gap-2">
-                      <h2 className="text-xl font-semibold">{project.title}</h2>
-                      <p className="text-sm text-zinc-500">
-                        音声: {project.audioOriginalName} / 画像: {project.sourceImages.length} 枚
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-600">
-                      {project.status}
-                    </span>
-                  </div>
-                  <dl className="mt-5 grid gap-3 text-sm text-zinc-600 sm:grid-cols-3">
-                    <div>
-                      <dt className="font-medium text-zinc-900">作成日</dt>
-                      <dd>{project.createdAt.toLocaleString()}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-900">抽出テキスト</dt>
-                      <dd>{project.rawExtractedText ? 'あり' : '未処理'}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-900">次フェーズ</dt>
-                      <dd>OCR / 段落分割 / 学習画面</dd>
-                    </div>
-                  </dl>
-                </article>
-              </Link>
-            ))}
-          </div>
-        )}
+        <ProjectList
+          projects={projects.map((p) => ({
+            id: p.id,
+            title: p.title,
+            audioOriginalName: p.audioOriginalName,
+            sourceImages: p.sourceImages,
+            status: p.status,
+            createdAt: p.createdAt,
+            rawExtractedText: p.rawExtractedText,
+          }))}
+        />
       </div>
     </main>
   )

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 
@@ -30,6 +30,15 @@ export async function ensureProjectStorage(projectId: string) {
   ])
 
   return paths
+}
+
+export async function deleteProjectStorage(projectId: string) {
+  const projectDir = path.join(env.STORAGE_ROOT, projectId)
+  try {
+    await rm(projectDir, { recursive: true, force: true })
+  } catch {
+    // ignore
+  }
 }
 
 export async function saveUploadedFile(params: {
