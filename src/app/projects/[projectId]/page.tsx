@@ -78,13 +78,18 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {project.sourceImages.length === 0 ? (
             <p className="text-sm text-zinc-500">画像はまだありません。</p>
           ) : (
-            <ul className="grid gap-3 text-sm text-zinc-700">
+            <div className={`grid gap-4 ${project.sourceImages.length >= 5 ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {project.sourceImages.map((image) => (
-                <li key={image.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-                  {image.originalName}
-                </li>
+                <div key={image.id} className="flex flex-col items-center gap-2">
+                  <img
+                    src={`/api/projects/${project.id}/images/${image.id}`}
+                    alt={image.originalName}
+                    className="w-full h-48 object-cover rounded-2xl border border-zinc-200 shadow-sm"
+                  />
+                  <p className="text-xs text-zinc-500 text-center">{image.originalName}</p>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
