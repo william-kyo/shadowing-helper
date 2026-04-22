@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
-import { join } from 'path'
 import { db } from '@/lib/db'
-import { env } from '@/lib/env'
 
 type RouteParams = {
   params: Promise<{
@@ -25,11 +23,10 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
   }
 
-  const imageFilePath = join(env.STORAGE_ROOT, sourceImage.imagePath)
-
+  // imagePath stored in DB is the full absolute path (returned by saveUploadedFile)
   let fileBuffer: Buffer
   try {
-    fileBuffer = await readFile(imageFilePath)
+    fileBuffer = await readFile(sourceImage.imagePath)
   } catch {
     return NextResponse.json({ error: '画像ファイルの読み込みに失敗しました' }, { status: 500 })
   }
