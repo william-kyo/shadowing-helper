@@ -85,7 +85,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <dl className="mt-5 grid gap-3 text-sm text-zinc-600 sm:grid-cols-3">
         <div>
           <dt className="font-medium text-zinc-900">作成日</dt>
-          <dd>{new Date(project.createdAt).toLocaleString()}</dd>
+          <dd suppressHydrationWarning>{new Date(project.createdAt).toLocaleString('ja-JP')}</dd>
         </div>
         <div>
           <dt className="font-medium text-zinc-900">抽出テキスト</dt>

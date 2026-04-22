@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "prisma generate && next dev",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
     "migrate:legacy-projects": "node scripts/assign-legacy-projects.mjs",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma db push",
+    "db:import:sqlite": "echo 'SQLite import already completed. This script is kept for reference only.'"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
