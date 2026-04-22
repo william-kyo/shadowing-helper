@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
-import { StageIcons } from '@/components/segment/stage-icons'
+import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
 import { db } from '@/lib/db'
 
 type SegmentDetailPageProps = {
@@ -74,8 +74,9 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-zinc-950">Stage 1–5</h2>
           <div className="flex items-center gap-2">
-            <StageIcons
-              progress={segment.progress.map((p) => ({
+            <StageProgressTracker
+              segmentId={segment.id}
+              initialProgress={segment.progress.map((p) => ({
                 stage: p.stage,
                 status: p.status,
               }))}
