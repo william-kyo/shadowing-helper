@@ -7,10 +7,17 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+vi.mock('@/lib/auth', () => ({
+  requireAppUser: vi.fn().mockResolvedValue({
+    id: 'user-1',
+    email: 'owner@example.com',
+  }),
+}))
+
 vi.mock('@/lib/db', () => ({
   db: {
     project: {
-      findUnique: vi.fn().mockResolvedValue({
+      findFirst: vi.fn().mockResolvedValue({
         id: 'project-1',
         title: 'NHK lesson 1',
         status: 'draft',

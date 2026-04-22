@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 
 import { NextResponse } from 'next/server'
 
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 type RouteContext = {
@@ -11,10 +12,15 @@ type RouteContext = {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const { user, response } = await requireAppUserForApi()
+  if (response || !user) {
+    return response
+  }
+
   const { segmentId } = await context.params
 
-  const segment = await db.segment.findUnique({
-    where: { id: segmentId },
+  const segment = await db.segment.findFirst({
+    where: { id: segmentId, project: { userId: user.id } },
     select: {
       audioPath: true,
       project: {
@@ -30,7 +36,10 @@ export async function GET(request: Request, context: RouteContext) {
   let fileBuffer: ArrayBuffer
   try {
     const fileData = await fs.readFile(segment.audioPath)
-    fileBuffer = fileData.buffer as ArrayBuffer
+    fileBuffer = fileData.buffer.slice(
+      fileData.byteOffset,
+      fileData.byteOffset + fileData.byteLength,
+    )
   } catch {
     return NextResponse.json({ error: 'ファイルが見つかりません。' }, { status: 404 })
   }

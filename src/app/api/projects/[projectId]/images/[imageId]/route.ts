@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
+
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 type RouteParams = {
@@ -10,12 +12,18 @@ type RouteParams = {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const { user, response } = await requireAppUserForApi()
+  if (response || !user) {
+    return response
+  }
+
   const { projectId, imageId } = await params
 
   const sourceImage = await db.sourceImage.findFirst({
     where: {
       id: imageId,
       projectId: projectId,
+      project: { userId: user.id },
     },
   })
 

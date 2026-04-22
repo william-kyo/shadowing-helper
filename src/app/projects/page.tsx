@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
-
+import { LogoutButton } from '@/components/auth/logout-button'
+import { ProjectCreateForm } from '@/components/project/project-create-form'
 import { db } from '@/lib/db'
+import { requireAppUser } from '@/lib/auth'
 import { ProjectList } from '@/components/project/project-list'
 
 export default async function ProjectsPage() {
+  const currentUser = await requireAppUser()
+
   const projects = await db.project.findMany({
+    where: { userId: currentUser.id },
     orderBy: { createdAt: 'desc' },
     include: { sourceImages: true },
   })
@@ -18,14 +22,20 @@ export default async function ProjectsPage() {
           <div>
             <p className="text-sm font-medium text-indigo-600">Project dashboard</p>
             <h1 className="text-3xl font-semibold tracking-tight">プロジェクト一覧</h1>
+            <p className="mt-2 text-sm text-zinc-500">{currentUser.email}</p>
           </div>
-          <Link
-            href="/"
-            className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium transition hover:border-zinc-900"
-          >
-            新しいプロジェクトを作成
-          </Link>
+          <LogoutButton />
         </div>
+
+        <section className="grid gap-4 rounded-3xl border border-black/5 bg-white/60 p-2 sm:p-3">
+          <div className="px-4 pt-4 sm:px-5">
+            <h2 className="text-lg font-semibold tracking-tight">新しいプロジェクトを作成</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              ログイン中のユーザーに紐づく音声と台本画像を登録します。
+            </p>
+          </div>
+          <ProjectCreateForm />
+        </section>
 
         <ProjectList
           projects={projects.map((p) => ({

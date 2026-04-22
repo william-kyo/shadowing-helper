@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { NextResponse } from 'next/server'
 
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
 import { ensureProjectStorage, saveUploadedFile } from '@/lib/storage'
@@ -21,6 +22,11 @@ function isFile(value: FormDataEntryValue | null): value is File {
 
 export async function POST(request: Request) {
   try {
+    const { user, response } = await requireAppUserForApi()
+    if (response || !user) {
+      return response
+    }
+
     await mkdir(path.resolve(env.STORAGE_ROOT), { recursive: true })
 
     const formData = await request.formData()
@@ -86,6 +92,7 @@ export async function POST(request: Request) {
 
     const project = await db.project.create({
       data: {
+        userId: user.id,
         title: titleResult.data.title,
         audioPath: '',
         audioOriginalName: audioFile.name,

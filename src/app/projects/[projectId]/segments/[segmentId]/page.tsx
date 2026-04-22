@@ -3,9 +3,11 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { LogoutButton } from '@/components/auth/logout-button'
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
+import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 type SegmentDetailPageProps = {
@@ -16,10 +18,11 @@ type SegmentDetailPageProps = {
 }
 
 export default async function SegmentDetailPage({ params }: SegmentDetailPageProps) {
+  const currentUser = await requireAppUser()
   const { projectId, segmentId } = await params
 
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId, userId: currentUser.id },
     select: { id: true, title: true },
   })
 
@@ -27,8 +30,8 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     notFound()
   }
 
-  const segment = await db.segment.findUnique({
-    where: { id: segmentId },
+  const segment = await db.segment.findFirst({
+    where: { id: segmentId, projectId, project: { userId: currentUser.id } },
     include: {
       progress: {
         orderBy: { stage: 'asc' },
@@ -54,12 +57,15 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               {project.title} · {segment.index + 1}番目
             </p>
           </div>
-          <Link
-            href={`/projects/${projectId}`}
-            className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
-          >
-            ← プロジェクトに戻る
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/projects/${projectId}`}
+              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
+            >
+              ← プロジェクトに戻る
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
 
         {/* audio player */}

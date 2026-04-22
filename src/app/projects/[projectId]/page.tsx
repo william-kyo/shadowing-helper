@@ -3,7 +3,9 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { LogoutButton } from '@/components/auth/logout-button'
 import { ProjectSegmentWorkspace } from '@/components/project/project-segment-workspace'
+import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 type ProjectDetailPageProps = {
@@ -13,9 +15,10 @@ type ProjectDetailPageProps = {
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const currentUser = await requireAppUser()
   const { projectId } = await params
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId, userId: currentUser.id },
     include: {
       sourceImages: {
         orderBy: { sortOrder: 'asc' },
@@ -51,6 +54,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             >
               一覧へ戻る
             </Link>
+            <LogoutButton />
           </div>
         </div>
 

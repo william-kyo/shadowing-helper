@@ -31,6 +31,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isDeleting, setIsDeleting] = useState(false)
+  const projectHref = `/projects/${project.id}`
 
   function handleDelete() {
     if (!confirm(`「${project.title}」を削除しますか？音声・画像・セグメントもすべて削除されます。`)) {
@@ -49,7 +50,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
   }
 
   return (
-    <article className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm transition hover:border-zinc-900/20 hover:shadow-md">
+    <article className="relative rounded-3xl border border-black/5 bg-white p-6 shadow-sm transition hover:border-zinc-900/20 hover:shadow-md">
+      <Link
+        href={projectHref}
+        aria-label={`${project.title} の詳細を開く`}
+        className="absolute inset-0 rounded-3xl"
+      />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-2">
           <h2 className="text-xl font-semibold">{project.title}</h2>
@@ -57,12 +63,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
             音声: {project.audioOriginalName} / 画像: {project.sourceImages.length} 枚
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-600">
             {project.status}
           </span>
           <Link
-            href={`/projects/${project.id}`}
+            href={projectHref}
             className="rounded-2xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
           >
             詳細

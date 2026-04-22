@@ -9,12 +9,15 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "migrate:legacy-projects": "node scripts/assign-legacy-projects.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.16.2",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.104.0",
     "groq": "^5.21.0",
     "next": "16.2.4",
     "prisma": "^6.16.2",

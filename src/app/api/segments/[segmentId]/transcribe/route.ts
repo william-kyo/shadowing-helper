@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { transcribeAudio } from '@/lib/groq'
 
@@ -9,10 +11,15 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const { user, response } = await requireAppUserForApi()
+  if (response || !user) {
+    return response
+  }
+
   const { segmentId } = await context.params
 
-  const segment = await db.segment.findUnique({
-    where: { id: segmentId },
+  const segment = await db.segment.findFirst({
+    where: { id: segmentId, project: { userId: user.id } },
   })
 
   if (!segment) {

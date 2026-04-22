@@ -21,18 +21,31 @@ enum StageStatus {
 }
 
 model Project {
-  id               String         @id @default(cuid())
-  title            String
-  audioPath        String
+  id                String         @id @default(cuid())
+  userId            String?
+  title             String
+  audioPath         String
   audioOriginalName String
-  audioMimeType    String
-  audioDurationMs  Int?
-  status           ProjectStatus  @default(draft)
-  rawExtractedText String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  sourceImages     SourceImage[]
-  segments         Segment[]
+  audioMimeType     String
+  audioDurationMs   Int?
+  status            ProjectStatus  @default(draft)
+  rawExtractedText  String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceImages      SourceImage[]
+  segments          Segment[]
+
+  @@index([userId, createdAt])
+}
+
+model User {
+  id             String    @id @default(cuid())
+  supabaseUserId String    @unique
+  email          String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  projects       Project[]
 }
 
 model SourceImage {

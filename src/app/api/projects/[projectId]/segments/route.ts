@@ -3,6 +3,7 @@ import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { extractAudioSegment } from '@/lib/segment-audio'
 import { createStoredFileName, getProjectStoragePaths } from '@/lib/storage'
@@ -25,6 +26,11 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
+    const { user, response } = await requireAppUserForApi()
+    if (response || !user) {
+      return response
+    }
+
     const { projectId } = await context.params
     const json = await request.json()
     const parsed = createSegmentSchema.safeParse(json)
@@ -33,8 +39,8 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? '入力内容を確認してください。' }, { status: 400 })
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, userId: user.id },
       include: {
         segments: {
           orderBy: { index: 'desc' },

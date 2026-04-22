@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { rm } from 'node:fs/promises'
+
+import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 const updateSchema = z.object({
@@ -15,6 +17,11 @@ type RouteContext = {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const { user, response } = await requireAppUserForApi()
+  if (response || !user) {
+    return response
+  }
+
   const { segmentId } = await context.params
 
   const json = await request.json()
@@ -23,8 +30,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'リクエスト形式が正しくありません' }, { status: 400 })
   }
 
-  const segment = await db.segment.findUnique({
-    where: { id: segmentId },
+  const segment = await db.segment.findFirst({
+    where: { id: segmentId, project: { userId: user.id } },
   })
 
   if (!segment) {
@@ -43,10 +50,15 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const { user, response } = await requireAppUserForApi()
+  if (response || !user) {
+    return response
+  }
+
   const { segmentId } = await context.params
 
-  const segment = await db.segment.findUnique({
-    where: { id: segmentId },
+  const segment = await db.segment.findFirst({
+    where: { id: segmentId, project: { userId: user.id } },
   })
 
   if (!segment) {

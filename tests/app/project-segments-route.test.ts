@@ -8,10 +8,17 @@ const { findProject, createSegment, getPaths, createStoredFileName, extractAudio
   extractAudioSegment: vi.fn(),
 }))
 
+vi.mock('@/lib/auth', () => ({
+  requireAppUserForApi: vi.fn().mockResolvedValue({
+    user: { id: 'user-1', email: 'owner@example.com' },
+    response: null,
+  }),
+}))
+
 vi.mock('@/lib/db', () => ({
   db: {
     project: {
-      findUnique: findProject,
+      findFirst: findProject,
     },
     segment: {
       create: createSegment,
