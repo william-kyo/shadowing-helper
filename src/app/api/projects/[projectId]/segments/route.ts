@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { extractAudioSegment } from '@/lib/segment-audio'
 import { createStoredFileName, getProjectStoragePaths } from '@/lib/storage'
+import { transcribeAudio } from '@/lib/groq'
 
 const createSegmentSchema = z.object({
   title: z.string().trim().min(1, 'セグメント名を入力してください。'),
@@ -76,6 +77,19 @@ export async function POST(request: Request, context: RouteContext) {
         },
       },
     })
+
+    // Fire-and-forget: start transcription immediately after segment creation
+    void (async () => {
+      try {
+        const transcribedText = await transcribeAudio(audioPath)
+        await db.segment.update({
+          where: { id: segment.id },
+          data: { text: transcribedText },
+        })
+      } catch (err) {
+        console.error(`[transcribe] Failed for segment ${segment.id}:`, err)
+      }
+    })()
 
     return NextResponse.json({
       segment: {

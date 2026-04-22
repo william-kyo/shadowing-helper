@@ -25,6 +25,6 @@ export async function transcribeAudio(audioPath: string): Promise<string> {
     throw new Error(`Groq API error ${response.status}: ${errorText}`)
   }
 
-  const data = (await response.json()) as { text: string }
-  return data.text
+  const text = await response.text()
+  return text
 }
