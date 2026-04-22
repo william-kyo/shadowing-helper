@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
+import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { StageIcons } from '@/components/segment/stage-icons'
 import { db } from '@/lib/db'
 
@@ -84,6 +85,14 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             タップしてステージを開始 / 完了状態を確認
           </p>
         </section>
+
+        {/* stage 1 detail */}
+        <Stage1Panel
+          segmentId={segment.id}
+          initialText={segment.text ?? ''}
+          initialNotes={segment.notes ?? null}
+          stageStatus={(segment.progress.find((p) => p.stage === 1)?.status ?? 'not_started') as 'not_started' | 'in_progress' | 'completed'}
+        />
       </div>
     </main>
   )
