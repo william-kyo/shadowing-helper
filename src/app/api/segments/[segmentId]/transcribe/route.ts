@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
@@ -50,7 +52,7 @@ export async function POST(request: Request, context: RouteContext) {
       })
       const text = await transcribeAudio({
         audioBuffer,
-        fileName: segment.title ?? segment.project.audioOriginalName,
+        fileName: path.basename(segment.audioPath) || segment.project.audioOriginalName,
         mimeType: segment.project.audioMimeType,
       })
       await db.segment.update({
