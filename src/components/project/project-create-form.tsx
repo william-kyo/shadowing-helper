@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { buildStorageObjectKey, createStoredFileName, getProjectStoragePaths } from '@/lib/storage-paths'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
@@ -59,20 +61,92 @@ export function ProjectCreateForm() {
         return
       }
 
-      const formData = new FormData()
-      formData.append('title', values.title)
-      formData.append('audio', audioFile)
-      imageFiles.forEach((image) => formData.append('images', image))
+      if (audioFile.size > 100 * 1024 * 1024) {
+        setErrorMessage('音声ファイルは100MB以下にしてください。')
+        return
+      }
+
+      if (imageFiles.some((image) => image.size > 10 * 1024 * 1024)) {
+        setErrorMessage('画像ファイルは1枚10MB以下にしてください。')
+        return
+      }
 
       try {
+        const supabase = createSupabaseBrowserClient()
+        const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !userResult.user) {
+          setErrorMessage('ログイン状態を確認できませんでした。再度ログインしてください。')
+          return
+        }
+
+        const projectId = crypto.randomUUID()
+        const storagePaths = getProjectStoragePaths(userResult.user.id, projectId)
+        const audioStoredName = createStoredFileName(audioFile.name)
+        const audioPath = buildStorageObjectKey(storagePaths.audioDir, audioStoredName)
+
+        const { error: audioUploadError } = await supabase.storage.from('app-media').upload(audioPath, audioFile, {
+          contentType: audioFile.type,
+          upsert: true,
+        })
+
+        if (audioUploadError) {
+          setErrorMessage(audioUploadError.message || '音声アップロードに失敗しました。')
+          return
+        }
+
+        const sourceImages = [] as {
+          imagePath: string
+          originalName: string
+          mimeType: string
+          sortOrder: number
+        }[]
+
+        for (const [index, image] of imageFiles.entries()) {
+          const imageStoredName = createStoredFileName(image.name)
+          const imagePath = buildStorageObjectKey(storagePaths.imageDir, imageStoredName)
+          const { error: imageUploadError } = await supabase.storage.from('app-media').upload(imagePath, image, {
+            contentType: image.type,
+            upsert: true,
+          })
+
+          if (imageUploadError) {
+            await supabase.storage.from('app-media').remove([
+              audioPath,
+              ...sourceImages.map((uploadedImage) => uploadedImage.imagePath),
+            ])
+            setErrorMessage(imageUploadError.message || '画像アップロードに失敗しました。')
+            return
+          }
+
+          sourceImages.push({
+            imagePath,
+            originalName: image.name,
+            mimeType: image.type,
+            sortOrder: index,
+          })
+        }
+
         const response = await fetch('/api/projects', {
           method: 'POST',
-          body: formData,
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            projectId,
+            title: values.title,
+            audioPath,
+            audioOriginalName: audioFile.name,
+            audioMimeType: audioFile.type,
+            sourceImages,
+          }),
         })
 
         const result = (await response.json()) as CreateProjectResponse
 
         if (!response.ok || !result.project) {
+          await supabase.storage.from('app-media').remove([
+            audioPath,
+            ...sourceImages.map((image) => image.imagePath),
+          ])
           setErrorMessage(result.error ?? 'プロジェクト作成に失敗しました。')
           return
         }

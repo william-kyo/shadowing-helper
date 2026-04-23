@@ -1,31 +1,11 @@
-import path from 'node:path'
-import { randomUUID } from 'node:crypto'
-
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { env } from '@/lib/env'
+import { buildStorageObjectKey, createStoredFileName, getProjectStoragePaths } from '@/lib/storage-paths'
 
 type StorageClient = SupabaseClient
 
-export function createStoredFileName(originalName: string) {
-  const extension = path.extname(originalName).toLowerCase()
-  return `${randomUUID()}${extension}`
-}
-
-export function getProjectStoragePaths(ownerSupabaseUserId: string, projectId: string) {
-  const projectDir = path.posix.join(ownerSupabaseUserId, 'projects', projectId)
-
-  return {
-    projectDir,
-    audioDir: path.posix.join(projectDir, 'audio'),
-    imageDir: path.posix.join(projectDir, 'images'),
-    recordingDir: path.posix.join(projectDir, 'recordings'),
-  }
-}
-
-export function buildStorageObjectKey(directory: string, fileName: string) {
-  return path.posix.join(directory, fileName)
-}
+export { buildStorageObjectKey, createStoredFileName, getProjectStoragePaths }
 
 export async function uploadFileToStorage(params: {
   client: StorageClient

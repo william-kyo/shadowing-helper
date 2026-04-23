@@ -27,4 +27,18 @@ export const createProjectSchema = z.object({
     .max(120, 'タイトルは120文字以内で入力してください。'),
 })
 
+export const createProjectUploadSchema = z.object({
+  projectId: z.string().min(1),
+  title: createProjectSchema.shape.title,
+  audioPath: z.string().min(1),
+  audioOriginalName: z.string().min(1),
+  audioMimeType: z.string().min(1),
+  sourceImages: z.array(z.object({
+    imagePath: z.string().min(1),
+    originalName: z.string().min(1),
+    mimeType: z.string().min(1),
+    sortOrder: z.number().int().min(0),
+  })).min(1, '台本画像を1枚以上アップロードしてください。'),
+})
+
 export type CreateProjectInput = z.infer<typeof createProjectSchema>
