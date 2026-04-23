@@ -1,5 +1,6 @@
 'use client'
 
+import type { ChangeEvent } from 'react'
 import { useRef, useState } from 'react'
 
 type SegmentAudioPlayerProps = {
@@ -60,6 +61,17 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
   const handleEnded = () => {
     setPlaying(false)
     setCurrentTime(0)
+  }
+
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
+
+  const handleProgressChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const nextTimeMs = Number(event.target.value)
+    audio.currentTime = nextTimeMs / 1000
+    setCurrentTime(nextTimeMs)
   }
 
   return (
@@ -127,12 +139,28 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
         </button>
       </div>
 
-      {/* progress bar */}
-      <div className="h-2 w-full rounded-full bg-zinc-200">
-        <div
-          className="h-2 rounded-full bg-indigo-600 transition-all duration-100"
-          style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
-        />
+      <div className="grid gap-2">
+        <div className="relative h-4 w-full">
+          <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-zinc-200" />
+          <div
+            className="absolute inset-y-0 left-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-indigo-600 transition-[width] duration-100"
+            style={{ width: `${progressPercent}%` }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={Math.max(duration, 0)}
+            step={100}
+            value={Math.min(currentTime, duration || currentTime)}
+            onChange={handleProgressChange}
+            aria-label={`${title || 'Segment'} audio progress`}
+            className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-track]:h-3 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-indigo-600 [&::-moz-range-thumb]:shadow-md"
+          />
+        </div>
+        <div className="flex justify-between text-xs text-zinc-400">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
       </div>
     </div>
   )

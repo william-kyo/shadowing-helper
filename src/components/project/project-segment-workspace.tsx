@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useRef, useState } from 'react'
 
 import { ManualSegmentForm } from '@/components/project/manual-segment-form'
 
@@ -23,15 +23,6 @@ type ProjectSegmentWorkspaceProps = {
   initialSegments: SegmentListItem[]
 }
 
-async function deleteSegment(segmentId: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
-  if (!res.ok) {
-    const data = await res.json()
-    return { success: false, error: data.error ?? '削除に失敗しました。' }
-  }
-  return { success: true }
-}
-
 export function ProjectSegmentWorkspace({
   projectId,
   audioSrc,
@@ -40,6 +31,7 @@ export function ProjectSegmentWorkspace({
   initialSegments,
 }: ProjectSegmentWorkspaceProps) {
   const router = useRouter()
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [segments, setSegments] = useState(initialSegments)
 
   function handleDeleteSegment(segmentId: string) {
@@ -47,7 +39,6 @@ export function ProjectSegmentWorkspace({
     if (!seg || !confirm(`セグメント「${seg.title ?? seg.index + 1}」を削除しますか？`)) {
       return
     }
-    // eslint-disable-next-line no-restricted-globals
     fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
       .then((res) => res.json())
       .then((data) => {
@@ -69,14 +60,19 @@ export function ProjectSegmentWorkspace({
           <p className="mt-1 text-sm text-zinc-500">{audioOriginalName}</p>
         </div>
 
-        <audio controls preload="metadata" aria-label="元音声プレイヤー" className="w-full">
+        <audio
+          ref={audioRef}
+          controls
+          preload="metadata"
+          aria-label="元音声プレイヤー"
+          className="w-full"
+        >
           <source src={audioSrc} type={audioMimeType} />
         </audio>
 
         <ManualSegmentForm
           getCurrentTime={() => {
-            const audio = document.querySelector('audio[aria-label="元音声プレイヤー"]') as HTMLAudioElement | null
-            return audio?.currentTime ?? 0
+            return audioRef.current?.currentTime ?? 0
           }}
           onSubmit={async (values) => {
             const response = await fetch(`/api/projects/${projectId}/segments`, {
