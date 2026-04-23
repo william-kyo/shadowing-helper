@@ -64,5 +64,5 @@ export async function POST(request: Request, context: RouteContext) {
     }
   })()
 
-  return NextResponse.json({ success: true, message: '文字起こしを開始しました。稍后刷新页面查看结果。' })
+  return NextResponse.json({ success: true, message: '文字起こしを開始しました。ページを更新して結果を確認してください。' })
 }
