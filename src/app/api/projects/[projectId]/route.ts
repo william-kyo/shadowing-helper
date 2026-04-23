@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { deleteProjectStorage } from '@/lib/storage'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { removeStorageObjects } from '@/lib/storage'
 
 type RouteContext = {
   params: Promise<{
@@ -20,7 +21,17 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   const project = await db.project.findFirst({
     where: { id: projectId, userId: user.id },
-    select: { id: true },
+    select: {
+      id: true,
+      audioPath: true,
+      sourceImages: { select: { imagePath: true } },
+      segments: {
+        select: {
+          audioPath: true,
+          recordings: { select: { filePath: true } },
+        },
+      },
+    },
   })
 
   if (!project) {
@@ -30,8 +41,22 @@ export async function DELETE(request: Request, context: RouteContext) {
   // Delete DB records (cascades to segments, sourceImages, stageProgresses, recordings)
   await db.project.delete({ where: { id: projectId } })
 
-  // Delete all project files from storage
-  await deleteProjectStorage(projectId)
+  const supabase = await createSupabaseServerClient()
+  const objectKeys = [
+    project.audioPath,
+    ...project.sourceImages.map((image) => image.imagePath),
+    ...project.segments.map((segment) => segment.audioPath),
+    ...project.segments.flatMap((segment) => segment.recordings.map((recording) => recording.filePath)),
+  ]
+
+  try {
+    await removeStorageObjects({
+      client: supabase,
+      objectKeys,
+    })
+  } catch {
+    // ignore storage deletion errors
+  }
 
   return NextResponse.json({ success: true })
 }

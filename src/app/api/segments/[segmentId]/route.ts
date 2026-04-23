@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rm } from 'node:fs/promises'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { removeStorageObjects } from '@/lib/storage'
 
 const updateSchema = z.object({
   text: z.string().optional(),
@@ -32,6 +33,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const segment = await db.segment.findFirst({
     where: { id: segmentId, project: { userId: user.id } },
+    select: { audioPath: true },
   })
 
   if (!segment) {
@@ -68,11 +70,15 @@ export async function DELETE(request: Request, context: RouteContext) {
   // Delete DB records (cascades to stageProgress, recordings)
   await db.segment.delete({ where: { id: segmentId } })
 
-  // Delete segment audio file
+  const supabase = await createSupabaseServerClient()
+
   try {
-    await rm(segment.audioPath, { force: true })
+    await removeStorageObjects({
+      client: supabase,
+      objectKeys: [segment.audioPath],
+    })
   } catch {
-    // ignore file deletion errors
+    // ignore storage deletion errors
   }
 
   return NextResponse.json({ success: true })

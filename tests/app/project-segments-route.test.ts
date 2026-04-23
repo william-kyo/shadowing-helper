@@ -1,16 +1,24 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { findProject, createSegment, getPaths, createStoredFileName, extractAudioSegment } = vi.hoisted(() => ({
+const { findProject, createSegment, getPaths, createStoredFileName, downloadStorageObject, uploadBufferToStorage, extractAudioSegmentFromBuffer, createSupabaseServerClient, transcribeAudio } = vi.hoisted(() => ({
   findProject: vi.fn(),
   createSegment: vi.fn(),
   getPaths: vi.fn(),
   createStoredFileName: vi.fn(),
-  extractAudioSegment: vi.fn(),
+  downloadStorageObject: vi.fn(),
+  uploadBufferToStorage: vi.fn(),
+  extractAudioSegmentFromBuffer: vi.fn(),
+  createSupabaseServerClient: vi.fn(),
+  transcribeAudio: vi.fn(),
 }))
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 vi.mock('@/lib/auth', () => ({
   requireAppUserForApi: vi.fn().mockResolvedValue({
-    user: { id: 'user-1', email: 'owner@example.com' },
+    user: { id: 'user-1', supabaseUserId: 'sb-user-1', email: 'owner@example.com' },
     response: null,
   }),
 }))
@@ -29,10 +37,21 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/storage', () => ({
   getProjectStoragePaths: getPaths,
   createStoredFileName,
+  downloadStorageObject,
+  uploadBufferToStorage,
+  buildStorageObjectKey: (directory: string, fileName: string) => `${directory}/${fileName}`,
 }))
 
 vi.mock('@/lib/segment-audio', () => ({
-  extractAudioSegment,
+  extractAudioSegmentFromBuffer,
+}))
+
+vi.mock('@/lib/supabase/server', () => ({
+  createSupabaseServerClient,
+}))
+
+vi.mock('@/lib/groq', () => ({
+  transcribeAudio,
 }))
 
 import { POST } from '@/app/api/projects/[projectId]/segments/route'
@@ -42,24 +61,29 @@ describe('POST /api/projects/[projectId]/segments', () => {
     findProject.mockResolvedValue({
       id: 'project-1',
       title: 'lesson',
-      audioPath: '/tmp/source.wav',
+      audioPath: 'sb-user-1/projects/project-1/audio/source.wav',
       audioMimeType: 'audio/wav',
+      audioOriginalName: 'source.wav',
       segments: [{ id: 'seg-1', index: 0 }],
     })
     getPaths.mockReturnValue({
-      projectDir: 'storage/projects/project-1',
-      audioDir: 'storage/projects/project-1/audio',
-      imageDir: 'storage/projects/project-1/images',
-      recordingDir: 'storage/projects/project-1/recordings',
+      projectDir: 'sb-user-1/projects/project-1',
+      audioDir: 'sb-user-1/projects/project-1/audio',
+      imageDir: 'sb-user-1/projects/project-1/images',
+      recordingDir: 'sb-user-1/projects/project-1/recordings',
     })
     createStoredFileName.mockReturnValue('segment-2.wav')
+    createSupabaseServerClient.mockResolvedValue({})
+    downloadStorageObject.mockResolvedValue(Buffer.from('source-audio').buffer)
+    extractAudioSegmentFromBuffer.mockResolvedValue(Buffer.from('segment-audio'))
+    transcribeAudio.mockResolvedValue('transcribed text')
     createSegment.mockResolvedValue({
       id: 'seg-2',
       index: 1,
       title: '01',
       startMs: 0,
       endMs: 16000,
-      audioPath: 'storage/projects/project-1/audio/segment-2.wav',
+      audioPath: 'sb-user-1/projects/project-1/audio/segment-2.wav',
       progress: [1, 2, 3, 4, 5].map((stage) => ({ id: `sp-${stage}`, stage, status: 'not_started' })),
     })
 
@@ -73,11 +97,22 @@ describe('POST /api/projects/[projectId]/segments', () => {
     const json = await response.json()
 
     expect(response.status).toBe(200)
-    expect(extractAudioSegment).toHaveBeenCalledWith({
-      inputPath: '/tmp/source.wav',
-      outputPath: 'storage/projects/project-1/audio/segment-2.wav',
+    expect(downloadStorageObject).toHaveBeenCalledWith({
+      client: {},
+      objectKey: 'sb-user-1/projects/project-1/audio/source.wav',
+    })
+    expect(extractAudioSegmentFromBuffer).toHaveBeenCalledWith({
+      inputBuffer: expect.any(Buffer),
+      inputExtension: '.wav',
+      outputExtension: '.wav',
       startSeconds: 0,
       endSeconds: 16,
+    })
+    expect(uploadBufferToStorage).toHaveBeenCalledWith({
+      client: {},
+      objectKey: 'sb-user-1/projects/project-1/audio/segment-2.wav',
+      buffer: Buffer.from('segment-audio'),
+      contentType: 'audio/wav',
     })
     expect(createSegment).toHaveBeenCalled()
     expect(json.segment).toMatchObject({

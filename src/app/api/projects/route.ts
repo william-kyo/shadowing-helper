@@ -1,12 +1,9 @@
-import { mkdir } from 'node:fs/promises'
-import path from 'node:path'
-
 import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { env } from '@/lib/env'
-import { ensureProjectStorage, saveUploadedFile } from '@/lib/storage'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getProjectStoragePaths, uploadFileToStorage } from '@/lib/storage'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
@@ -26,8 +23,6 @@ export async function POST(request: Request) {
     if (response || !user) {
       return response
     }
-
-    await mkdir(path.resolve(env.STORAGE_ROOT), { recursive: true })
 
     const formData = await request.formData()
     const titleResult = createProjectSchema.safeParse({
@@ -100,8 +95,10 @@ export async function POST(request: Request) {
       },
     })
 
-    const storagePaths = await ensureProjectStorage(project.id)
-    const audioPath = await saveUploadedFile({
+    const supabase = await createSupabaseServerClient()
+    const storagePaths = getProjectStoragePaths(user.supabaseUserId, project.id)
+    const audioPath = await uploadFileToStorage({
+      client: supabase,
       directory: storagePaths.audioDir,
       file: audioFile,
     })
@@ -114,7 +111,8 @@ export async function POST(request: Request) {
     }[]
 
     for (const [index, image] of imageFiles.entries()) {
-      const imagePath = await saveUploadedFile({
+      const imagePath = await uploadFileToStorage({
+        client: supabase,
         directory: storagePaths.imageDir,
         file: image,
       })

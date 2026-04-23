@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { downloadStorageObject } from '@/lib/storage'
 
 type RouteParams = {
   params: Promise<{
@@ -31,15 +32,19 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
   }
 
-  // imagePath stored in DB is the full absolute path (returned by saveUploadedFile)
-  let fileBuffer: Buffer
+  const supabase = await createSupabaseServerClient()
+
+  let fileBuffer: ArrayBuffer
   try {
-    fileBuffer = await readFile(sourceImage.imagePath)
+    fileBuffer = await downloadStorageObject({
+      client: supabase,
+      objectKey: sourceImage.imagePath,
+    })
   } catch {
-    return NextResponse.json({ error: '画像ファイルの読み込みに失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '画像ファイルが見つかりません' }, { status: 404 })
   }
 
-  return new NextResponse(new Uint8Array(fileBuffer), {
+  return new NextResponse(fileBuffer, {
     headers: {
       'Content-Type': sourceImage.mimeType,
       'Cache-Control': 'public, max-age=31536000, immutable',

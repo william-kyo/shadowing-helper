@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "migrate:legacy-projects": "node scripts/assign-legacy-projects.mjs",
+    "storage:migrate-local": "node --env-file=.env scripts/migrate-local-storage-to-supabase.mjs",
     "prisma:generate": "prisma generate",
     "prisma:generate:sqlite": "prisma generate --schema prisma/schema-sqlite.prisma",
     "prisma:migrate": "prisma db push",

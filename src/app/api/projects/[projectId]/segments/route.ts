@@ -5,9 +5,10 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { extractAudioSegment } from '@/lib/segment-audio'
-import { createStoredFileName, getProjectStoragePaths } from '@/lib/storage'
+import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { transcribeAudio } from '@/lib/groq'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
 
 const createSegmentSchema = z.object({
   title: z.string().trim().min(1, 'セグメント名を入力してください。'),
@@ -53,15 +54,29 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
     }
 
-    const storagePaths = getProjectStoragePaths(project.id)
+    const supabase = await createSupabaseServerClient()
+    const storagePaths = getProjectStoragePaths(user.supabaseUserId, project.id)
     const storedName = createStoredFileName(project.audioOriginalName)
-    const audioPath = path.join(storagePaths.audioDir, storedName)
+    const audioPath = buildStorageObjectKey(storagePaths.audioDir, storedName)
 
-    await extractAudioSegment({
-      inputPath: project.audioPath,
-      outputPath: audioPath,
+    const projectAudioBuffer = Buffer.from(await downloadStorageObject({
+      client: supabase,
+      objectKey: project.audioPath,
+    }))
+
+    const segmentAudioBuffer = await extractAudioSegmentFromBuffer({
+      inputBuffer: projectAudioBuffer,
+      inputExtension: path.extname(project.audioOriginalName),
+      outputExtension: path.extname(storedName),
       startSeconds: parsed.data.startSeconds,
       endSeconds: parsed.data.endSeconds,
+    })
+
+    await uploadBufferToStorage({
+      client: supabase,
+      objectKey: audioPath,
+      buffer: segmentAudioBuffer,
+      contentType: project.audioMimeType,
     })
 
     const segment = await db.segment.create({
@@ -87,7 +102,11 @@ export async function POST(request: Request, context: RouteContext) {
     // Fire-and-forget: start transcription immediately after segment creation
     void (async () => {
       try {
-        const transcribedText = await transcribeAudio(audioPath)
+        const transcribedText = await transcribeAudio({
+          audioBuffer: segmentAudioBuffer,
+          fileName: storedName,
+          mimeType: project.audioMimeType,
+        })
         await db.segment.update({
           where: { id: segment.id },
           data: { text: transcribedText },

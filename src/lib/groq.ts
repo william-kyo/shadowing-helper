@@ -1,13 +1,17 @@
 import { env } from '@/lib/env'
 
-export async function transcribeAudio(audioPath: string): Promise<string> {
+export async function transcribeAudio(params: {
+  audioBuffer: ArrayBuffer | Uint8Array | Buffer
+  fileName: string
+  mimeType: string
+}): Promise<string> {
   const apiKey = env.GROQ_API_KEY
+  const audioBytes = params.audioBuffer instanceof ArrayBuffer
+    ? new Uint8Array(params.audioBuffer)
+    : Uint8Array.from(params.audioBuffer)
 
   const formData = new FormData()
-  const audioBuffer = await import('node:fs/promises').then((fs) =>
-    fs.readFile(audioPath)
-  )
-  const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' })
+  const audioFile = new File([audioBytes], params.fileName, { type: params.mimeType })
   formData.append('file', audioFile)
   formData.append('model', 'whisper-large-v3-turbo')
   formData.append('response_format', 'text')

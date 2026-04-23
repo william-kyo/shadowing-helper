@@ -10,11 +10,11 @@ describe('storage helpers', () => {
   })
 
   it('returns deterministic directories for a project', () => {
-    expect(getProjectStoragePaths('project-123')).toEqual({
-      projectDir: 'storage/projects/project-123',
-      audioDir: 'storage/projects/project-123/audio',
-      imageDir: 'storage/projects/project-123/images',
-      recordingDir: 'storage/projects/project-123/recordings',
+    expect(getProjectStoragePaths('supabase-user-1', 'project-123')).toEqual({
+      projectDir: 'supabase-user-1/projects/project-123',
+      audioDir: 'supabase-user-1/projects/project-123/audio',
+      imageDir: 'supabase-user-1/projects/project-123/images',
+      recordingDir: 'supabase-user-1/projects/project-123/recordings',
     })
   })
 })
