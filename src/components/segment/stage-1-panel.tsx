@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
 type Stage1Props = {
   segmentId: string
   initialText: string
   initialNotes: string | null
-  stageStatus: 'not_started' | 'in_progress' | 'completed'
+  stageStatus: StageStatus
   /** 1〜5の現在アクティブなステージに応じてスクリプト表示のデフォルト値が変わる */
   activeStage: number
+  isStatusUpdating: boolean
+  onStageStatusChange: (status: StageStatus) => void
 }
 
 // ステージに応じたスクリプトデフォルト表示: 2,4 は表示(true)、それ以外は非表示(false)
@@ -25,12 +29,28 @@ const STAGE_LABELS: Record<number, string> = {
   5: '脱稿シャドウ',
 }
 
+const nextStatus: Record<StageStatus, StageStatus> = {
+  not_started: 'in_progress',
+  in_progress: 'completed',
+  completed: 'not_started',
+}
+
+function getStatusLabel(status: StageStatus) {
+  return status === 'completed'
+    ? '✔ 完了'
+    : status === 'in_progress'
+      ? '◐ 進行中'
+      : '○ 未着手'
+}
+
 export function Stage1Panel({
   segmentId,
   initialText,
   initialNotes,
   stageStatus,
   activeStage,
+  isStatusUpdating,
+  onStageStatusChange,
 }: Stage1Props) {
   const [text, setText] = useState(initialText)
   const [notes, setNotes] = useState(initialNotes ?? '')
@@ -39,7 +59,17 @@ export function Stage1Panel({
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [transcribeMsg, setTranscribeMsg] = useState<string | null>(null)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [, startTransition] = useTransition()
+  const scriptTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    const textarea = scriptTextareaRef.current
+    if (!textarea) {
+      return
+    }
+
+    textarea.style.height = '0px'
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [text, isScriptVisible])
 
   const handleTranscribe = async () => {
     setIsTranscribing(true)
@@ -83,9 +113,14 @@ export function Stage1Panel({
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-indigo-700">Stage {activeStage} — {STAGE_LABELS[activeStage]}</h3>
-        <span className="text-xs text-zinc-400">
-          {stageStatus === 'completed' ? '✔ 完了' : stageStatus === 'in_progress' ? '◐ 進行中' : '○ 未着手'}
-        </span>
+        <button
+          type="button"
+          onClick={() => onStageStatusChange(nextStatus[stageStatus])}
+          disabled={isStatusUpdating}
+          className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-500 transition hover:border-indigo-400 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isStatusUpdating ? '更新中…' : getStatusLabel(stageStatus)}
+        </button>
       </div>
 
       <div className="grid gap-3">
@@ -105,9 +140,10 @@ export function Stage1Panel({
           )}
           {isScriptVisible && (
             <>
-              {!initialText && (
+              {!text.trim() && (
                 <div className="mb-2">
                   <button
+                    type="button"
                     onClick={handleTranscribe}
                     disabled={isTranscribing}
                     className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
@@ -117,11 +153,12 @@ export function Stage1Panel({
                 </div>
               )}
               <textarea
+                ref={scriptTextareaRef}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={6}
                 placeholder="スクリプトがここに表示されます。編集して上書き保存できます。"
-                className="w-full resize-y rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="w-full overflow-hidden rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
             </>
           )}
@@ -144,6 +181,7 @@ export function Stage1Panel({
         {/* save button */}
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={handleSave}
             disabled={isSaving}
             className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"

@@ -4,9 +4,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
+import { SegmentStageWorkspace } from '@/components/segment/segment-stage-workspace'
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
-import { Stage1Panel } from '@/components/segment/stage-1-panel'
-import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 
@@ -88,37 +87,21 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           />
         </section>
 
-        {/* stage 1-5 */}
-        <section className="rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-zinc-500">Stage 1–5</h2>
-            <StageProgressTracker
-              segmentId={segment.id}
-              initialProgress={segment.progress.map((p) => ({
-                stage: p.stage,
-                status: p.status,
-              }))}
-            />
-          </div>
-        </section>
-
-        {/* stage 1 detail */}
-        {(() => {
-          // 最も番号が大きい完了/進行中ステージを「アクティブ」とする
-          const activeStage = segment.progress
-            .filter((p) => p.status === 'in_progress' || p.status === 'completed')
-            .map((p) => p.stage)
-            .sort((a, b) => b - a)[0] ?? 1
-          return (
-            <Stage1Panel
-              segmentId={segment.id}
-              initialText={segment.text ?? ''}
-              initialNotes={segment.notes ?? null}
-              stageStatus={(segment.progress.find((p) => p.stage === 1)?.status ?? 'not_started') as 'not_started' | 'in_progress' | 'completed'}
-              activeStage={activeStage}
-            />
-          )
-        })()}
+        <SegmentStageWorkspace
+          segmentId={segment.id}
+          initialProgress={segment.progress.map((p) => ({
+            stage: p.stage,
+            status: p.status,
+          }))}
+          initialText={segment.text ?? ''}
+          initialNotes={segment.notes ?? null}
+          initialStage={
+            segment.progress
+              .filter((p) => p.status === 'in_progress' || p.status === 'completed')
+              .map((p) => p.stage)
+              .sort((a, b) => b - a)[0] ?? 1
+          }
+        />
 
         {/* prev / next navigation */}
         <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">

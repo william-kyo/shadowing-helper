@@ -46,6 +46,9 @@ prisma/*.db-journal
 # vercel
 .vercel
 
+# local docs (not for git)
+DEPLOY.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -1,7 +1,5 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
 type StageProgress = {
@@ -10,17 +8,12 @@ type StageProgress = {
 }
 
 type StageProgressTrackerProps = {
-  segmentId: string
-  initialProgress: StageProgress[]
+  progress: StageProgress[]
+  selectedStage: number
+  onStageSelect: (stage: number) => void
 }
 
 const STAGES = [1, 2, 3, 4, 5]
-
-const nextStatus: Record<StageStatus, StageStatus> = {
-  not_started: 'in_progress',
-  in_progress: 'completed',
-  completed: 'not_started',
-}
 
 function getStatusClasses(status: StageStatus) {
   switch (status) {
@@ -34,76 +27,27 @@ function getStatusClasses(status: StageStatus) {
 }
 
 export function StageProgressTracker({
-  segmentId,
-  initialProgress,
+  progress,
+  selectedStage,
+  onStageSelect,
 }: StageProgressTrackerProps) {
-  const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
-  const [, startTransition] = useTransition()
-
   const getStatus = (stage: number): StageStatus => {
     const found = progress.find((p) => p.stage === stage)
     return found?.status ?? 'not_started'
-  }
-
-  const handleStageClick = async (stage: number) => {
-    const currentStatus = getStatus(stage)
-    const newStatus = nextStatus[currentStatus]
-
-    startTransition(() => {
-      setProgress((prev) => {
-        const exists = prev.find((p) => p.stage === stage)
-        if (exists) {
-          return prev.map((p) =>
-            p.stage === stage ? { ...p, status: newStatus } : p
-          )
-        }
-        return [...prev, { stage, status: newStatus }]
-      })
-    })
-
-    try {
-      const res = await fetch(`/api/segments/${segmentId}/progress`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ stage, status: newStatus }),
-      })
-      if (!res.ok) {
-        startTransition(() => {
-          setProgress((prev) => {
-            const exists = prev.find((p) => p.stage === stage)
-            if (exists) {
-              return prev.map((p) =>
-                p.stage === stage ? { ...p, status: currentStatus } : p
-              )
-            }
-            return prev.filter((p) => p.stage !== stage)
-          })
-        })
-      }
-    } catch {
-      startTransition(() => {
-        setProgress((prev) => {
-          const exists = prev.find((p) => p.stage === stage)
-          if (exists) {
-            return prev.map((p) =>
-              p.stage === stage ? { ...p, status: currentStatus } : p
-            )
-          }
-          return prev.filter((p) => p.stage !== stage)
-        })
-      })
-    }
   }
 
   return (
     <div className="flex items-center gap-3">
       {STAGES.map((stage) => {
         const status = getStatus(stage)
+        const isSelected = selectedStage === stage
         return (
           <button
             key={stage}
-            onClick={() => handleStageClick(stage)}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer ${getStatusClasses(status)}`}
+            type="button"
+            onClick={() => onStageSelect(stage)}
+            aria-pressed={isSelected}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer ${getStatusClasses(status)} ${isSelected ? 'ring-4 ring-indigo-200 ring-offset-2' : ''}`}
             title={`Stage ${stage}: ${status}`}
           >
             {status === 'completed' ? (
