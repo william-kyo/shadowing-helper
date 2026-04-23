@@ -6,13 +6,22 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
+function getFfmpegPath() {
+  return path.join(
+    process.cwd(),
+    'node_modules',
+    'ffmpeg-static',
+    process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg',
+  )
+}
+
 export async function extractAudioSegment(params: {
   inputPath: string
   outputPath: string
   startSeconds: number
   endSeconds: number
 }) {
-  await execFileAsync('ffmpeg', [
+  await execFileAsync(getFfmpegPath(), [
     '-y',
     '-i',
     params.inputPath,
