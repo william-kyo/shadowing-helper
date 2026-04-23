@@ -43,6 +43,18 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     notFound()
   }
 
+  // Fetch adjacent segments (prev and next by index)
+  const [prevSegment, nextSegment] = await Promise.all([
+    db.segment.findFirst({
+      where: { projectId, index: { equals: segment.index - 1 } },
+      select: { id: true, title: true, index: true },
+    }),
+    db.segment.findFirst({
+      where: { projectId, index: { equals: segment.index + 1 } },
+      select: { id: true, title: true, index: true },
+    }),
+  ])
+
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
       <div className="mx-auto grid max-w-2xl gap-8">
@@ -77,9 +89,9 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         </section>
 
         {/* stage 1-5 */}
-        <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-zinc-950">Stage 1–5</h2>
-          <div className="flex items-center gap-2">
+        <section className="rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-zinc-500">Stage 1–5</h2>
             <StageProgressTracker
               segmentId={segment.id}
               initialProgress={segment.progress.map((p) => ({
@@ -88,18 +100,51 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               }))}
             />
           </div>
-          <p className="mt-4 text-sm text-zinc-500">
-            タップしてステージを開始 / 完了状態を確認
-          </p>
         </section>
 
         {/* stage 1 detail */}
-        <Stage1Panel
-          segmentId={segment.id}
-          initialText={segment.text ?? ''}
-          initialNotes={segment.notes ?? null}
-          stageStatus={(segment.progress.find((p) => p.stage === 1)?.status ?? 'not_started') as 'not_started' | 'in_progress' | 'completed'}
-        />
+        {(() => {
+          // 最も番号が大きい完了/進行中ステージを「アクティブ」とする
+          const activeStage = segment.progress
+            .filter((p) => p.status === 'in_progress' || p.status === 'completed')
+            .map((p) => p.stage)
+            .sort((a, b) => b - a)[0] ?? 1
+          return (
+            <Stage1Panel
+              segmentId={segment.id}
+              initialText={segment.text ?? ''}
+              initialNotes={segment.notes ?? null}
+              stageStatus={(segment.progress.find((p) => p.stage === 1)?.status ?? 'not_started') as 'not_started' | 'in_progress' | 'completed'}
+              activeStage={activeStage}
+            />
+          )
+        })()}
+
+        {/* prev / next navigation */}
+        <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+          {prevSegment ? (
+            <Link
+              href={`/projects/${projectId}/segments/${prevSegment.id}`}
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+            >
+              <span className="text-zinc-400">←</span>
+              <span className="max-w-32 truncate">{prevSegment.title ?? `Segment ${prevSegment.index + 1}`}</span>
+            </Link>
+          ) : (
+            <span className="text-sm text-zinc-300">前のセグメント</span>
+          )}
+          {nextSegment ? (
+            <Link
+              href={`/projects/${projectId}/segments/${nextSegment.id}`}
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+            >
+              <span className="max-w-32 truncate">{nextSegment.title ?? `Segment ${nextSegment.index + 1}`}</span>
+              <span className="text-zinc-400">→</span>
+            </Link>
+          ) : (
+            <span className="text-sm text-zinc-300">次のセグメント</span>
+          )}
+        </nav>
       </div>
     </main>
   )

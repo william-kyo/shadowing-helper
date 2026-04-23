@@ -103,7 +103,7 @@ export function StageProgressTracker({
           <button
             key={stage}
             onClick={() => handleStageClick(stage)}
-            className={`relative flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold transition-all cursor-pointer ${getStatusClasses(status)}`}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer ${getStatusClasses(status)}`}
             title={`Stage ${stage}: ${status}`}
           >
             {status === 'completed' ? (
