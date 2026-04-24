@@ -55,4 +55,33 @@ describe('SegmentStageWorkspace', () => {
 
     expect(screen.getByRole('button', { name: '◐ 進行中' })).toBeInTheDocument()
   })
+
+  it('keeps saved script and notes when switching stages without a page refresh', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: 'saved script', notes: 'saved notes' }),
+    } as Response)
+
+    render(
+      <SegmentStageWorkspace
+        segmentId="seg-1"
+        initialProgress={[{ stage: 1, status: 'in_progress' }]}
+        initialText="old script"
+        initialNotes="old notes"
+        initialStage={1}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+    fireEvent.change(screen.getByDisplayValue('old script'), { target: { value: 'saved script' } })
+    fireEvent.change(screen.getByDisplayValue('old notes'), { target: { value: 'saved notes' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    expect(await screen.findByText('保存しました')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTitle('Stage 2: not_started'))
+
+    expect(screen.getByDisplayValue('saved script')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('saved notes')).toBeInTheDocument()
+  })
 })

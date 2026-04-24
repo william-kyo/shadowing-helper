@@ -9,18 +9,18 @@ type Stage1Props = {
   initialText: string
   initialNotes: string | null
   stageStatus: StageStatus
-  /** 1〜5の現在アクティブなステージに応じてスクリプト表示のデフォルト値が変わる */
+  /** The active stage controls whether the script is shown by default. */
   activeStage: number
   isStatusUpdating: boolean
   onStageStatusChange: (status: StageStatus) => void
+  onContentSaved: (content: { text: string; notes: string | null }) => void
 }
 
-// ステージに応じたスクリプトデフォルト表示: 2,4 は表示(true)、それ以外は非表示(false)
+// Stages 2 and 4 start with the script visible; other stages start hidden.
 function getDefaultScriptVisible(activeStage: number): boolean {
   return activeStage === 2 || activeStage === 4
 }
 
-// ステージ名（日本語）
 const STAGE_LABELS: Record<number, string> = {
   1: 'スクリプト確認（聴写）',
   2: 'シャドウ默読',
@@ -51,6 +51,7 @@ export function Stage1Panel({
   activeStage,
   isStatusUpdating,
   onStageStatusChange,
+  onContentSaved,
 }: Stage1Props) {
   const [text, setText] = useState(initialText)
   const [notes, setNotes] = useState(initialNotes ?? '')
@@ -100,6 +101,7 @@ export function Stage1Panel({
       })
       const data = await res.json()
       if (res.ok) {
+        onContentSaved({ text: data.text ?? text, notes: data.notes ?? null })
         setSaveMsg('保存しました')
       } else {
         setSaveMsg(data.error ?? '保存に失敗しました')

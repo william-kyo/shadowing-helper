@@ -29,6 +29,8 @@ export function SegmentStageWorkspace({
 }: SegmentStageWorkspaceProps) {
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
   const [selectedStage, setSelectedStage] = useState(initialStage)
+  const [segmentText, setSegmentText] = useState(initialText)
+  const [segmentNotes, setSegmentNotes] = useState(initialNotes ?? '')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [, startTransition] = useTransition()
 
@@ -99,12 +101,16 @@ export function SegmentStageWorkspace({
       <Stage1Panel
         key={selectedStage}
         segmentId={segmentId}
-        initialText={initialText}
-        initialNotes={initialNotes}
+        initialText={segmentText}
+        initialNotes={segmentNotes}
         activeStage={selectedStage}
         stageStatus={getStatus(selectedStage)}
         isStatusUpdating={isUpdatingStatus}
         onStageStatusChange={(nextStatus) => updateStageStatus(selectedStage, nextStatus)}
+        onContentSaved={({ text, notes }) => {
+          setSegmentText(text)
+          setSegmentNotes(notes ?? '')
+        }}
       />
     </div>
   )
