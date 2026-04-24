@@ -38,7 +38,7 @@ export const createProjectUploadSchema = z.object({
     originalName: z.string().min(1),
     mimeType: z.string().min(1),
     sortOrder: z.number().int().min(0),
-  })).min(1, '台本画像を1枚以上アップロードしてください。'),
+  })).default([]),
 })
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>

@@ -56,11 +56,6 @@ export function ProjectCreateForm() {
         return
       }
 
-      if (imageFiles.length === 0) {
-        setErrorMessage('台本画像を1枚以上選択してください。')
-        return
-      }
-
       if (audioFile.size > 100 * 1024 * 1024) {
         setErrorMessage('音声ファイルは100MB以下にしてください。')
         return
@@ -215,7 +210,7 @@ export function ProjectCreateForm() {
 
       <div className="grid gap-2">
         <label className="text-sm font-medium text-zinc-900" htmlFor="images">
-          台本画像
+          台本画像（任意）
         </label>
         <input
           id="images"
@@ -224,12 +219,10 @@ export function ProjectCreateForm() {
           accept={acceptedImages}
           aria-invalid={errors.images ? 'true' : 'false'}
           className="block rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm"
-          {...register('images', {
-            required: '台本画像を1枚以上選択してください。',
-          })}
+          {...register('images')}
         />
         <p className="text-xs text-zinc-500">
-          png / jpg / webp / heic を受け付けます。順番どおりに選ぶとその順で保存します。
+          png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。
         </p>
         {errors.images ? (
           <p className="text-sm text-red-600">{errors.images.message as string}</p>
