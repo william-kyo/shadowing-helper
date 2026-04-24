@@ -33,6 +33,7 @@ export function ProjectSegmentWorkspace({
   const router = useRouter()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [segments, setSegments] = useState(initialSegments)
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(initialSegments.length === 0)
 
   function handleDeleteSegment(segmentId: string) {
     const seg = segments.find((s) => s.id === segmentId)
@@ -52,6 +53,84 @@ export function ProjectSegmentWorkspace({
       .catch(() => alert('削除に失敗しました。'))
   }
 
+  const createSegmentForm = isCreateFormOpen ? (
+    <ManualSegmentForm
+      getCurrentTime={() => {
+        return audioRef.current?.currentTime ?? 0
+      }}
+      onCollapse={() => setIsCreateFormOpen(false)}
+      onSubmit={async (values) => {
+        const response = await fetch(`/api/projects/${projectId}/segments`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(values),
+        })
+
+        const result = (await response.json()) as {
+          error?: string
+          segment?: SegmentListItem
+        }
+
+        if (!response.ok || !result.segment) {
+          return { error: result.error ?? 'セグメント保存に失敗しました。' }
+        }
+
+        const createdSegment = result.segment
+
+        setSegments((current) => [...current, createdSegment].sort((a, b) => a.index - b.index))
+        router.refresh()
+        return { success: true }
+      }}
+    />
+  ) : (
+    <div className="flex justify-center pt-2">
+      <button
+        type="button"
+        onClick={() => setIsCreateFormOpen(true)}
+        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+      >
+        セグメントを追加
+      </button>
+    </div>
+  )
+
+  const segmentListSection = (
+    <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+      <div>
+        <h2 className="text-xl font-semibold text-zinc-950">セグメント一覧</h2>
+        <p className="mt-2 text-sm text-zinc-600">切り出した学習単位をここに並べます。</p>
+      </div>
+
+      {segments.length === 0 ? (
+        <p className="text-sm text-zinc-500">まだセグメントはありません。上のフォームから追加してください。</p>
+      ) : (
+        <ul className="grid gap-3">
+          {segments.map((segment) => (
+            <li key={segment.id} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
+              <Link
+                href={`/projects/${projectId}/segments/${segment.id}`}
+                className="flex-1"
+              >
+                <div className="font-medium text-zinc-950">
+                  {segment.index + 1}. {segment.title ?? 'Untitled segment'}
+                </div>
+                <div className="mt-1 text-sm text-zinc-600">
+                  {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms / stage 初期化: {segment.progressCount}
+                </div>
+              </Link>
+              <button
+                onClick={() => handleDeleteSegment(segment.id)}
+                className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+              >
+                削除
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+
   return (
     <section className="grid gap-6">
       <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
@@ -69,70 +148,10 @@ export function ProjectSegmentWorkspace({
         >
           <source src={audioSrc} type={audioMimeType} />
         </audio>
-
-        <ManualSegmentForm
-          getCurrentTime={() => {
-            return audioRef.current?.currentTime ?? 0
-          }}
-          onSubmit={async (values) => {
-            const response = await fetch(`/api/projects/${projectId}/segments`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify(values),
-            })
-
-            const result = (await response.json()) as {
-              error?: string
-              segment?: SegmentListItem
-            }
-
-            if (!response.ok || !result.segment) {
-              return { error: result.error ?? 'セグメント保存に失敗しました。' }
-            }
-
-            const createdSegment = result.segment
-
-            setSegments((current) => [...current, createdSegment].sort((a, b) => a.index - b.index))
-            router.refresh()
-            return { success: true }
-          }}
-        />
       </section>
 
-      <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-        <div>
-          <h2 className="text-xl font-semibold text-zinc-950">セグメント一覧</h2>
-          <p className="mt-2 text-sm text-zinc-600">切り出した学習単位をここに並べます。</p>
-        </div>
-
-        {segments.length === 0 ? (
-          <p className="text-sm text-zinc-500">まだセグメントはありません。上のフォームから追加してください。</p>
-        ) : (
-          <ul className="grid gap-3">
-            {segments.map((segment) => (
-              <li key={segment.id} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
-                <Link
-                  href={`/projects/${projectId}/segments/${segment.id}`}
-                  className="flex-1"
-                >
-                  <div className="font-medium text-zinc-950">
-                    {segment.index + 1}. {segment.title ?? 'Untitled segment'}
-                  </div>
-                  <div className="mt-1 text-sm text-zinc-600">
-                    {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms / stage 初期化: {segment.progressCount}
-                  </div>
-                </Link>
-                <button
-                  onClick={() => handleDeleteSegment(segment.id)}
-                  className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
-                >
-                  削除
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {segments.length === 0 ? createSegmentForm : segmentListSection}
+      {segments.length === 0 ? segmentListSection : createSegmentForm}
     </section>
   )
 }

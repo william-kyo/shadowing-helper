@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { LogoutButton } from '@/components/auth/logout-button'
-import { ProjectCreateForm } from '@/components/project/project-create-form'
+import { ProjectCreateSection } from '@/components/project/project-create-section'
 import { db } from '@/lib/db'
 import { requireAppUser } from '@/lib/auth'
 import { ProjectList } from '@/components/project/project-list'
@@ -27,15 +27,7 @@ export default async function ProjectsPage() {
           <LogoutButton />
         </div>
 
-        <section className="grid gap-4 rounded-3xl border border-black/5 bg-white/60 p-2 sm:p-3">
-          <div className="px-4 pt-4 sm:px-5">
-            <h2 className="text-lg font-semibold tracking-tight">新しいプロジェクトを作成</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              ログイン中のユーザーに紐づく音声と台本画像を登録します。
-            </p>
-          </div>
-          <ProjectCreateForm />
-        </section>
+        {projects.length === 0 ? <ProjectCreateSection /> : null}
 
         <ProjectList
           projects={projects.map((p) => ({
@@ -48,6 +40,8 @@ export default async function ProjectsPage() {
             rawExtractedText: p.rawExtractedText,
           }))}
         />
+
+        {projects.length > 0 ? <ProjectCreateSection initiallyOpen={false} /> : null}
       </div>
     </main>
   )

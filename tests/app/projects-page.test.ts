@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -34,6 +34,10 @@ vi.mock('@/lib/db', () => ({
 
 import ProjectsPage, * as ProjectsPageModule from '@/app/projects/page'
 
+afterEach(() => {
+  cleanup()
+})
+
 describe('ProjectsPage module', () => {
   it('forces dynamic rendering so newly created projects appear in production without rebuilding', () => {
     expect(ProjectsPageModule.dynamic).toBe('force-dynamic')
@@ -46,5 +50,21 @@ describe('ProjectsPage module', () => {
       'href',
       '/projects/project-1',
     )
+  })
+
+  it('hides the create panel behind a bottom button when projects already exist', async () => {
+    render(await ProjectsPage())
+
+    expect(screen.queryByText('新しいプロジェクトを作成')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'プロジェクトを作成' }))
+
+    expect(screen.getByText('新しいプロジェクトを作成')).toBeInTheDocument()
+    expect(screen.getByLabelText('プロジェクト名')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+
+    expect(screen.queryByText('新しいプロジェクトを作成')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'プロジェクトを作成' })).toBeInTheDocument()
   })
 })

@@ -21,6 +21,40 @@ beforeEach(() => {
 })
 
 describe('ProjectSegmentWorkspace', () => {
+  it('shows existing segments first and hides the manual form behind a bottom button', () => {
+    render(
+      <ProjectSegmentWorkspace
+        projectId="project-1"
+        audioSrc="/api/projects/project-1/audio"
+        audioMimeType="audio/wav"
+        audioOriginalName="lesson.wav"
+        initialSegments={[
+          {
+            id: 'seg-1',
+            index: 0,
+            title: '01',
+            startMs: 0,
+            endMs: 16000,
+            progressCount: 5,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('1. 01')).toBeInTheDocument()
+    expect(screen.queryByLabelText('セグメント名')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'セグメントを追加' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'セグメントを追加' }))
+
+    expect(screen.getByLabelText('セグメント名')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+
+    expect(screen.queryByLabelText('セグメント名')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'セグメントを追加' })).toBeInTheDocument()
+  })
+
   it('appends a newly created segment to the visible list without a full reload', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

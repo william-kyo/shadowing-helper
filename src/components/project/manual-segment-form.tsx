@@ -10,13 +10,14 @@ type ManualSegmentFormSubmitResult = {
 type ManualSegmentFormProps = {
   getCurrentTime: () => number
   onSubmit?: (values: { title: string; startSeconds: number; endSeconds: number }) => ManualSegmentFormSubmitResult | Promise<ManualSegmentFormSubmitResult | void> | void
+  onCollapse?: () => void
 }
 
 function formatSeconds(value: number) {
   return Number(value.toFixed(2))
 }
 
-export function ManualSegmentForm({ getCurrentTime, onSubmit }: ManualSegmentFormProps) {
+export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: ManualSegmentFormProps) {
   const [title, setTitle] = useState('')
   const [startSeconds, setStartSeconds] = useState<number | ''>('')
   const [endSeconds, setEndSeconds] = useState<number | ''>('')
@@ -78,11 +79,22 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit }: ManualSegmentFor
 
   return (
     <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-      <div>
-        <h2 className="text-xl font-semibold text-zinc-950">手動でセグメントを追加</h2>
-        <p className="mt-2 text-sm text-zinc-600">
-          元音声を再生しながら開始位置と終了位置を決めて、1 つずつ segment を切り出します。
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-950">手動でセグメントを追加</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            元音声を再生しながら開始位置と終了位置を決めて、1 つずつ segment を切り出します。
+          </p>
+        </div>
+        {onCollapse ? (
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="rounded-2xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+          >
+            閉じる
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-2">
