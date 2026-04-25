@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 
 import { ManualSegmentForm } from '@/components/project/manual-segment-form'
+import { computeCurrentStage, type StageProgress } from '@/lib/stage-progress'
 
 type SegmentListItem = {
   id: string
@@ -13,6 +14,7 @@ type SegmentListItem = {
   startMs: number | null
   endMs: number | null
   progressCount: number
+  progress: StageProgress[]
 }
 
 type ProjectSegmentWorkspaceProps = {
@@ -105,17 +107,31 @@ export function ProjectSegmentWorkspace({
         <p className="text-sm text-zinc-500">まだセグメントはありません。上のフォームから追加してください。</p>
       ) : (
         <ul className="grid gap-3">
-          {segments.map((segment) => (
+          {segments.map((segment) => {
+            const { currentStage, allCompleted } = computeCurrentStage(segment.progress)
+            return (
             <li key={segment.id} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
               <Link
                 href={`/projects/${projectId}/segments/${segment.id}`}
                 className="flex-1"
               >
-                <div className="font-medium text-zinc-950">
-                  {segment.index + 1}. {segment.title ?? 'Untitled segment'}
+                <div className="flex items-center gap-2 font-medium text-zinc-950">
+                  <span>
+                    {segment.index + 1}. {segment.title ?? 'Untitled segment'}
+                  </span>
+                  {allCompleted ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+                      <span aria-hidden>✅</span>
+                      完了
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                      Stage {currentStage} 進行中
+                    </span>
+                  )}
                 </div>
                 <div className="mt-1 text-sm text-zinc-600">
-                  {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms / stage 初期化: {segment.progressCount}
+                  {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms
                 </div>
               </Link>
               <button
@@ -125,7 +141,8 @@ export function ProjectSegmentWorkspace({
                 削除
               </button>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
     </section>

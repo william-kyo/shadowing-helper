@@ -125,6 +125,7 @@ export async function POST(request: Request, context: RouteContext) {
         endMs: segment.endMs,
         audioPath: segment.audioPath,
         progressCount: segment.progress.length,
+        progress: segment.progress.map((p) => ({ stage: p.stage, status: p.status })),
       },
     })
   } catch (error) {

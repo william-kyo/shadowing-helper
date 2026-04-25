@@ -36,6 +36,7 @@ describe('ProjectSegmentWorkspace', () => {
             startMs: 0,
             endMs: 16000,
             progressCount: 5,
+            progress: [],
           },
         ]}
       />,
@@ -66,6 +67,7 @@ describe('ProjectSegmentWorkspace', () => {
           startMs: 0,
           endMs: 16000,
           progressCount: 5,
+          progress: [],
         },
       }),
     } as Response)

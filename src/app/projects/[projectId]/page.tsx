@@ -70,6 +70,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             startMs: segment.startMs,
             endMs: segment.endMs,
             progressCount: segment.progress.length,
+            progress: segment.progress.map((p) => ({ stage: p.stage, status: p.status })),
           }))}
         />
 

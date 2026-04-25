@@ -8,6 +8,7 @@ import { SegmentStageWorkspace } from '@/components/segment/segment-stage-worksp
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { computeCurrentStage } from '@/lib/stage-progress'
 
 type SegmentDetailPageProps = {
   params: Promise<{
@@ -96,10 +97,9 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           initialText={segment.text ?? ''}
           initialNotes={segment.notes ?? null}
           initialStage={
-            segment.progress
-              .filter((p) => p.status === 'in_progress' || p.status === 'completed')
-              .map((p) => p.stage)
-              .sort((a, b) => b - a)[0] ?? 1
+            computeCurrentStage(
+              segment.progress.map((p) => ({ stage: p.stage, status: p.status })),
+            ).currentStage
           }
         />
 
