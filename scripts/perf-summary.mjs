@@ -5,6 +5,21 @@ import fs from 'node:fs'
 const inputPath = process.argv[2]
 const input = inputPath ? fs.readFileSync(inputPath, 'utf8') : fs.readFileSync(0, 'utf8')
 
+if (input.trim().length === 0) {
+  console.error(
+    [
+      'No log data found.',
+      '',
+      'Vercel CLI writes runtime log lines to stderr in some environments.',
+      'Capture both stdout and stderr before running the summary:',
+      '',
+      '  vercel logs --environment production --source serverless --since 24h --expand > perf.log 2>&1',
+      '  npm run perf:summary perf.log',
+    ].join('\n'),
+  )
+  process.exit(1)
+}
+
 function tryParseJson(line) {
   const start = line.indexOf('{')
   if (start === -1) return null
@@ -30,10 +45,12 @@ function round(value) {
 const routeTotals = new Map()
 const stepTotals = new Map()
 const browserTotals = new Map()
+let parsedJsonCount = 0
 
 for (const line of input.split('\n')) {
   const entry = tryParseJson(line)
   if (!entry || typeof entry !== 'object') continue
+  parsedJsonCount += 1
 
   if (entry.type === 'perf' && typeof entry.route === 'string' && typeof entry.totalMs === 'number') {
     const routeKey = `${entry.method ?? entry.kind ?? 'PAGE'} ${entry.route}`
@@ -67,6 +84,16 @@ for (const line of input.split('\n')) {
       browserTotals.set(key, values)
     }
   }
+}
+
+if (routeTotals.size === 0 && stepTotals.size === 0 && browserTotals.size === 0) {
+  console.error(
+    [
+      `Parsed ${parsedJsonCount} JSON line(s), but found no perf entries.`,
+      'Expected log JSON with type "perf" or "browser_perf".',
+    ].join('\n'),
+  )
+  process.exitCode = 1
 }
 
 function printSummary(title, groups) {
