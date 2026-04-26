@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { STAGE_META } from '@/lib/stage-meta'
+
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
 type Stage1Props = {
@@ -19,14 +21,6 @@ type Stage1Props = {
 // Stages 2 and 4 start with the script visible; other stages start hidden.
 function getDefaultScriptVisible(activeStage: number): boolean {
   return activeStage === 2 || activeStage === 4
-}
-
-const STAGE_LABELS: Record<number, string> = {
-  1: 'スクリプト確認（聴写）',
-  2: 'シャドウ默読',
-  3: 'シャドウ跟読',
-  4: 'スクリプト付きシャドウ',
-  5: '脱稿シャドウ',
 }
 
 const nextStatus: Record<StageStatus, StageStatus> = {
@@ -114,7 +108,14 @@ export function Stage1Panel({
   return (
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-indigo-700">Stage {activeStage} — {STAGE_LABELS[activeStage]}</h3>
+        <div className="group relative">
+          <h3 className="cursor-default text-sm font-semibold text-indigo-700">
+            Stage {activeStage} — {STAGE_META[activeStage]?.label}
+          </h3>
+          <div className="pointer-events-none absolute left-0 top-full z-10 mt-1.5 hidden w-72 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-xs leading-relaxed text-zinc-600 shadow-lg group-hover:block">
+            {STAGE_META[activeStage]?.description}
+          </div>
+        </div>
         <button
           type="button"
           onClick={() => onStageStatusChange(nextStatus[stageStatus])}

@@ -1,5 +1,7 @@
 'use client'
 
+import { STAGE_META } from '@/lib/stage-meta'
+
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
 type StageProgress = {
@@ -48,7 +50,7 @@ export function StageProgressTracker({
             onClick={() => onStageSelect(stage)}
             aria-pressed={isSelected}
             className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer ${getStatusClasses(status)} ${isSelected ? 'ring-4 ring-indigo-200 ring-offset-2' : ''}`}
-            title={`Stage ${stage}: ${status}`}
+            title={`Stage ${stage} ${STAGE_META[stage]?.label ?? ''}`}
           >
             {status === 'completed' ? (
               <svg
