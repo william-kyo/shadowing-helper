@@ -40,7 +40,7 @@ describe('ProjectCreateForm', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows validation messages for missing audio and images on submit', async () => {
+  it('shows a validation message for missing audio while images are optional', async () => {
     render(<ProjectCreateForm />)
 
     fireEvent.change(screen.getByLabelText('プロジェクト名'), {
@@ -53,8 +53,8 @@ describe('ProjectCreateForm', () => {
       await screen.findByText('音声ファイルを選択してください。'),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText('台本画像を1枚以上選択してください。'),
-    ).toBeInTheDocument()
+      screen.queryByText('台本画像を1枚以上選択してください。'),
+    ).not.toBeInTheDocument()
     expect(await screen.findByText('入力内容を確認してください。')).toBeInTheDocument()
   })
 })

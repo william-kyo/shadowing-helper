@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
+import { addPerfAttrs, measureStep } from '@/lib/perf'
 
 // Cached in memory for the lifetime of the serverless function instance.
 // jose re-fetches automatically on unknown kid (key rotation).
@@ -59,15 +60,17 @@ function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): s
 }
 
 async function getAuthenticatedSupabaseUser() {
-  const cookieStore = await cookies()
+  const cookieStore = await measureStep('auth.cookies', () => cookies())
 
-  const accessToken = extractAccessToken(cookieStore)
+  const accessToken = await measureStep('auth.extract_cookie', async () => extractAccessToken(cookieStore))
   if (!accessToken) return null
 
   try {
-    const { payload } = await jwtVerify(accessToken, jwks, {
-      issuer: `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`,
-    })
+    const { payload } = await measureStep('auth.jwt_verify', () =>
+      jwtVerify(accessToken, jwks, {
+        issuer: `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`,
+      }),
+    )
 
     const sub = payload.sub
     const email = payload.email as string | undefined
@@ -89,19 +92,23 @@ export async function getCurrentAppUser() {
   const supabaseUser = await getAuthenticatedSupabaseUser()
   if (!supabaseUser) return null
 
-  const appUser = await db.user.upsert({
-    where: { supabaseUserId: supabaseUser.id },
-    update: { email: supabaseUser.email },
-    create: {
-      supabaseUserId: supabaseUser.id,
-      email: supabaseUser.email,
-    },
-    select: {
-      id: true,
-      supabaseUserId: true,
-      email: true,
-    },
-  })
+  addPerfAttrs({ 'auth.user_found': true })
+
+  const appUser = await measureStep('db.user.upsert', () =>
+    db.user.upsert({
+      where: { supabaseUserId: supabaseUser.id },
+      update: { email: supabaseUser.email },
+      create: {
+        supabaseUserId: supabaseUser.id,
+        email: supabaseUser.email,
+      },
+      select: {
+        id: true,
+        supabaseUserId: true,
+        email: true,
+      },
+    }),
+  )
 
   return appUser
 }

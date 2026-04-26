@@ -8,6 +8,7 @@ import { SegmentStageWorkspace } from '@/components/segment/segment-stage-worksp
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { measureStep, withPagePerf } from '@/lib/perf'
 import { computeCurrentStage } from '@/lib/stage-progress'
 
 type SegmentDetailPageProps = {
@@ -18,42 +19,49 @@ type SegmentDetailPageProps = {
 }
 
 export default async function SegmentDetailPage({ params }: SegmentDetailPageProps) {
-  const currentUser = await requireAppUser()
-  const { projectId, segmentId } = await params
+  return withPagePerf('/projects/[projectId]/segments/[segmentId]', async () => {
+  const currentUser = await measureStep('auth.require_user', () => requireAppUser())
+  const { projectId, segmentId } = await measureStep('route.params', () => params)
 
-  const project = await db.project.findFirst({
-    where: { id: projectId, userId: currentUser.id },
-    select: { id: true, title: true },
-  })
+  const project = await measureStep('db.project.find_segment_page', () =>
+    db.project.findFirst({
+      where: { id: projectId, userId: currentUser.id },
+      select: { id: true, title: true },
+    }),
+  )
 
   if (!project) {
     notFound()
   }
 
-  const segment = await db.segment.findFirst({
-    where: { id: segmentId, projectId, project: { userId: currentUser.id } },
-    include: {
-      progress: {
-        orderBy: { stage: 'asc' },
+  const segment = await measureStep('db.segment.find_detail', () =>
+    db.segment.findFirst({
+      where: { id: segmentId, projectId, project: { userId: currentUser.id } },
+      include: {
+        progress: {
+          orderBy: { stage: 'asc' },
+        },
       },
-    },
-  })
+    }),
+  )
 
   if (!segment) {
     notFound()
   }
 
   // Fetch adjacent segments (prev and next by index)
-  const [prevSegment, nextSegment] = await Promise.all([
-    db.segment.findFirst({
-      where: { projectId, index: { equals: segment.index - 1 } },
-      select: { id: true, title: true, index: true },
-    }),
-    db.segment.findFirst({
-      where: { projectId, index: { equals: segment.index + 1 } },
-      select: { id: true, title: true, index: true },
-    }),
-  ])
+  const [prevSegment, nextSegment] = await measureStep('db.segment.find_adjacent', () =>
+    Promise.all([
+      db.segment.findFirst({
+        where: { projectId, index: { equals: segment.index - 1 } },
+        select: { id: true, title: true, index: true },
+      }),
+      db.segment.findFirst({
+        where: { projectId, index: { equals: segment.index + 1 } },
+        select: { id: true, title: true, index: true },
+      }),
+    ]),
+  )
 
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
@@ -131,4 +139,5 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
       </div>
     </main>
   )
+  })
 }

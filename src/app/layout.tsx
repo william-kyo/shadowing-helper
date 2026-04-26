@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 
+import { WebVitals } from '@/components/perf/web-vitals'
+
 import './globals.css'
 
 const geistSans = Geist({
@@ -28,7 +30,10 @@ export default function RootLayout({
       lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-zinc-50 text-zinc-950">{children}</body>
+      <body className="min-h-full bg-zinc-50 text-zinc-950">
+        <WebVitals />
+        {children}
+      </body>
     </html>
   )
 }

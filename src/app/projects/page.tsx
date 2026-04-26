@@ -5,15 +5,19 @@ import { ProjectCreateSection } from '@/components/project/project-create-sectio
 import { db } from '@/lib/db'
 import { requireAppUser } from '@/lib/auth'
 import { ProjectList } from '@/components/project/project-list'
+import { measureStep, withPagePerf } from '@/lib/perf'
 
 export default async function ProjectsPage() {
-  const currentUser = await requireAppUser()
+  return withPagePerf('/projects', async () => {
+  const currentUser = await measureStep('auth.require_user', () => requireAppUser())
 
-  const projects = await db.project.findMany({
-    where: { userId: currentUser.id },
-    orderBy: { createdAt: 'desc' },
-    include: { sourceImages: true },
-  })
+  const projects = await measureStep('db.project.find_many_with_images', () =>
+    db.project.findMany({
+      where: { userId: currentUser.id },
+      orderBy: { createdAt: 'desc' },
+      include: { sourceImages: true },
+    }),
+  )
 
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
@@ -45,4 +49,5 @@ export default async function ProjectsPage() {
       </div>
     </main>
   )
+  })
 }

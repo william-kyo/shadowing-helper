@@ -7,6 +7,7 @@ import { LogoutButton } from '@/components/auth/logout-button'
 import { ProjectSegmentWorkspace } from '@/components/project/project-segment-workspace'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { measureStep, withPagePerf } from '@/lib/perf'
 
 type ProjectDetailPageProps = {
   params: Promise<{
@@ -15,24 +16,27 @@ type ProjectDetailPageProps = {
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
-  const currentUser = await requireAppUser()
-  const { projectId } = await params
-  const project = await db.project.findFirst({
-    where: { id: projectId, userId: currentUser.id },
-    include: {
-      sourceImages: {
-        orderBy: { sortOrder: 'asc' },
-      },
-      segments: {
-        orderBy: { index: 'asc' },
-        include: {
-          progress: {
-            orderBy: { stage: 'asc' },
+  return withPagePerf('/projects/[projectId]', async () => {
+  const currentUser = await measureStep('auth.require_user', () => requireAppUser())
+  const { projectId } = await measureStep('route.params', () => params)
+  const project = await measureStep('db.project.find_detail', () =>
+    db.project.findFirst({
+      where: { id: projectId, userId: currentUser.id },
+      include: {
+        sourceImages: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        segments: {
+          orderBy: { index: 'asc' },
+          include: {
+            progress: {
+              orderBy: { stage: 'asc' },
+            },
           },
         },
       },
-    },
-  })
+    }),
+  )
 
   if (!project) {
     notFound()
@@ -100,4 +104,5 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </div>
     </main>
   )
+  })
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
@@ -9,14 +10,15 @@ import {
 } from '@/lib/validations/project'
 
 export async function POST(request: Request) {
+  return withApiPerf('/api/projects', request, async () => {
   try {
-    const { user, response } = await requireAppUserForApi()
+    const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
     if (response || !user) {
       return response
     }
 
-    const json = await request.json()
-    const titleResult = createProjectUploadSchema.safeParse(json)
+    const json = await measureStep('request.json', () => request.json())
+    const titleResult = await measureStep('validation.project_create', async () => createProjectUploadSchema.safeParse(json))
 
     if (!titleResult.success) {
       return NextResponse.json(
@@ -52,22 +54,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '画像アップロード先が不正です。' }, { status: 400 })
     }
 
-    const project = await db.project.create({
-      data: {
-        id: titleResult.data.projectId,
-        userId: user.id,
-        title: titleResult.data.title,
-        audioPath: titleResult.data.audioPath,
-        audioOriginalName: titleResult.data.audioOriginalName,
-        audioMimeType: titleResult.data.audioMimeType,
-        sourceImages: {
-          create: titleResult.data.sourceImages,
+    addPerfAttrs({ 'project.source_image_count': titleResult.data.sourceImages.length })
+
+    const project = await measureStep('db.project.create_with_images', () =>
+      db.project.create({
+        data: {
+          id: titleResult.data.projectId,
+          userId: user.id,
+          title: titleResult.data.title,
+          audioPath: titleResult.data.audioPath,
+          audioOriginalName: titleResult.data.audioOriginalName,
+          audioMimeType: titleResult.data.audioMimeType,
+          sourceImages: {
+            create: titleResult.data.sourceImages,
+          },
         },
-      },
-      include: {
-        sourceImages: true,
-      },
-    })
+        include: {
+          sourceImages: true,
+        },
+      }),
+    )
 
     return NextResponse.json({
       project: {
@@ -86,4 +92,5 @@ export async function POST(request: Request) {
       { status: 500 },
     )
   }
+  })
 }

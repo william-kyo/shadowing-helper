@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "perf:summary": "node scripts/perf-summary.mjs",
     "migrate:legacy-projects": "node scripts/assign-legacy-projects.mjs",
     "storage:migrate-local": "node --env-file=.env scripts/migrate-local-storage-to-supabase.mjs",
     "prisma:generate": "prisma generate",
