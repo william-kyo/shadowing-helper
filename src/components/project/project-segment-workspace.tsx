@@ -131,7 +131,7 @@ export function ProjectSegmentWorkspace({
                   )}
                 </div>
                 <div className="mt-1 text-sm text-zinc-600">
-                  {segment.startMs ?? 0}ms - {segment.endMs ?? 0}ms
+                  {Math.round((segment.startMs ?? 0) / 1000)}s – {Math.round((segment.endMs ?? 0) / 1000)}s
                 </div>
               </Link>
               <button
