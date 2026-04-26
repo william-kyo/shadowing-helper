@@ -1,9 +1,18 @@
+'use server'
+
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
+
+// Cached in memory for the lifetime of the serverless function instance.
+// jose re-fetches automatically on unknown kid (key rotation).
+const jwks = createRemoteJWKSet(
+  new URL(`${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
+)
 
 function isSupabaseAuthCookie(name: string) {
   return name.includes('-auth-token')
@@ -25,39 +34,60 @@ async function clearSupabaseAuthCookies() {
   }
 }
 
+function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): string | null {
+  // Supabase SSR stores: base64-<base64url(JSON)> or plain JSON
+  // It may also chunk large values across multiple cookies with suffixes .0, .1, ...
+  const authCookies = cookieStore
+    .getAll()
+    .filter((c) => isSupabaseAuthCookie(c.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  if (authCookies.length === 0) return null
+
+  // Reassemble chunked cookies
+  const raw = authCookies.map((c) => c.value).join('')
+
+  try {
+    const jsonStr = raw.startsWith('base64-')
+      ? Buffer.from(raw.slice(7), 'base64').toString('utf-8')
+      : raw
+    const parsed = JSON.parse(jsonStr) as { access_token?: string }
+    return parsed.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
 async function getAuthenticatedSupabaseUser() {
   const cookieStore = await cookies()
-  if (!cookieStore.getAll().some((cookie) => isSupabaseAuthCookie(cookie.name))) {
-    return null
-  }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+  const accessToken = extractAccessToken(cookieStore)
+  if (!accessToken) return null
 
-  if (error) {
-    if (error.message.toLowerCase().includes('refresh token')) {
+  try {
+    const { payload } = await jwtVerify(accessToken, jwks, {
+      issuer: `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`,
+    })
+
+    const sub = payload.sub
+    const email = payload.email as string | undefined
+
+    if (!sub || !email) return null
+
+    return { id: sub, email }
+  } catch (err) {
+    // Expired or invalid token — clear cookies so the client can re-authenticate
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.includes('expired') || message.includes('invalid')) {
       await clearSupabaseAuthCookies()
-      return null
     }
-
     return null
   }
-
-  if (!user?.email) {
-    return null
-  }
-
-  return user
 }
 
 export async function getCurrentAppUser() {
   const supabaseUser = await getAuthenticatedSupabaseUser()
-  if (!supabaseUser?.email) {
-    return null
-  }
+  if (!supabaseUser) return null
 
   const appUser = await db.user.upsert({
     where: { supabaseUserId: supabaseUser.id },
