@@ -1,7 +1,7 @@
 'use client'
 
 import type { ChangeEvent } from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type SegmentAudioPlayerProps = {
   src: string
@@ -63,6 +63,28 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
     setCurrentTime(0)
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        togglePlay()
+      } else if (e.key === 'j') {
+        e.preventDefault()
+        seek(-3)
+      } else if (e.key === 'k') {
+        e.preventDefault()
+        seek(3)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing])
+
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   const handleProgressChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -93,25 +115,27 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
       </div>
 
       {/* controls */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-12">
         {/* rewind 3s */}
         <button
           onClick={() => seek(-3)}
-          className="flex items-center gap-1 rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
-          title="3秒戻る"
+          className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+          title="3秒戻る (j)"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M11 19l-7-7 7-7" />
-            <path d="M22 19l-7-7 7-7" />
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
+            <g transform="rotate(45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </g>
+            <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
           </svg>
-          3秒
         </button>
 
         {/* play/pause */}
         <button
           onClick={togglePlay}
           className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700"
-          title={playing ? '一時停止' : '再生'}
+          title={playing ? '一時停止 (Space)' : '再生 (Space)'}
         >
           {playing ? (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -128,13 +152,15 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
         {/* forward 3s */}
         <button
           onClick={() => seek(3)}
-          className="flex items-center gap-1 rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
-          title="3秒進む"
+          className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+          title="3秒進む (k)"
         >
-          3秒
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M13 5l7 7-7 7" />
-            <path d="M2 5l7 7-7 7" />
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
+            <g transform="rotate(-45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+            </g>
+            <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
           </svg>
         </button>
       </div>
