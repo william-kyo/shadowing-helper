@@ -26,7 +26,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   const project = await measureStep('db.project.find_segment_page', () =>
     db.project.findFirst({
       where: { id: projectId, userId: currentUser.id },
-      select: { id: true, title: true },
+      select: { id: true, title: true, createdAt: true },
     }),
   )
 
@@ -60,6 +60,34 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         where: { projectId, index: { equals: segment.index + 1 } },
         select: { id: true, title: true, index: true },
       }),
+    ]),
+  )
+
+  // Fetch adjacent projects only when at the boundary of the current project
+  const [prevProjectEntry, nextProjectEntry] = await measureStep('db.project.find_adjacent', () =>
+    Promise.all([
+      prevSegment
+        ? Promise.resolve(null)
+        : db.project.findFirst({
+            where: { userId: currentUser.id, createdAt: { lt: project.createdAt } },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              title: true,
+              segments: { orderBy: { index: 'desc' }, take: 1, select: { id: true, title: true, index: true } },
+            },
+          }),
+      nextSegment
+        ? Promise.resolve(null)
+        : db.project.findFirst({
+            where: { userId: currentUser.id, createdAt: { gt: project.createdAt } },
+            orderBy: { createdAt: 'asc' },
+            select: {
+              id: true,
+              title: true,
+              segments: { orderBy: { index: 'asc' }, take: 1, select: { id: true, title: true, index: true } },
+            },
+          }),
     ]),
   )
 
@@ -113,6 +141,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
 
         {/* prev / next navigation */}
         <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+          {/* left side */}
           {prevSegment ? (
             <Link
               href={`/projects/${projectId}/segments/${prevSegment.id}`}
@@ -121,9 +150,30 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               <span className="text-zinc-400">←</span>
               <span className="max-w-32 truncate">{prevSegment.title ?? `Segment ${prevSegment.index + 1}`}</span>
             </Link>
+          ) : prevProjectEntry ? (
+            <Link
+              href={
+                prevProjectEntry.segments[0]
+                  ? `/projects/${prevProjectEntry.id}/segments/${prevProjectEntry.segments[0].id}`
+                  : `/projects/${prevProjectEntry.id}`
+              }
+              className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:border-indigo-500 hover:bg-indigo-100"
+            >
+              <span>←</span>
+              <span className="max-w-40 truncate">{prevProjectEntry.title}</span>
+              <span className="shrink-0 text-xs text-indigo-400">前のプロジェクト</span>
+            </Link>
           ) : (
-            <span className="text-sm text-zinc-300">前のセグメント</span>
+            <Link
+              href="/projects"
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+            >
+              <span>＋</span>
+              <span>プロジェクトを追加</span>
+            </Link>
           )}
+
+          {/* right side */}
           {nextSegment ? (
             <Link
               href={`/projects/${projectId}/segments/${nextSegment.id}`}
@@ -132,8 +182,27 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               <span className="max-w-32 truncate">{nextSegment.title ?? `Segment ${nextSegment.index + 1}`}</span>
               <span className="text-zinc-400">→</span>
             </Link>
+          ) : nextProjectEntry ? (
+            <Link
+              href={
+                nextProjectEntry.segments[0]
+                  ? `/projects/${nextProjectEntry.id}/segments/${nextProjectEntry.segments[0].id}`
+                  : `/projects/${nextProjectEntry.id}`
+              }
+              className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:border-indigo-500 hover:bg-indigo-100"
+            >
+              <span className="shrink-0 text-xs text-indigo-400">次のプロジェクト</span>
+              <span className="max-w-40 truncate">{nextProjectEntry.title}</span>
+              <span>→</span>
+            </Link>
           ) : (
-            <span className="text-sm text-zinc-300">次のセグメント</span>
+            <Link
+              href="/projects"
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+            >
+              <span>プロジェクトを追加</span>
+              <span>＋</span>
+            </Link>
           )}
         </nav>
       </div>
