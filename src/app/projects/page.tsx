@@ -15,7 +15,15 @@ export default async function ProjectsPage() {
     db.project.findMany({
       where: { userId: currentUser.id },
       orderBy: { createdAt: 'desc' },
-      include: { sourceImages: true },
+      include: {
+        sourceImages: true,
+        segments: {
+          select: {
+            id: true,
+            progress: { select: { stage: true, status: true } },
+          },
+        },
+      },
     }),
   )
 
@@ -39,9 +47,10 @@ export default async function ProjectsPage() {
             title: p.title,
             audioOriginalName: p.audioOriginalName,
             sourceImages: p.sourceImages,
-            status: p.status,
             createdAt: p.createdAt,
-            rawExtractedText: p.rawExtractedText,
+            segments: p.segments.map((s) => ({
+              progress: s.progress,
+            })),
           }))}
         />
 

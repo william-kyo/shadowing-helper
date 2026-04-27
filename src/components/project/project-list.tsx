@@ -4,14 +4,43 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
+type SegmentSummary = {
+  progress: { stage: number; status: string }[]
+}
+
 type Project = {
   id: string
   title: string
   audioOriginalName: string
   sourceImages: { id: string }[]
-  status: string
   createdAt: Date
-  rawExtractedText: string | null
+  segments: SegmentSummary[]
+}
+
+function computeProjectStatus(segments: SegmentSummary[]): {
+  label: string
+  detail: string
+  color: 'gray' | 'indigo' | 'green'
+} {
+  if (segments.length === 0) {
+    return { label: '未着手', detail: 'セグメントなし', color: 'gray' }
+  }
+
+  const completedCount = segments.filter((s) =>
+    [1, 2, 3, 4, 5].every((stage) =>
+      s.progress.some((p) => p.stage === stage && p.status === 'completed'),
+    ),
+  ).length
+
+  if (completedCount === segments.length) {
+    return { label: '完了', detail: `${segments.length} / ${segments.length} 完了`, color: 'green' }
+  }
+
+  return {
+    label: '進行中',
+    detail: `${completedCount} / ${segments.length} 完了`,
+    color: 'indigo',
+  }
 }
 
 async function deleteProject(projectId: string): Promise<{ success: boolean; error?: string }> {
@@ -27,11 +56,18 @@ type ProjectCardProps = {
   project: Project
 }
 
+const statusStyles = {
+  gray: 'bg-zinc-100 text-zinc-500',
+  indigo: 'bg-indigo-50 text-indigo-600',
+  green: 'bg-green-50 text-green-700',
+}
+
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isDeleting, setIsDeleting] = useState(false)
   const projectHref = `/projects/${project.id}`
+  const { label, detail, color } = computeProjectStatus(project.segments)
 
   function handleDelete() {
     if (!confirm(`「${project.title}」を削除しますか？音声・画像・セグメントもすべて削除されます。`)) {
@@ -64,8 +100,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </p>
         </div>
         <div className="relative z-10 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-600">
-            {project.status}
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[color]}`}>
+            {label}
           </span>
           <Link
             href={projectHref}
@@ -82,18 +118,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </button>
         </div>
       </div>
-      <dl className="mt-5 grid gap-3 text-sm text-zinc-600 sm:grid-cols-3">
+      <dl className="mt-5 grid gap-3 text-sm text-zinc-600 sm:grid-cols-2">
         <div>
           <dt className="font-medium text-zinc-900">作成日</dt>
           <dd suppressHydrationWarning>{new Date(project.createdAt).toLocaleString('ja-JP')}</dd>
         </div>
         <div>
-          <dt className="font-medium text-zinc-900">抽出テキスト</dt>
-          <dd>{project.rawExtractedText ? 'あり' : '未処理'}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-zinc-900">次フェーズ</dt>
-          <dd>OCR / 段落分割 / 学習画面</dd>
+          <dt className="font-medium text-zinc-900">進捗</dt>
+          <dd>{detail}</dd>
         </div>
       </dl>
     </article>

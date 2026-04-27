@@ -42,6 +42,21 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound()
   }
 
+  const totalSegments = project.segments.length
+  const completedSegments = project.segments.filter((s) =>
+    [1, 2, 3, 4, 5].every((stage) =>
+      s.progress.some((p) => p.stage === stage && p.status === 'completed'),
+    ),
+  ).length
+  const projectStatusLabel =
+    totalSegments === 0
+      ? '未着手'
+      : completedSegments === totalSegments
+        ? '完了'
+        : '進行中'
+  const projectStatusDetail =
+    totalSegments === 0 ? 'セグメントなし' : `${completedSegments} / ${totalSegments} 完了`
+
   const [prevProject, nextProject] = await measureStep('db.project.find_adjacent', () =>
     Promise.all([
       db.project.findFirst({
@@ -64,7 +79,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <div>
             <p className="text-sm font-medium text-indigo-600">Project detail</p>
             <h1 className="text-3xl font-semibold tracking-tight">{project.title}</h1>
-            <p className="mt-2 text-sm text-zinc-500">状態: {project.status}</p>
+            <p className="mt-2 text-sm text-zinc-500">{projectStatusLabel} · {projectStatusDetail}</p>
           </div>
           <div className="flex flex-wrap gap-3 text-sm">
             <Link
