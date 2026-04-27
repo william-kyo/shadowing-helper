@@ -67,6 +67,11 @@ export function SegmentStageWorkspace({
       if (!res.ok) {
         throw new Error('Failed to update stage status')
       }
+
+      // Auto-advance to next stage when marking completed, unless already on stage 5
+      if (nextStatus === 'completed' && stage < 5) {
+        setSelectedStage(stage + 1)
+      }
     } catch {
       startTransition(() => {
         setProgress((prev) => {
