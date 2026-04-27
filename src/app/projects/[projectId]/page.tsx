@@ -42,6 +42,21 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound()
   }
 
+  const [prevProject, nextProject] = await measureStep('db.project.find_adjacent', () =>
+    Promise.all([
+      db.project.findFirst({
+        where: { userId: currentUser.id, createdAt: { lt: project.createdAt } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, title: true },
+      }),
+      db.project.findFirst({
+        where: { userId: currentUser.id, createdAt: { gt: project.createdAt } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, title: true },
+      }),
+    ]),
+  )
+
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
       <div className="mx-auto grid max-w-5xl gap-6">
@@ -101,6 +116,43 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             </div>
           )}
         </section>
+        {/* prev / next project navigation */}
+        <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+          {prevProject ? (
+            <Link
+              href={`/projects/${prevProject.id}`}
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+            >
+              <span className="text-zinc-400">←</span>
+              <span className="max-w-48 truncate">{prevProject.title}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/projects"
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+            >
+              <span>＋</span>
+              <span>プロジェクトを追加</span>
+            </Link>
+          )}
+          {nextProject ? (
+            <Link
+              href={`/projects/${nextProject.id}`}
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+            >
+              <span className="max-w-48 truncate">{nextProject.title}</span>
+              <span className="text-zinc-400">→</span>
+            </Link>
+          ) : (
+            <Link
+              href="/projects"
+              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+            >
+              <span>プロジェクトを追加</span>
+              <span>＋</span>
+            </Link>
+          )}
+        </nav>
       </div>
     </main>
   )
