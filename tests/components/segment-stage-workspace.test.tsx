@@ -23,11 +23,11 @@ describe('SegmentStageWorkspace', () => {
       />,
     )
 
-    expect(screen.getByText('Stage 2 — シャドウ默読')).toBeInTheDocument()
+    expect(screen.getByText(/Stage 2 — サイレント・シャドーイング/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByTitle('Stage 4: not_started'))
+    fireEvent.click(screen.getByTitle('Stage 4 スクリプト付きシャドーイング'))
 
-    expect(screen.getByText('Stage 4 — スクリプト付きシャドウ')).toBeInTheDocument()
+    expect(screen.getByText(/Stage 4 — スクリプト付きシャドーイング/)).toBeInTheDocument()
   })
 
   it('updates the selected stage status from the panel header', async () => {
@@ -79,7 +79,7 @@ describe('SegmentStageWorkspace', () => {
 
     expect(await screen.findByText('保存しました')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByTitle('Stage 2: not_started'))
+    fireEvent.click(screen.getByTitle('Stage 2 サイレント・シャドーイング'))
 
     expect(screen.getByDisplayValue('saved script')).toBeInTheDocument()
     expect(screen.getByDisplayValue('saved notes')).toBeInTheDocument()

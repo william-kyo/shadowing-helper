@@ -26,6 +26,7 @@ vi.mock('@/lib/db', () => ({
           rawExtractedText: null,
           createdAt: new Date('2026-04-21T13:00:00.000Z'),
           sourceImages: [{ id: 'img-1' }],
+          segments: [],
         },
       ]),
     },
