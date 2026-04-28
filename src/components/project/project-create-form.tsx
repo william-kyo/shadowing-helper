@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useRef, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -34,11 +34,19 @@ export function ProjectCreateForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<FormValues>()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const audioRef = useRef<HTMLInputElement | null>(null)
+  const imagesRef = useRef<HTMLInputElement | null>(null)
+  const watchedAudio = watch('audio')
+  const watchedImages = watch('images')
+  const audioFileName = watchedAudio?.[0]?.name ?? null
+  const imageFileNames = watchedImages ? Array.from(watchedImages).map((f) => f.name) : []
 
   const acceptedAudio = useMemo(() => acceptedAudioMimeTypes.join(','), [])
   const acceptedImages = useMemo(() => acceptedImageMimeTypes.join(','), [])
@@ -195,17 +203,31 @@ export function ProjectCreateForm() {
           type="file"
           accept={acceptedAudio}
           aria-invalid={errors.audio ? 'true' : 'false'}
-          className="block rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm"
-          {...register('audio', {
-            required: '音声ファイルを選択してください。',
-          })}
+          className="sr-only"
+          {...register('audio', { required: '音声ファイルを選択してください。' })}
+          ref={(el) => {
+            register('audio', { required: '音声ファイルを選択してください。' }).ref(el)
+            audioRef.current = el
+          }}
         />
-        <p className="text-xs text-zinc-500">
-          mp3 / wav / m4a / webm / ogg を想定。まずはローカル保存のみ行います。
-        </p>
-        {errors.audio ? (
-          <p className="text-sm text-red-600">{errors.audio.message as string}</p>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => audioRef.current?.click()}
+          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm transition hover:border-zinc-500 hover:bg-zinc-100"
+        >
+          {audioFileName ? (
+            <span className="truncate text-zinc-800">{audioFileName}</span>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span className="text-zinc-400">ファイルを選択</span>
+            </>
+          )}
+        </button>
+        <p className="text-xs text-zinc-500">mp3 / wav / m4a / webm / ogg を想定。まずはローカル保存のみ行います。</p>
+        {errors.audio ? <p className="text-sm text-red-600">{errors.audio.message as string}</p> : null}
       </div>
 
       <div className="grid gap-2">
@@ -218,15 +240,31 @@ export function ProjectCreateForm() {
           multiple
           accept={acceptedImages}
           aria-invalid={errors.images ? 'true' : 'false'}
-          className="block rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm"
+          className="sr-only"
           {...register('images')}
+          ref={(el) => {
+            register('images').ref(el)
+            imagesRef.current = el
+          }}
         />
-        <p className="text-xs text-zinc-500">
-          png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。
-        </p>
-        {errors.images ? (
-          <p className="text-sm text-red-600">{errors.images.message as string}</p>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => imagesRef.current?.click()}
+          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm transition hover:border-zinc-500 hover:bg-zinc-100"
+        >
+          {imageFileNames.length > 0 ? (
+            <span className="truncate text-zinc-800">{imageFileNames.join('、')}</span>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span className="text-zinc-400">ファイルを選択（複数可）</span>
+            </>
+          )}
+        </button>
+        <p className="text-xs text-zinc-500">png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。</p>
+        {errors.images ? <p className="text-sm text-red-600">{errors.images.message as string}</p> : null}
       </div>
 
       {errorMessage ? (
