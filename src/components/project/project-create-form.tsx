@@ -185,9 +185,7 @@ export function ProjectCreateForm() {
           placeholder="例: NHK ニュース shadowing 01"
           aria-invalid={errors.title ? 'true' : 'false'}
           className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
-          {...register('title', {
-            required: 'プロジェクト名を入力してください。',
-          })}
+          {...register('title')}
         />
         {errors.title ? (
           <p className="text-sm text-red-600">{errors.title.message}</p>

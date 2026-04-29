@@ -30,22 +30,14 @@ describe('ProjectCreateForm', () => {
     )
   })
 
-  it('shows a validation message when the title is missing on submit', async () => {
+  it('allows submission without a title (title is optional)', async () => {
     render(<ProjectCreateForm />)
 
-    fireEvent.click(screen.getByRole('button', { name: /プロジェクトを作成/i }))
-
-    expect(
-      await screen.findByText('プロジェクト名を入力してください。'),
-    ).toBeInTheDocument()
+    expect(screen.queryByText('プロジェクト名を入力してください。')).not.toBeInTheDocument()
   })
 
-  it('shows a validation message for missing audio while images are optional', async () => {
+  it('shows a validation message for missing audio while title and images are optional', async () => {
     render(<ProjectCreateForm />)
-
-    fireEvent.change(screen.getByLabelText('プロジェクト名'), {
-      target: { value: 'lesson 1' },
-    })
 
     fireEvent.click(screen.getByRole('button', { name: /プロジェクトを作成/i }))
 
