@@ -3,11 +3,17 @@ import { NextResponse } from 'next/server'
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
+import { transcribeAudioWithSegments } from '@/lib/groq'
+import { analyzeTopicBoundaries } from '@/lib/segment-analysis'
+import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
   createProjectUploadSchema,
 } from '@/lib/validations/project'
+import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import path from 'node:path'
 
 export async function POST(request: Request) {
   return withApiPerf('/api/projects', request, async () => {
@@ -74,6 +80,87 @@ export async function POST(request: Request) {
         },
       }),
     )
+
+    void (async () => {
+      try {
+        const supabase = await createSupabaseServerClient()
+        const audioBuffer = Buffer.from(await downloadStorageObject({
+          client: supabase,
+          objectKey: titleResult.data.audioPath,
+        }))
+
+        const whisperResponse = await transcribeAudioWithSegments({
+          audioBuffer,
+          fileName: titleResult.data.audioOriginalName,
+          mimeType: titleResult.data.audioMimeType,
+        })
+
+        const topicSegments = await analyzeTopicBoundaries(whisperResponse.segments)
+        const resolvedSegments = topicSegments
+          .map((seg) => {
+            const startWhisperSeg = whisperResponse.segments[seg.startIndex]
+            const endWhisperSeg = whisperResponse.segments[seg.endIndex]
+            if (!startWhisperSeg || !endWhisperSeg) {
+              console.warn(`[auto-segment] Invalid indices ${seg.startIndex}-${seg.endIndex} for ${whisperResponse.segments.length} segments`)
+              return null
+            }
+            return {
+              title: seg.title,
+              startSeconds: startWhisperSeg.start,
+              endSeconds: endWhisperSeg.end,
+              text: seg.text,
+            }
+          })
+          .filter(Boolean) as { title: string; startSeconds: number; endSeconds: number; text: string }[]
+
+        const filteredSegments = resolvedSegments.filter(
+          (seg) => (seg.endSeconds - seg.startSeconds) >= 3,
+        )
+        const limitedSegments = filteredSegments.slice(0, 20)
+
+        const storagePaths = getProjectStoragePaths(user.supabaseUserId, project.id)
+        const baseName = path.basename(titleResult.data.audioOriginalName, path.extname(titleResult.data.audioOriginalName))
+
+        await Promise.all(
+          limitedSegments.map(async (seg, index: number) => {
+            const storedName = createStoredFileName(`${baseName}_segment_${index + 1}${path.extname(titleResult.data.audioOriginalName)}`)
+            const audioPath = buildStorageObjectKey(storagePaths.audioDir, storedName)
+
+            const segmentAudioBuffer = await extractAudioSegmentFromBuffer({
+              inputBuffer: audioBuffer,
+              inputExtension: path.extname(titleResult.data.audioOriginalName),
+              outputExtension: path.extname(storedName),
+              startSeconds: seg.startSeconds,
+              endSeconds: seg.endSeconds,
+            })
+
+            await uploadBufferToStorage({
+              client: supabase,
+              objectKey: audioPath,
+              buffer: segmentAudioBuffer,
+              contentType: titleResult.data.audioMimeType,
+            })
+
+            await db.segment.create({
+              data: {
+                projectId: project.id,
+                index,
+                title: seg.title,
+                text: seg.text,
+                audioPath,
+                startMs: Math.round(seg.startSeconds * 1000),
+                endMs: Math.round(seg.endSeconds * 1000),
+                progress: {
+                  create: Array.from({ length: 5 }, (_, idx) => ({ stage: idx + 1 })),
+                },
+              },
+            })
+          }),
+        )
+      } catch (err) {
+        console.error('[auto-segment] Failed during project creation for project', project.id, err)
+      }
+    })()
 
     return NextResponse.json({
       project: {

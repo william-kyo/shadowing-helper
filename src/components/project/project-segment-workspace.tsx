@@ -36,6 +36,7 @@ export function ProjectSegmentWorkspace({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [segments, setSegments] = useState(initialSegments)
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(initialSegments.length === 0)
+  const [isAutoSegmenting, setIsAutoSegmenting] = useState(false)
 
   function handleDeleteSegment(segmentId: string) {
     const seg = segments.find((s) => s.id === segmentId)
@@ -53,6 +54,30 @@ export function ProjectSegmentWorkspace({
         }
       })
       .catch(() => alert('削除に失敗しました。'))
+  }
+
+  function handleAutoSegment() {
+    if (!confirm('AI が音声を自動分割します。既存のセグメントは削除されません。続行しますか？')) {
+      return
+    }
+    setIsAutoSegmenting(true)
+    fetch(`/api/projects/${projectId}/auto-segment`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ minDurationSeconds: 3, maxSegments: 20 }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          alert(data.error)
+        } else {
+          alert(data.message ?? `${data.segments?.length ?? 0}件のセグメントを作成しました`)
+          setSegments(data.segments)
+          router.refresh()
+        }
+      })
+      .catch(() => alert('自動分割に失敗しました。'))
+      .finally(() => setIsAutoSegmenting(false))
   }
 
   const createSegmentForm = isCreateFormOpen ? (
@@ -169,6 +194,24 @@ export function ProjectSegmentWorkspace({
 
       {segments.length === 0 ? createSegmentForm : segmentListSection}
       {segments.length === 0 ? segmentListSection : createSegmentForm}
+
+      <div className="flex justify-center pt-2">
+        <button
+          type="button"
+          onClick={handleAutoSegment}
+          disabled={isAutoSegmenting}
+          className="inline-flex items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-3 text-sm font-medium text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isAutoSegmenting ? (
+            <>
+              <span className="mr-2 inline-block animate-spin">⟳</span>
+              分割中...
+            </>
+          ) : (
+            'AI で自動分割'
+          )}
+        </button>
+      </div>
     </section>
   )
 }
