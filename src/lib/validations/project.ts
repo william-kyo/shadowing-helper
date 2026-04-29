@@ -23,8 +23,8 @@ export const createProjectSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(1, 'タイトルを入力してください。')
-    .max(120, 'タイトルは120文字以内で入力してください。'),
+    .max(120, 'タイトルは120文字以内で入力してください。')
+    .optional(),
 })
 
 export const createProjectUploadSchema = z.object({

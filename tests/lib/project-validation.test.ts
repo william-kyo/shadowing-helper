@@ -11,11 +11,17 @@ describe('createProjectSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects an empty title', () => {
+  it('accepts an empty title (title is optional)', () => {
+    const result = createProjectSchema.safeParse({})
+
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts an empty string that gets trimmed to nothing (treated as optional)', () => {
     const result = createProjectSchema.safeParse({
       title: '',
     })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
   })
 })

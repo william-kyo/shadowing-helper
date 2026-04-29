@@ -62,12 +62,15 @@ export async function POST(request: Request) {
 
     addPerfAttrs({ 'project.source_image_count': titleResult.data.sourceImages.length })
 
+    const projectTitle = titleResult.data.title?.trim()
+      || path.basename(titleResult.data.audioOriginalName, path.extname(titleResult.data.audioOriginalName))
+
     const project = await measureStep('db.project.create_with_images', () =>
       db.project.create({
         data: {
           id: titleResult.data.projectId,
           userId: user.id,
-          title: titleResult.data.title,
+          title: projectTitle,
           audioPath: titleResult.data.audioPath,
           audioOriginalName: titleResult.data.audioOriginalName,
           audioMimeType: titleResult.data.audioMimeType,
