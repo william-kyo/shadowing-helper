@@ -29,6 +29,8 @@ model Project {
   audioOriginalName String
   audioMimeType     String
   audioDurationMs   Int?
+  audioFileHash     String?
+  audioPcmHash      String?
   status            ProjectStatus  @default(draft)
   rawExtractedText  String?
   createdAt         DateTime       @default(now())
@@ -38,6 +40,8 @@ model Project {
   segments          Segment[]
 
   @@index([userId, createdAt])
+  @@index([audioFileHash])
+  @@index([audioPcmHash])
 }
 
 model User {

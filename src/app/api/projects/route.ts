@@ -6,6 +6,7 @@ import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { analyzeTopicBoundaries } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
+import { computePcmHash } from '@/lib/audio-fingerprint'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
           audioPath: titleResult.data.audioPath,
           audioOriginalName: titleResult.data.audioOriginalName,
           audioMimeType: titleResult.data.audioMimeType,
+          audioFileHash: titleResult.data.audioFileHash,
           sourceImages: {
             create: titleResult.data.sourceImages,
           },
@@ -92,34 +94,92 @@ export async function POST(request: Request) {
           objectKey: titleResult.data.audioPath,
         }))
 
-        const whisperResponse = await transcribeAudioWithSegments({
-          audioBuffer,
-          fileName: titleResult.data.audioOriginalName,
-          mimeType: titleResult.data.audioMimeType,
+        const inputExtension = path.extname(titleResult.data.audioOriginalName)
+
+        let cachedSegments: { title: string; startSeconds: number; endSeconds: number; text: string }[] | null = null
+        let pcmHash: string | null = null
+
+        if (titleResult.data.audioFileHash) {
+          const fileHashMatch = await db.project.findFirst({
+            where: {
+              audioFileHash: titleResult.data.audioFileHash,
+              id: { not: project.id },
+              segments: { some: {} },
+            },
+            include: { segments: { orderBy: { index: 'asc' } } },
+          })
+          if (fileHashMatch && fileHashMatch.segments.length > 0) {
+            cachedSegments = fileHashMatch.segments.map((s) => ({
+              title: s.title ?? '',
+              text: s.text,
+              startSeconds: (s.startMs ?? 0) / 1000,
+              endSeconds: (s.endMs ?? 0) / 1000,
+            }))
+            pcmHash = fileHashMatch.audioPcmHash
+            console.log(`[auto-segment] Reusing ${cachedSegments.length} segments via file hash from project ${fileHashMatch.id}`)
+          }
+        }
+
+        if (!cachedSegments) {
+          pcmHash = await computePcmHash({ inputBuffer: audioBuffer, inputExtension })
+          const pcmMatch = await db.project.findFirst({
+            where: {
+              audioPcmHash: pcmHash,
+              id: { not: project.id },
+              segments: { some: {} },
+            },
+            include: { segments: { orderBy: { index: 'asc' } } },
+          })
+          if (pcmMatch && pcmMatch.segments.length > 0) {
+            cachedSegments = pcmMatch.segments.map((s) => ({
+              title: s.title ?? '',
+              text: s.text,
+              startSeconds: (s.startMs ?? 0) / 1000,
+              endSeconds: (s.endMs ?? 0) / 1000,
+            }))
+            console.log(`[auto-segment] Reusing ${cachedSegments.length} segments via pcm hash from project ${pcmMatch.id}`)
+          }
+        }
+
+        await db.project.update({
+          where: { id: project.id },
+          data: { audioPcmHash: pcmHash },
         })
 
-        const topicSegments = await analyzeTopicBoundaries(whisperResponse.segments)
-        const resolvedSegments = topicSegments
-          .map((seg) => {
-            const startWhisperSeg = whisperResponse.segments[seg.startIndex]
-            const endWhisperSeg = whisperResponse.segments[seg.endIndex]
-            if (!startWhisperSeg || !endWhisperSeg) {
-              console.warn(`[auto-segment] Invalid indices ${seg.startIndex}-${seg.endIndex} for ${whisperResponse.segments.length} segments`)
-              return null
-            }
-            return {
-              title: seg.title,
-              startSeconds: startWhisperSeg.start,
-              endSeconds: endWhisperSeg.end,
-              text: seg.text,
-            }
-          })
-          .filter(Boolean) as { title: string; startSeconds: number; endSeconds: number; text: string }[]
+        let limitedSegments: { title: string; startSeconds: number; endSeconds: number; text: string }[]
 
-        const filteredSegments = resolvedSegments.filter(
-          (seg) => (seg.endSeconds - seg.startSeconds) >= 3,
-        )
-        const limitedSegments = filteredSegments.slice(0, 20)
+        if (cachedSegments) {
+          limitedSegments = cachedSegments
+        } else {
+          const whisperResponse = await transcribeAudioWithSegments({
+            audioBuffer,
+            fileName: titleResult.data.audioOriginalName,
+            mimeType: titleResult.data.audioMimeType,
+          })
+
+          const topicSegments = await analyzeTopicBoundaries(whisperResponse.segments)
+          const resolvedSegments = topicSegments
+            .map((seg) => {
+              const startWhisperSeg = whisperResponse.segments[seg.startIndex]
+              const endWhisperSeg = whisperResponse.segments[seg.endIndex]
+              if (!startWhisperSeg || !endWhisperSeg) {
+                console.warn(`[auto-segment] Invalid indices ${seg.startIndex}-${seg.endIndex} for ${whisperResponse.segments.length} segments`)
+                return null
+              }
+              return {
+                title: seg.title,
+                startSeconds: startWhisperSeg.start,
+                endSeconds: endWhisperSeg.end,
+                text: seg.text,
+              }
+            })
+            .filter(Boolean) as { title: string; startSeconds: number; endSeconds: number; text: string }[]
+
+          const filteredSegments = resolvedSegments.filter(
+            (seg) => (seg.endSeconds - seg.startSeconds) >= 3,
+          )
+          limitedSegments = filteredSegments.slice(0, 20)
+        }
 
         const storagePaths = getProjectStoragePaths(user.supabaseUserId, project.id)
         const baseName = path.basename(titleResult.data.audioOriginalName, path.extname(titleResult.data.audioOriginalName))

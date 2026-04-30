@@ -33,6 +33,7 @@ export const createProjectUploadSchema = z.object({
   audioPath: z.string().min(1),
   audioOriginalName: z.string().min(1),
   audioMimeType: z.string().min(1),
+  audioFileHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   sourceImages: z.array(z.object({
     imagePath: z.string().min(1),
     originalName: z.string().min(1),

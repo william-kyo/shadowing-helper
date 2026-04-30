@@ -15,7 +15,6 @@ Implemented in this phase:
 
 Planned next:
 - OCR pipeline for uploaded images
-- LLM-based segment extraction using the Raspberry Pi GPT 5.4 setup
 - Segment timing editor
 - Five stage study UI
 - Recording workflow for stage 5

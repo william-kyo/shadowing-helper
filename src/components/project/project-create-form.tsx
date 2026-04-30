@@ -88,6 +88,17 @@ export function ProjectCreateForm() {
         const audioStoredName = createStoredFileName(audioFile.name)
         const audioPath = buildStorageObjectKey(storagePaths.audioDir, audioStoredName)
 
+        let audioFileHash: string | undefined
+        try {
+          const audioBytes = await audioFile.arrayBuffer()
+          const digest = await crypto.subtle.digest('SHA-256', audioBytes)
+          audioFileHash = Array.from(new Uint8Array(digest))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+        } catch (hashError) {
+          console.warn('[project-create] failed to compute audio file hash', hashError)
+        }
+
         const { error: audioUploadError } = await supabase.storage.from('app-media').upload(audioPath, audioFile, {
           contentType: audioFile.type,
           upsert: true,
@@ -139,6 +150,7 @@ export function ProjectCreateForm() {
             audioPath,
             audioOriginalName: audioFile.name,
             audioMimeType: audioFile.type,
+            audioFileHash,
             sourceImages,
           }),
         })
