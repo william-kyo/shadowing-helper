@@ -49,6 +49,14 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     notFound()
   }
 
+  const allSegments = await measureStep('db.segment.find_all_for_project', () =>
+    db.segment.findMany({
+      where: { projectId },
+      orderBy: { index: 'asc' },
+      select: { id: true, title: true, index: true },
+    }),
+  )
+
   // Fetch adjacent segments (prev and next by index)
   const [prevSegment, nextSegment] = await measureStep('db.segment.find_adjacent', () =>
     Promise.all([
@@ -121,6 +129,9 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           <SegmentAudioPlayer
             src={`/api/segments/${segment.id}/audio`}
             title={segment.title ?? ''}
+            projectId={projectId}
+            segmentId={segment.id}
+            segments={allSegments}
           />
         </section>
 

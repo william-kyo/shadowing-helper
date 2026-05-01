@@ -2,10 +2,14 @@
 
 import type { ChangeEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 
 type SegmentAudioPlayerProps = {
   src: string
   title: string
+  projectId: string
+  segmentId: string
+  segments: { id: string; title: string | null; index: number }[]
 }
 
 function formatTime(ms: number): string {
@@ -15,11 +19,14 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
+export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments }: SegmentAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+  const [showTocMenu, setShowTocMenu] = useState(false)
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -35,10 +42,7 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
   const seek = (seconds: number) => {
     const audio = audioRef.current
     if (!audio) return
-    // Guard: if duration is not loaded yet, audio.duration is NaN
-    // Math.min(NaN, x) = NaN → currentTime becomes NaN → audio restarts
     if (!audio.duration || isNaN(audio.duration)) {
-      // Fallback: seek without upper-bound check
       audio.currentTime = Math.max(0, audio.currentTime + seconds)
       return
     }
@@ -84,6 +88,20 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing])
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate
+    }
+  }, [playbackRate])
+
+  const handleSpeedChange = (rate: number) => {
+    setPlaybackRate(rate)
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate
+    }
+    setShowSpeedMenu(false)
+  }
+
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   const handleProgressChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -114,54 +132,119 @@ export function SegmentAudioPlayer({ src, title }: SegmentAudioPlayerProps) {
       </div>
 
       {/* controls */}
-      <div className="flex items-center justify-center gap-12">
-        {/* rewind 3s */}
-        <button
-          onClick={() => seek(-3)}
-          className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
-          title="3秒戻る (j)"
-        >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
-            <g transform="rotate(45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </g>
-            <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
-          </svg>
-        </button>
-
-        {/* play/pause */}
-        <button
-          onClick={togglePlay}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700"
-          title={playing ? '一時停止 (Space)' : '再生 (Space)'}
-        >
-          {playing ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="4" width="4" height="16" rx="1" />
-              <rect x="14" y="4" width="4" height="16" rx="1" />
+      <div className="flex items-center justify-between">
+        {/* playback speed - left */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowTocMenu(false) }}
+            className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+            title="再生速度"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m12 14 4-4"></path>
+              <path d="M3.34 19a10 10 0 1 1 17.32 0"></path>
             </svg>
-          ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
+          </button>
+          {showSpeedMenu && (
+            <div className="absolute bottom-full mb-2 left-0 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+              {[0.5, 0.75, 1].map((rate) => (
+                <button
+                  key={rate}
+                  onClick={() => handleSpeedChange(rate)}
+                  className={`w-full px-4 py-2 text-sm text-start transition hover:bg-zinc-50 ${playbackRate === rate ? 'font-medium text-indigo-600' : 'text-zinc-700'}`}
+                >
+                  {rate}x
+                </button>
+              ))}
+            </div>
           )}
-        </button>
+        </div>
 
-        {/* forward 3s */}
-        <button
-          onClick={() => seek(3)}
-          className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
-          title="3秒進む (k)"
-        >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
-            <g transform="rotate(-45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-            </g>
-            <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
-          </svg>
-        </button>
+        <div className="flex items-center gap-12">
+          {/* rewind 3s */}
+          <button
+            onClick={() => seek(-3)}
+            className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+            title="3秒戻る (j)"
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
+              <g transform="rotate(45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </g>
+              <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
+            </svg>
+          </button>
+
+          {/* play/pause */}
+          <button
+            onClick={togglePlay}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700"
+            title={playing ? '一時停止 (Space)' : '再生 (Space)'}
+          >
+            {playing ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5,3 19,12 5,21" />
+              </svg>
+            )}
+          </button>
+
+          {/* forward 3s */}
+          <button
+            onClick={() => seek(3)}
+            className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+            title="3秒進む (k)"
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" overflow="visible">
+              <g transform="rotate(-45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </g>
+              <text x="12" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" fontFamily="sans-serif">3</text>
+            </svg>
+          </button>
+        </div>
+
+        {/* table of contents - right */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowTocMenu(!showTocMenu); setShowSpeedMenu(false) }}
+            className="flex items-center justify-center rounded-2xl border border-zinc-300 bg-white p-3 text-zinc-500 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-50"
+            title="目次"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12h.01"></path>
+              <path d="M3 18h.01"></path>
+              <path d="M3 6h.01"></path>
+              <path d="M8 12h13"></path>
+              <path d="M8 18h13"></path>
+              <path d="M8 6h13"></path>
+            </svg>
+          </button>
+          {showTocMenu && (
+            <div className="absolute bottom-full mb-2 right-0 w-64 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+              <div className="border-b border-zinc-100 px-3 py-2 text-xs font-medium text-zinc-400">目次</div>
+              {segments.map((seg) => (
+                <Link
+                  key={seg.id}
+                  href={`/projects/${projectId}/segments/${seg.id}`}
+                  onClick={() => setShowTocMenu(false)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm transition hover:bg-zinc-50 ${seg.id === segmentId ? 'text-indigo-600 font-medium' : 'text-zinc-700'}`}
+                >
+                  {seg.id === segmentId && (
+                    <span className="flex h-2 w-2 shrink-0 rounded-full bg-indigo-600" />
+                  )}
+                  <span className="truncate">{seg.title ?? `Segment ${seg.index + 1}`}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-2">
