@@ -125,7 +125,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         </div>
 
         {/* audio player */}
-        <section className="rounded-3xl border border-black/10 bg-white p-8 shadow-sm">
+        <section className="rounded-3xl border border-black/10 bg-white p-4 sm:p-8 shadow-sm">
           <SegmentAudioPlayer
             src={`/api/segments/${segment.id}/audio`}
             title={segment.title ?? ''}

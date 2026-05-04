@@ -160,7 +160,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           )}
         </div>
 
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-4 sm:gap-12">
           {/* rewind 3s */}
           <button
             onClick={() => seek(-3)}
