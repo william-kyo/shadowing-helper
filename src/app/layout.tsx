@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Shadowing Helper',
   description: 'Local-first shadowing practice app for audio, scripts, and stage-based study.',
+  appleWebApp: {
+    capable: true,
+    title: 'Shadowing',
+    statusBarStyle: 'default',
+  },
 }
 
 export default function RootLayout({
