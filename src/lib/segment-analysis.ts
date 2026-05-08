@@ -90,3 +90,75 @@ ${segmentsText}`
 
   throw new Error(`Unexpected LLM response format: ${JSON.stringify(Object.keys(parsed))}`)
 }
+
+export async function addPunctuation(texts: string[]): Promise<string[]> {
+  if (texts.length === 0) return []
+
+  const apiKey = env.GROQ_API_KEY
+
+  const textsWithIndex = texts.map((t, i) => `[${i}] ${t}`).join('\n')
+
+  const prompt = `Add appropriate Japanese punctuation (。！？、) to each line. Return a JSON object with an "indexed_texts" array.
+
+Rules:
+1. Keep each text on a single line with punctuation added
+2. Preserve the original [index] prefix at the start of each line
+3. Do NOT add spaces between Japanese characters
+4. Output only the JSON object, no markdown
+
+Input:
+${textsWithIndex}`
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Groq LLM API error ${response.status}: ${errorText}`)
+  }
+
+  const json = await response.json()
+  const content = json.choices?.[0]?.message?.content
+
+  if (!content) {
+    throw new Error('No content in LLM response')
+  }
+
+  const parsed = JSON.parse(content)
+
+  if (parsed.indexed_texts && Array.isArray(parsed.indexed_texts)) {
+    return parsed.indexed_texts.map((item: string | { text: string }, idx: number) => {
+      if (typeof item === 'string') {
+        return item.replace(/^\[\d+\]\s*/, '')
+      }
+      return item.text ?? texts[idx] ?? ''
+    })
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item: string | { text: string }, idx: number) => {
+      if (typeof item === 'string') {
+        return item.replace(/^\[\d+\]\s*/, '')
+      }
+      return item.text ?? texts[idx] ?? ''
+    })
+  }
+
+  return texts
+}

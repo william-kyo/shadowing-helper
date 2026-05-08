@@ -7,7 +7,7 @@ import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { transcribeAudioWithSegments } from '@/lib/groq'
-import { analyzeTopicBoundaries } from '@/lib/segment-analysis'
+import { addPunctuation, analyzeTopicBoundaries } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
@@ -98,6 +98,14 @@ export async function POST(request: Request, context: RouteContext) {
           }
         })
         .filter(Boolean) as { title: string; startSeconds: number; endSeconds: number; text: string }[]
+
+      const punctuatedTexts = await measureStep('llm.add_punctuation', () =>
+        addPunctuation(resolvedSegments.map((seg) => seg.text)),
+      )
+
+      resolvedSegments.forEach((seg, i) => {
+        seg.text = punctuatedTexts[i] ?? seg.text
+      })
 
       const filteredSegments = resolvedSegments.filter(
         (seg) => (seg.endSeconds - seg.startSeconds) >= parsed.data.minDurationSeconds,
