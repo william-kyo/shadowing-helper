@@ -151,6 +151,11 @@ export async function POST(request: Request) {
         if (cachedSegments) {
           limitedSegments = cachedSegments
         } else {
+          await db.project.update({
+            where: { id: project.id },
+            data: { status: 'segmenting' },
+          })
+
           const whisperResponse = await transcribeAudioWithSegments({
             audioBuffer,
             fileName: titleResult.data.audioOriginalName,
@@ -224,8 +229,17 @@ export async function POST(request: Request) {
             })
           }),
         )
+
+        await db.project.update({
+          where: { id: project.id },
+          data: { status: 'processed' },
+        })
       } catch (err) {
         console.error('[auto-segment] Failed during project creation for project', project.id, err)
+        await db.project.update({
+          where: { id: project.id },
+          data: { status: 'failed' },
+        }).catch(() => {})
       }
     })()
 

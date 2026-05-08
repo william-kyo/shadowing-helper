@@ -55,6 +55,10 @@ export async function POST(request: Request, context: RouteContext) {
         return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
       }
 
+      if (project.status === 'segmenting') {
+        return NextResponse.json({ error: '自動分割中は重复実行できません。' }, { status: 409 })
+      }
+
       if (!project.audioPath) {
         return NextResponse.json({ error: '音声ファイルが見つかりません。' }, { status: 400 })
       }

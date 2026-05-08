@@ -19,6 +19,7 @@ type SegmentListItem = {
 
 type ProjectSegmentWorkspaceProps = {
   projectId: string
+  projectStatus: string
   audioSrc: string
   audioMimeType: string
   audioOriginalName: string
@@ -27,6 +28,7 @@ type ProjectSegmentWorkspaceProps = {
 
 export function ProjectSegmentWorkspace({
   projectId,
+  projectStatus,
   audioSrc,
   audioMimeType,
   audioOriginalName,
@@ -199,10 +201,10 @@ export function ProjectSegmentWorkspace({
         <button
           type="button"
           onClick={handleAutoSegment}
-          disabled={isAutoSegmenting}
+          disabled={isAutoSegmenting || projectStatus === 'segmenting'}
           className="inline-flex items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-3 text-sm font-medium text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isAutoSegmenting ? (
+          {isAutoSegmenting || projectStatus === 'segmenting' ? (
             <>
               <span className="mr-2 inline-block animate-spin">⟳</span>
               分割中...

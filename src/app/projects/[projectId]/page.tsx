@@ -94,6 +94,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         <ProjectSegmentWorkspace
           projectId={project.id}
+          projectStatus={project.status}
           audioSrc={`/api/projects/${project.id}/audio`}
           audioMimeType={project.audioMimeType}
           audioOriginalName={project.audioOriginalName}

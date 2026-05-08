@@ -46,6 +46,7 @@ export default async function ProjectsPage() {
             id: p.id,
             title: p.title,
             audioOriginalName: p.audioOriginalName,
+            status: p.status,
             sourceImages: p.sourceImages,
             createdAt: p.createdAt,
             segments: p.segments.map((s) => ({

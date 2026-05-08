@@ -12,33 +12,42 @@ type Project = {
   id: string
   title: string
   audioOriginalName: string
+  status: string
   sourceImages: { id: string }[]
   createdAt: Date
   segments: SegmentSummary[]
 }
 
-function computeProjectStatus(segments: SegmentSummary[]): {
+function computeProjectStatus(project: Project): {
   label: string
   detail: string
-  color: 'gray' | 'indigo' | 'green'
+  color: 'gray' | 'indigo' | 'green' | 'yellow'
 } {
-  if (segments.length === 0) {
+  if (project.status === 'segmenting') {
+    return { label: '分割中', detail: 'AI が音声を処理中...', color: 'yellow' }
+  }
+
+  if (project.status === 'failed') {
+    return { label: '失敗', detail: '分割処理に失敗しました', color: 'gray' }
+  }
+
+  if (project.segments.length === 0) {
     return { label: '未着手', detail: 'セグメントなし', color: 'gray' }
   }
 
-  const completedCount = segments.filter((s) =>
+  const completedCount = project.segments.filter((s) =>
     [1, 2, 3, 4, 5].every((stage) =>
       s.progress.some((p) => p.stage === stage && p.status === 'completed'),
     ),
   ).length
 
-  if (completedCount === segments.length) {
-    return { label: '完了', detail: `${segments.length} / ${segments.length} 完了`, color: 'green' }
+  if (completedCount === project.segments.length) {
+    return { label: '完了', detail: `${project.segments.length} / ${project.segments.length} 完了`, color: 'green' }
   }
 
   return {
     label: '進行中',
-    detail: `${completedCount} / ${segments.length} 完了`,
+    detail: `${completedCount} / ${project.segments.length} 完了`,
     color: 'indigo',
   }
 }
@@ -60,6 +69,7 @@ const statusStyles = {
   gray: 'bg-zinc-100 text-zinc-500',
   indigo: 'bg-indigo-50 text-indigo-600',
   green: 'bg-green-50 text-green-700',
+  yellow: 'bg-yellow-50 text-yellow-700',
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -67,7 +77,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const [isPending, startTransition] = useTransition()
   const [isDeleting, setIsDeleting] = useState(false)
   const projectHref = `/projects/${project.id}`
-  const { label, detail, color } = computeProjectStatus(project.segments)
+  const { label, detail, color } = computeProjectStatus(project)
 
   function handleDelete() {
     if (!confirm(`「${project.title}」を削除しますか？音声・画像・セグメントもすべて削除されます。`)) {
