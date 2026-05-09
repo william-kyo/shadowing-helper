@@ -1,9 +1,9 @@
 export const DEFAULT_TIME_ZONE = 'Asia/Tokyo'
 export const HABIT_GOAL_DAYS = 21
 
-export function toDateKey(date: Date, timeZone: string = DEFAULT_TIME_ZONE): string {
+export function toDateKey(date: Date, tz: string = DEFAULT_TIME_ZONE): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
+    timeZone: tz,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -30,10 +30,10 @@ export function nextDateKey(key: string): string {
   return shiftDateKey(key, 1)
 }
 
-function buildDateKeySet(activityDates: Iterable<Date>, timeZone: string): Set<string> {
+function buildDateKeySet(activityDates: Iterable<Date>, tz: string): Set<string> {
   const set = new Set<string>()
   for (const d of activityDates) {
-    set.add(toDateKey(d, timeZone))
+    set.add(toDateKey(d, tz))
   }
   return set
 }
@@ -41,10 +41,10 @@ function buildDateKeySet(activityDates: Iterable<Date>, timeZone: string): Set<s
 export function computeCurrentStreak(
   activityDates: Iterable<Date>,
   today: Date,
-  timeZone: string = DEFAULT_TIME_ZONE,
+  tz: string = DEFAULT_TIME_ZONE,
 ): number {
-  const set = buildDateKeySet(activityDates, timeZone)
-  const todayKey = toDateKey(today, timeZone)
+  const set = buildDateKeySet(activityDates, tz)
+  const todayKey = toDateKey(today, tz)
 
   let cursor = todayKey
   if (!set.has(cursor)) {
@@ -62,9 +62,9 @@ export function computeCurrentStreak(
 
 export function computeLongestStreak(
   activityDates: Iterable<Date>,
-  timeZone: string = DEFAULT_TIME_ZONE,
+  tz: string = DEFAULT_TIME_ZONE,
 ): number {
-  const set = buildDateKeySet(activityDates, timeZone)
+  const set = buildDateKeySet(activityDates, tz)
   if (set.size === 0) return 0
 
   const sorted = Array.from(set).sort()
@@ -92,9 +92,9 @@ const WEEKDAY_INDEX_FROM_SHORT: Record<string, number> = {
   Sun: 6,
 }
 
-function weekdayIndex(date: Date, timeZone: string): number {
+function weekdayIndex(date: Date, tz: string): number {
   const short = new Intl.DateTimeFormat('en-US', {
-    timeZone,
+    timeZone: tz,
     weekday: 'short',
   })
     .formatToParts(date)
@@ -113,11 +113,11 @@ export type WeekHeatmapDay = {
 export function buildWeekHeatmap(
   activityDates: Iterable<Date>,
   today: Date,
-  timeZone: string = DEFAULT_TIME_ZONE,
+  tz: string = DEFAULT_TIME_ZONE,
 ): WeekHeatmapDay[] {
-  const set = buildDateKeySet(activityDates, timeZone)
-  const todayKey = toDateKey(today, timeZone)
-  const todayIdx = weekdayIndex(today, timeZone)
+  const set = buildDateKeySet(activityDates, tz)
+  const todayKey = toDateKey(today, tz)
+  const todayIdx = weekdayIndex(today, tz)
   const mondayKey = shiftDateKey(todayKey, -todayIdx)
 
   const result: WeekHeatmapDay[] = []
