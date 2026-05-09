@@ -9,7 +9,7 @@ export default async function LoginPage() {
   const currentUser = await getCurrentAppUser()
 
   if (currentUser) {
-    redirect('/projects')
+    redirect('/')
   }
 
   return (

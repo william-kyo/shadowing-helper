@@ -27,7 +27,7 @@ export function LoginForm() {
       return
     }
 
-    router.replace('/projects')
+    router.replace('/')
     router.refresh()
   }
 
