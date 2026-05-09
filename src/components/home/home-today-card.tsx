@@ -79,9 +79,9 @@ export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps
       <Link
         href={href}
         aria-label={`${segment.segmentTitle} の練習を始める`}
-        className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-base font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-100"
+        className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-3.5 text-base font-semibold !text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-fuchsia-400"
       >
-        <span>▶</span>
+        <span aria-hidden>▶</span>
         <span>{ctaLabel}</span>
       </Link>
     </section>
