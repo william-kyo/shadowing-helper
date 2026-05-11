@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -39,6 +39,10 @@ vi.mock('@/lib/db', () => ({
 
 import ProjectDetailPage, { dynamic } from '@/app/projects/[projectId]/page'
 
+afterEach(() => {
+  cleanup()
+})
+
 describe('ProjectDetailPage', () => {
   it('forces dynamic rendering so newly created segments show up immediately', () => {
     expect(dynamic).toBe('force-dynamic')
@@ -52,5 +56,13 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('source.wav')).toBeInTheDocument()
     expect(screen.getByText('page-1.webp')).toBeInTheDocument()
     expect(screen.getByLabelText('セグメント名')).toBeInTheDocument()
+  })
+
+  it('shows a home link pointing to / in the header', async () => {
+    render(await ProjectDetailPage({ params: Promise.resolve({ projectId: 'project-1' }) }))
+
+    const homeLink = screen.getByRole('link', { name: /🏠 ホーム/ })
+    expect(homeLink).toBeInTheDocument()
+    expect(homeLink).toHaveAttribute('href', '/')
   })
 })

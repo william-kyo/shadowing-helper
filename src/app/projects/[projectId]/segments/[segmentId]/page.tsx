@@ -115,6 +115,12 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
+              href="/"
+              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
+            >
+              🏠 ホーム
+            </Link>
+            <Link
               href={`/projects/${projectId}`}
               className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
             >

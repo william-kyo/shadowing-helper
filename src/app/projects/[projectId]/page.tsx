@@ -83,6 +83,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           </div>
           <div className="flex flex-wrap gap-3 text-sm">
             <Link
+              href="/"
+              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-medium text-zinc-900 transition hover:border-zinc-900"
+            >
+              🏠 ホーム
+            </Link>
+            <Link
               href="/projects"
               className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-medium text-zinc-900 transition hover:border-zinc-900"
             >
