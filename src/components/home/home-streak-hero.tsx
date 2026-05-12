@@ -18,7 +18,11 @@ export function HomeStreakHero({
     return (
       <section
         aria-label="現在の継続日数"
-        className="rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm ring-1 ring-amber-100"
+        className={
+          hasPracticedToday
+            ? 'rounded-3xl bg-gradient-to-br from-amber-200 via-orange-200 to-rose-200 p-6 shadow-md ring-2 ring-orange-400'
+            : 'rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm ring-1 ring-amber-100'
+        }
       >
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -55,7 +59,11 @@ export function HomeStreakHero({
   return (
     <section
       aria-label="習慣化チャレンジ"
-      className="rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 p-6 shadow-sm ring-1 ring-emerald-100"
+      className={
+        hasPracticedToday
+          ? 'rounded-3xl bg-gradient-to-br from-emerald-200 via-teal-200 to-cyan-200 p-6 shadow-md ring-2 ring-emerald-400'
+          : 'rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 p-6 shadow-sm ring-1 ring-emerald-100'
+      }
     >
       <div className="flex items-start justify-between gap-4">
         <div>
