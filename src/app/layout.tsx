@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 
+import { AuthFetchInterceptor } from '@/components/auth/auth-fetch-interceptor'
 import { WebVitals } from '@/components/perf/web-vitals'
 
 import './globals.css'
@@ -37,6 +38,7 @@ export default function RootLayout({
     >
       <body className="min-h-full overflow-x-hidden bg-zinc-50 text-zinc-950">
         <WebVitals />
+        <AuthFetchInterceptor />
         {children}
       </body>
     </html>
