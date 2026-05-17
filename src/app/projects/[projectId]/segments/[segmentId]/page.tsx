@@ -101,7 +101,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
-      <div className="mx-auto grid max-w-2xl gap-8 px-6 py-10 pb-[calc(env(safe-area-inset-bottom)+15rem)] sm:pb-[calc(env(safe-area-inset-bottom)+13rem)]">
+      <div className="mx-auto grid max-w-2xl gap-8 px-6 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
         {/* header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -114,18 +114,6 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/"
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
-            >
-              🏠 ホーム
-            </Link>
-            <Link
-              href={`/projects/${projectId}`}
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
-            >
-              ← プロジェクトに戻る
-            </Link>
             <LogoutButton />
           </div>
         </div>
@@ -213,11 +201,13 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         </nav>
       </div>
 
-      {/* fixed bottom audio player — always visible for quick mobile playback control */}
+      {/* fixed bottom audio player — always visible for quick mobile playback control.
+          The nav row below the slider doubles as a buffer against the iOS bottom
+          gesture area so the progress bar thumb stays comfortably draggable. */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div
           className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
         >
           <SegmentAudioPlayer
             src={`/api/segments/${segment.id}/audio`}
@@ -226,6 +216,21 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             segmentId={segment.id}
             segments={allSegments}
           />
+
+          <div className="mt-3 flex items-center justify-center gap-2 text-xs">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+            >
+              🏠 ホーム
+            </Link>
+            <Link
+              href={`/projects/${projectId}`}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+            >
+              ← プロジェクトに戻る
+            </Link>
+          </div>
         </div>
       </div>
     </main>

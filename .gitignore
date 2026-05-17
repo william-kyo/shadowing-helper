@@ -50,6 +50,9 @@ prisma/*.db-journal
 # local docs (not for git)
 DEPLOY.md
 
+# claude code local scratch (worktrees, helper scripts, etc.)
+/.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
