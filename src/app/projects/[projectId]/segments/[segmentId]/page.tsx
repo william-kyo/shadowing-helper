@@ -100,8 +100,8 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   )
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
-      <div className="mx-auto grid max-w-2xl gap-8">
+    <main className="min-h-screen bg-zinc-50 text-zinc-950">
+      <div className="mx-auto grid max-w-2xl gap-8 px-6 py-10 pb-[calc(env(safe-area-inset-bottom)+15rem)] sm:pb-[calc(env(safe-area-inset-bottom)+13rem)]">
         {/* header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -129,17 +129,6 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             <LogoutButton />
           </div>
         </div>
-
-        {/* audio player */}
-        <section className="rounded-3xl border border-black/10 bg-white p-4 sm:p-8 shadow-sm">
-          <SegmentAudioPlayer
-            src={`/api/segments/${segment.id}/audio`}
-            title={segment.title ?? ''}
-            projectId={projectId}
-            segmentId={segment.id}
-            segments={allSegments}
-          />
-        </section>
 
         <SegmentStageWorkspace
           segmentId={segment.id}
@@ -222,6 +211,22 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             </Link>
           )}
         </nav>
+      </div>
+
+      {/* fixed bottom audio player — always visible for quick mobile playback control */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div
+          className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+        >
+          <SegmentAudioPlayer
+            src={`/api/segments/${segment.id}/audio`}
+            title={segment.title ?? ''}
+            projectId={projectId}
+            segmentId={segment.id}
+            segments={allSegments}
+          />
+        </div>
       </div>
     </main>
   )

@@ -114,7 +114,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <audio
         ref={audioRef}
         src={src}
@@ -126,7 +126,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
       />
 
       {/* time display */}
-      <div className="text-center font-mono text-2xl font-medium text-zinc-800">
+      <div className="text-center font-mono text-xl font-medium text-zinc-800">
         {formatTime(currentTime)} <span className="text-zinc-400">/</span>{' '}
         <span className="text-zinc-500">{formatTime(duration)}</span>
       </div>
@@ -247,28 +247,22 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
         </div>
       </div>
 
-      <div className="grid gap-2">
-        <div className="relative h-4 w-full">
-          <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-zinc-200" />
-          <div
-            className="absolute inset-y-0 left-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-indigo-600 transition-[width] duration-100"
-            style={{ width: `${progressPercent}%` }}
-          />
-          <input
-            type="range"
-            min={0}
-            max={Math.max(duration, 0)}
-            step={100}
-            value={Math.min(currentTime, duration || currentTime)}
-            onChange={handleProgressChange}
-            aria-label={`${title || 'Segment'} audio progress`}
-            className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-track]:h-3 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-indigo-600 [&::-moz-range-thumb]:shadow-md"
-          />
-        </div>
-        <div className="flex justify-between text-xs text-zinc-400">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
+      <div className="relative h-4 w-full">
+        <div className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-zinc-200" />
+        <div
+          className="absolute inset-y-0 left-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-indigo-600 transition-[width] duration-100"
+          style={{ width: `${progressPercent}%` }}
+        />
+        <input
+          type="range"
+          min={0}
+          max={Math.max(duration, 0)}
+          step={100}
+          value={Math.min(currentTime, duration || currentTime)}
+          onChange={handleProgressChange}
+          aria-label={`${title || 'Segment'} audio progress`}
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-track]:h-3 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-indigo-600 [&::-moz-range-thumb]:shadow-md"
+        />
       </div>
     </div>
   )
