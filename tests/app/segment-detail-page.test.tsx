@@ -87,7 +87,7 @@ describe('SegmentDetailPage', () => {
       }),
     )
 
-    const backLink = screen.getByRole('link', { name: /← プロジェクトに戻る/ })
+    const backLink = screen.getByRole('link', { name: /プロジェクトに戻る/ })
     expect(backLink).toBeInTheDocument()
     expect(backLink).toHaveAttribute('href', '/projects/proj-1')
   })

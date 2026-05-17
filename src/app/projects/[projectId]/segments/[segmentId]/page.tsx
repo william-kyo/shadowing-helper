@@ -217,7 +217,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             segments={allSegments}
           />
 
-          <div className="mt-3 flex items-center justify-center gap-2 text-xs">
+          <div className="mt-3 flex items-center justify-between gap-2 text-xs">
             <Link
               href="/"
               className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
@@ -226,9 +226,10 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             </Link>
             <Link
               href={`/projects/${projectId}`}
+              aria-label="プロジェクトに戻る"
               className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
             >
-              ← プロジェクトに戻る
+              ← 戻る
             </Link>
           </div>
         </div>
