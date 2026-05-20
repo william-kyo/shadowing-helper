@@ -107,7 +107,7 @@ export default async function HomePage() {
       const fallbackProject = await measureStep('db.project.find_fallback_for_home', () =>
         db.project.findFirst({
           where: { userId: currentUser.id, status: { in: ['ready', 'processed'] } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'asc' },
           include: {
             segments: {
               orderBy: { index: 'asc' },

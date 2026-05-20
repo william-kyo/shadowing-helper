@@ -49,6 +49,8 @@ prisma/*.db-journal
 
 # local docs (not for git)
 DEPLOY.md
+AGENTS.local.md
+CLAUDE.local.md
 
 # claude code local scratch (worktrees, helper scripts, etc.)
 /.claude/
