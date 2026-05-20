@@ -104,38 +104,87 @@ export default async function HomePage() {
     if (inProgressTarget) {
       todaySegment = buildTodayVm(inProgressTarget)
     } else {
-      const fallbackProject = await measureStep('db.project.find_fallback_for_home', () =>
-        db.project.findFirst({
-          where: { userId: currentUser.id, status: { in: ['ready', 'processed'] } },
-          orderBy: { createdAt: 'asc' },
-          include: {
-            segments: {
-              orderBy: { index: 'asc' },
-              include: { progress: { select: { stage: true, status: true } } },
-            },
-          },
-        }),
-      )
-      if (fallbackProject && fallbackProject.segments.length > 0) {
-        const next =
-          fallbackProject.segments.find((s) => {
+      // 2. Find the next uncompleted segment within the same recently-practiced project
+      const recentProjectIds = [...new Set(orderedRecent.map((s) => s.project.id))]
+      if (recentProjectIds.length > 0) {
+        const recentProjectsWithSegments = await measureStep(
+          'db.project.find_next_in_recent_for_home',
+          () =>
+            db.project.findMany({
+              where: { id: { in: recentProjectIds } },
+              include: {
+                segments: {
+                  orderBy: { index: 'asc' },
+                  include: { progress: { select: { stage: true, status: true } } },
+                },
+              },
+            }),
+        )
+        const projectMap = new Map(recentProjectsWithSegments.map((p) => [p.id, p]))
+        for (const recentSeg of orderedRecent) {
+          const project = projectMap.get(recentSeg.project.id)
+          if (!project) continue
+          const nextInProject = project.segments.find((s) => {
+            if (s.index <= recentSeg.index) return false
             const { allCompleted } = computeCurrentStage(
               s.progress.map((p) => ({ stage: p.stage, status: p.status })),
             )
             return !allCompleted
-          }) ?? fallbackProject.segments[0]
-        const completed = next.progress.filter((p) => p.status === 'completed').length
-        const { currentStage } = computeCurrentStage(
-          next.progress.map((p) => ({ stage: p.stage, status: p.status })),
+          })
+          if (nextInProject) {
+            const completed = nextInProject.progress.filter((p) => p.status === 'completed').length
+            const { currentStage } = computeCurrentStage(
+              nextInProject.progress.map((p) => ({ stage: p.stage, status: p.status })),
+            )
+            todaySegment = {
+              id: nextInProject.id,
+              projectId: project.id,
+              projectTitle: project.title,
+              segmentTitle: nextInProject.title ?? `Segment ${nextInProject.index + 1}`,
+              currentStage,
+              completedStages: completed,
+              totalStages: TOTAL_STAGES,
+            }
+            break
+          }
+        }
+      }
+
+      // 3. Final fallback: earliest created project
+      if (!todaySegment) {
+        const fallbackProject = await measureStep('db.project.find_fallback_for_home', () =>
+          db.project.findFirst({
+            where: { userId: currentUser.id, status: { in: ['draft', 'ready', 'processed'] } },
+            orderBy: { createdAt: 'asc' },
+            include: {
+              segments: {
+                orderBy: { index: 'asc' },
+                include: { progress: { select: { stage: true, status: true } } },
+              },
+            },
+          }),
         )
-        todaySegment = {
-          id: next.id,
-          projectId: fallbackProject.id,
-          projectTitle: fallbackProject.title,
-          segmentTitle: next.title ?? `Segment ${next.index + 1}`,
-          currentStage,
-          completedStages: completed,
-          totalStages: TOTAL_STAGES,
+        if (fallbackProject && fallbackProject.segments.length > 0) {
+          const next =
+            fallbackProject.segments.find((s) => {
+              const { allCompleted } = computeCurrentStage(
+                s.progress.map((p) => ({ stage: p.stage, status: p.status })),
+              )
+              return !allCompleted
+            }) ?? fallbackProject.segments[0]
+          const completed = next.progress.filter((p) => p.status === 'completed').length
+          const { currentStage } = computeCurrentStage(
+            next.progress.map((p) => ({ stage: p.stage, status: p.status })),
+          )
+          todaySegment = {
+            id: next.id,
+            projectId: fallbackProject.id,
+            projectTitle: fallbackProject.title,
+            segmentTitle: next.title ?? `Segment ${next.index + 1}`,
+            currentStage,
+            completedStages: completed,
+            totalStages: TOTAL_STAGES,
+          }
         }
       }
     }
