@@ -30,6 +30,7 @@ export default async function HomePage() {
       db.stageProgress.findMany({
         where: { segment: { project: { userId: currentUser.id } } },
         orderBy: { updatedAt: 'desc' },
+        take: 500,
         select: { updatedAt: true, segmentId: true },
       }),
     )
