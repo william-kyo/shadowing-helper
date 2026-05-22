@@ -1,19 +1,29 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Fraunces, Geist_Mono, Noto_Sans_JP } from 'next/font/google'
 
 import { AuthFetchInterceptor } from '@/components/auth/auth-fetch-interceptor'
 import { WebVitals } from '@/components/perf/web-vitals'
 
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const notoJp = Noto_Sans_JP({
+  variable: '--font-jp-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
+
+const fraunces = Fraunces({
+  variable: '--font-display',
+  subsets: ['latin'],
+  axes: ['SOFT', 'opsz'],
+  display: 'swap',
 })
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -34,9 +44,9 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${notoJp.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full overflow-x-hidden bg-zinc-50 text-zinc-950">
+      <body className="min-h-full overflow-x-hidden bg-surface text-ink">
         <WebVitals />
         <AuthFetchInterceptor />
         {children}

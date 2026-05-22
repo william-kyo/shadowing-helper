@@ -23,7 +23,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isSubmitting}
-      className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium transition hover:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 text-xs font-medium tracking-wide text-ink-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
     >
       {isSubmitting ? 'ログアウト中…' : 'ログアウト'}
     </button>

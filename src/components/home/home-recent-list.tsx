@@ -32,12 +32,17 @@ export function HomeRecentList({ items }: HomeRecentListProps) {
   return (
     <section aria-label="最近の練習" className="grid gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-800">最近の練習</h2>
-        <Link href="/projects" className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+        <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+          最近の練習 · recent
+        </h2>
+        <Link
+          href="/projects"
+          className="text-xs font-medium text-accent transition hover:text-accent-deep"
+        >
           すべて見る →
         </Link>
       </div>
-      <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+      <ul className="divide-y divide-ink-line/60 overflow-hidden rounded-card border border-ink-line bg-paper">
         {items.map((item) => {
           const href = `/projects/${item.projectId}/segments/${item.id}`
           const pct = Math.round((item.completedStages / item.totalStages) * 100)
@@ -45,31 +50,34 @@ export function HomeRecentList({ items }: HomeRecentListProps) {
             <li key={item.id}>
               <Link
                 href={href}
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-50"
+                className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-paper-soft"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  🎧
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-inset bg-accent-faint font-display text-base font-semibold text-accent">
+                  ♪
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-zinc-900">
+                  <p className="truncate text-sm font-semibold text-ink">
                     {item.segmentTitle}
                   </p>
-                  <p className="truncate text-xs text-zinc-500">
-                    {item.projectTitle} · <span suppressHydrationWarning>{formatRelative(item.lastPracticedAt)}</span>
+                  <p className="truncate text-xs text-ink-muted">
+                    {item.projectTitle} ·{' '}
+                    <span suppressHydrationWarning>
+                      {formatRelative(item.lastPracticedAt)}
+                    </span>
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-[11px] font-medium text-zinc-500">
+                  <span className="font-mono text-[10px] tabular-nums text-ink-faint">
                     {item.completedStages}/{item.totalStages}
                   </span>
-                  <div className="h-1 w-12 overflow-hidden rounded-full bg-zinc-100">
+                  <div className="h-1 w-12 overflow-hidden rounded-chip bg-paper-soft">
                     <div
-                      className="h-full rounded-full bg-indigo-500"
+                      className="h-full rounded-chip bg-accent"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                 </div>
-                <span className="text-zinc-300">›</span>
+                <span className="text-ink-faint">›</span>
               </Link>
             </li>
           )
