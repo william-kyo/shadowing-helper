@@ -100,16 +100,18 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   )
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-950">
+    <main className="min-h-screen bg-surface text-ink">
       <div className="mx-auto grid max-w-2xl gap-8 px-6 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
         {/* header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-5">
           <div>
-            <p className="text-sm font-medium text-indigo-600">セグメント詳細</p>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+              segment · 練習
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">
               {segment.title ?? `Segment ${segment.index + 1}`}
             </h1>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-ink-muted">
               {project.title} · {segment.index + 1}番目
             </p>
           </div>
@@ -134,14 +136,14 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         />
 
         {/* prev / next navigation */}
-        <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+        <nav className="flex items-center justify-between gap-4 rounded-card border border-ink-line bg-paper px-4 py-3">
           {/* left side */}
           {prevSegment ? (
             <Link
               href={`/projects/${projectId}/segments/${prevSegment.id}`}
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
-              <span className="text-zinc-400">←</span>
+              <span className="text-ink-faint">←</span>
               <span className="max-w-32 truncate">{prevSegment.title ?? `Segment ${prevSegment.index + 1}`}</span>
             </Link>
           ) : prevProjectEntry ? (
@@ -151,16 +153,16 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
                   ? `/projects/${prevProjectEntry.id}/segments/${prevProjectEntry.segments[0].id}`
                   : `/projects/${prevProjectEntry.id}`
               }
-              className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:border-indigo-500 hover:bg-indigo-100"
+              className="flex items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-4 py-2 text-sm font-medium text-accent-deep transition hover:border-accent hover:bg-accent-soft"
             >
               <span>←</span>
               <span className="max-w-40 truncate">{prevProjectEntry.title}</span>
-              <span className="shrink-0 text-xs text-indigo-400">前のプロジェクト</span>
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">prev</span>
             </Link>
           ) : (
             <Link
               href="/projects"
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
               <span>＋</span>
               <span>プロジェクトを追加</span>
@@ -171,10 +173,10 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           {nextSegment ? (
             <Link
               href={`/projects/${projectId}/segments/${nextSegment.id}`}
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
               <span className="max-w-32 truncate">{nextSegment.title ?? `Segment ${nextSegment.index + 1}`}</span>
-              <span className="text-zinc-400">→</span>
+              <span className="text-ink-faint">→</span>
             </Link>
           ) : nextProjectEntry ? (
             <Link
@@ -183,16 +185,16 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
                   ? `/projects/${nextProjectEntry.id}/segments/${nextProjectEntry.segments[0].id}`
                   : `/projects/${nextProjectEntry.id}`
               }
-              className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:border-indigo-500 hover:bg-indigo-100"
+              className="flex items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-4 py-2 text-sm font-medium text-accent-deep transition hover:border-accent hover:bg-accent-soft"
             >
-              <span className="shrink-0 text-xs text-indigo-400">次のプロジェクト</span>
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">next</span>
               <span className="max-w-40 truncate">{nextProjectEntry.title}</span>
               <span>→</span>
             </Link>
           ) : (
             <Link
               href="/projects"
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
               <span>プロジェクトを追加</span>
               <span>＋</span>
@@ -204,7 +206,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
       {/* fixed bottom audio player — always visible for quick mobile playback control.
           The nav row below the slider doubles as a buffer against the iOS bottom
           gesture area so the progress bar thumb stays comfortably draggable. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-line bg-paper shadow-[0_-4px_24px_rgba(29,27,24,0.08)]">
         <div
           className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
@@ -220,14 +222,14 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           <div className="mt-3 flex items-center justify-between gap-2 text-xs">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+              className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
-              🏠 ホーム
+              ホーム
             </Link>
             <Link
               href={`/projects/${projectId}`}
               aria-label="プロジェクトに戻る"
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+              className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
               ← 戻る
             </Link>

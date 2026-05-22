@@ -18,31 +18,33 @@ export function HomeStreakHero({
     return (
       <section
         aria-label="現在の継続日数"
-        className={
+        className={`rounded-card p-6 shadow-[0_1px_0_rgba(29,27,24,0.04),0_18px_40px_-30px_rgba(29,27,24,0.4)] ${
           hasPracticedToday
-            ? 'rounded-3xl bg-gradient-to-br from-amber-200 via-orange-200 to-rose-200 p-6 shadow-md ring-2 ring-orange-400'
-            : 'rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm ring-1 ring-amber-100'
-        }
+            ? 'bg-paper-soft ring-2 ring-accent'
+            : 'bg-paper ring-1 ring-ink-line'
+        }`}
       >
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-orange-700">継続中</p>
-            <p className="mt-1 flex items-baseline gap-2">
-              <span className="text-5xl font-bold tracking-tight text-orange-600">
-                🔥 {currentStreak}
-              </span>
-              <span className="text-base font-medium text-orange-700">日</span>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+              継続中 · streak
             </p>
-            <p className="mt-2 text-sm text-orange-700/80">
-              最長記録 {longestStreak} 日 · {label} {emoji}
+            <p className="mt-2 flex items-baseline gap-2">
+              <span className="font-display text-6xl font-semibold leading-none tracking-tight text-accent">
+                {currentStreak}
+              </span>
+              <span className="text-base font-medium text-ink-muted">日連続</span>
+            </p>
+            <p className="mt-2 text-sm text-ink-muted">
+              最長 {longestStreak} 日 · {label} {emoji}
             </p>
           </div>
           {hasPracticedToday ? (
-            <span className="shrink-0 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+            <span className="shrink-0 rounded-chip bg-accent px-3 py-1 text-xs font-semibold text-paper">
               ✓ 今日完了
             </span>
           ) : (
-            <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-orange-600 ring-1 ring-orange-200">
+            <span className="shrink-0 rounded-chip bg-paper px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent-soft">
               今日まだ
             </span>
           )}
@@ -59,55 +61,57 @@ export function HomeStreakHero({
   return (
     <section
       aria-label="習慣化チャレンジ"
-      className={
+      className={`rounded-card p-6 shadow-[0_1px_0_rgba(29,27,24,0.04),0_18px_40px_-30px_rgba(29,27,24,0.4)] ${
         hasPracticedToday
-          ? 'rounded-3xl bg-gradient-to-br from-emerald-200 via-teal-200 to-cyan-200 p-6 shadow-md ring-2 ring-emerald-400'
-          : 'rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 p-6 shadow-sm ring-1 ring-emerald-100'
-      }
+          ? 'bg-paper-soft ring-2 ring-accent'
+          : 'bg-paper ring-1 ring-ink-line'
+      }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-emerald-700">21日チャレンジ</p>
-          <p className="mt-1 flex items-baseline gap-2">
-            <span className="text-4xl font-bold tracking-tight text-emerald-700">
-              {emoji} Day {completed}
-            </span>
-            <span className="text-base font-medium text-emerald-700/70">/ {goal}</span>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+            21日チャレンジ
           </p>
-          <p className="mt-1 text-sm text-emerald-800/80">
-            {remaining > 0 ? `あと ${remaining} 日で習慣化` : '習慣達成おめでとう！'}
+          <p className="mt-2 flex items-baseline gap-2">
+            <span className="font-display text-5xl font-semibold leading-none tracking-tight text-ink">
+              Day {completed}
+            </span>
+            <span className="text-base font-medium text-ink-faint">/ {goal}</span>
+          </p>
+          <p className="mt-2 text-sm text-ink-muted">
+            {remaining > 0 ? `あと ${remaining} 日で習慣化 ${emoji}` : `習慣達成おめでとう ${emoji}`}
           </p>
         </div>
         {hasPracticedToday ? (
-          <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <span className="shrink-0 rounded-chip bg-accent px-3 py-1 text-xs font-semibold text-paper">
             ✓ 今日完了
           </span>
         ) : (
-          <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+          <span className="shrink-0 rounded-chip bg-paper px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent-soft">
             今日まだ
           </span>
         )}
       </div>
 
-      <div className="mt-5">
+      <div className="mt-6">
         <div
           role="progressbar"
           aria-valuenow={completed}
           aria-valuemin={0}
           aria-valuemax={goal}
           aria-label={`${completed} / ${goal} 日達成`}
-          className="h-3 w-full overflow-hidden rounded-full bg-white/60 ring-1 ring-emerald-100"
+          className="h-2 w-full overflow-hidden rounded-chip bg-paper-soft ring-1 ring-ink-line/60"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all"
+            className="h-full rounded-chip bg-accent transition-[width] duration-700 ease-out"
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <div className="mt-2 flex justify-between text-[11px] font-medium text-emerald-700/70">
-          <span>Day 1</span>
-          <span>Day 7 🌱</span>
-          <span>Day 14 🌿</span>
-          <span>Day 21 🌳</span>
+        <div className="mt-2 flex justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+          <span>D1</span>
+          <span>D7</span>
+          <span>D14</span>
+          <span>D21</span>
         </div>
       </div>
     </section>

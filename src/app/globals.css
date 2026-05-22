@@ -1,15 +1,68 @@
 @import "tailwindcss";
 
+/* --- Design tokens ------------------------------------------------- */
+/* "Warm paper" editorial direction: cream surface, ink type, single
+   vermillion accent. Replaces the previous zinc / indigo / fuchsia /
+   amber / emerald grab-bag.                                            */
+
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
+  /* surface */
+  --surface: #f4ecdc;
+  --paper: #faf4e6;
+  --paper-soft: #ede4cf;
+  --paper-deep: #1d1b18;
+
+  /* ink */
+  --ink: #1d1b18;
+  --ink-muted: #6b6358;
+  --ink-faint: #a39a8c;
+  --ink-line: #d6cbb3;
+
+  /* single accent: japanese vermillion */
+  --accent: #c8342a;
+  --accent-deep: #8e1f17;
+  --accent-soft: #f1d6cf;
+  --accent-faint: #f7e6e1;
+
+  /* radius — only three legal values */
+  --radius-chip: 999px;
+  --radius-inset: 0.875rem; /* 14px — inner chips, small cards */
+  --radius-card: 1.5rem;    /* 24px — every large container */
+
+  /* vertical rhythm — three steps */
+  --space-tight: 1rem;
+  --space-base: 1.5rem;
+  --space-loose: 2.5rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+
+  --color-paper: var(--paper);
+  --color-paper-soft: var(--paper-soft);
+  --color-paper-deep: var(--paper-deep);
+  --color-surface: var(--surface);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-ink-line: var(--ink-line);
+
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-faint: var(--accent-faint);
+
+  --font-sans: var(--font-jp-sans), "Hiragino Sans", "Yu Gothic UI",
+    system-ui, sans-serif;
+  --font-display: var(--font-display), "Hiragino Mincho ProN",
+    "Yu Mincho", Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-chip: var(--radius-chip);
+  --radius-inset: var(--radius-inset);
+  --radius-card: var(--radius-card);
 }
 
 * {
@@ -22,9 +75,12 @@ html {
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-jp-sans), "Hiragino Sans", "Yu Gothic UI",
+    system-ui, sans-serif;
+  font-feature-settings: "palt" 1;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -37,4 +93,26 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* Subtle paper grain — adds warmth without imagery */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(rgba(29, 27, 24, 0.035) 1px, transparent 1px),
+    radial-gradient(rgba(29, 27, 24, 0.025) 1px, transparent 1px);
+  background-size: 22px 22px, 13px 13px;
+  background-position: 0 0, 11px 11px;
+}
+
+main,
+header,
+nav {
+  position: relative;
+  z-index: 1;
 }

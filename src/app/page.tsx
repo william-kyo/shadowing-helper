@@ -204,12 +204,14 @@ export default async function HomePage() {
     })
 
     return (
-      <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:px-6 sm:py-10">
-        <div className="mx-auto grid max-w-2xl gap-5">
-          <header className="flex items-center justify-between gap-3">
+      <main className="min-h-screen bg-surface px-4 py-6 text-ink sm:px-6 sm:py-10">
+        <div className="mx-auto grid max-w-2xl gap-6">
+          <header className="flex items-end justify-between gap-3 border-b border-ink-line/70 pb-4">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-indigo-600">こんにちは 👋</p>
-              <h1 className="truncate text-lg font-semibold tracking-tight">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+                影 · shadowing
+              </p>
+              <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight">
                 {currentUser.email}
               </h1>
             </div>
@@ -231,7 +233,7 @@ export default async function HomePage() {
           <div className="flex justify-center pt-2">
             <Link
               href="/projects"
-              className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+              className="rounded-chip border border-ink-line bg-paper px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper"
             >
               プロジェクト一覧へ
             </Link>

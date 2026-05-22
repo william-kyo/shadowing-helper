@@ -34,10 +34,13 @@ export function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid gap-5 rounded-3xl border border-black/10 bg-white p-6 shadow-sm"
+      className="grid gap-5 rounded-card border border-ink-line bg-paper p-6 shadow-[0_1px_0_rgba(29,27,24,0.03),0_22px_50px_-30px_rgba(29,27,24,0.45)]"
     >
       <div className="grid gap-2">
-        <label htmlFor="email" className="text-sm font-medium text-zinc-900">
+        <label
+          htmlFor="email"
+          className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
+        >
           Email
         </label>
         <input
@@ -46,14 +49,17 @@ export function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+          className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/30"
           placeholder="name@company.com"
           required
         />
       </div>
 
       <div className="grid gap-2">
-        <label htmlFor="password" className="text-sm font-medium text-zinc-900">
+        <label
+          htmlFor="password"
+          className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
+        >
           Password
         </label>
         <input
@@ -62,14 +68,14 @@ export function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+          className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/30"
           placeholder="••••••••"
           required
         />
       </div>
 
       {errorMessage ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
           {errorMessage}
         </p>
       ) : null}
@@ -77,9 +83,9 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-500"
+        className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'ログイン中…' : 'ログイン'}
+        {isSubmitting ? 'ログイン中…' : 'ログイン →'}
       </button>
     </form>
   )

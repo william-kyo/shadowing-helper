@@ -29,13 +29,17 @@ export default async function ProjectsPage() {
   )
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
-      <div className="mx-auto grid max-w-5xl gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <main className="min-h-screen bg-surface px-6 py-10 text-ink">
+      <div className="mx-auto grid max-w-5xl gap-8">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
-            <p className="text-sm font-medium text-indigo-600">Project dashboard</p>
-            <h1 className="text-3xl font-semibold tracking-tight">プロジェクト一覧</h1>
-            <p className="mt-2 text-sm text-zinc-500">{currentUser.email}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+              project dashboard
+            </p>
+            <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
+              プロジェクト一覧
+            </h1>
+            <p className="mt-2 text-sm text-ink-muted">{currentUser.email}</p>
           </div>
           <LogoutButton />
         </div>

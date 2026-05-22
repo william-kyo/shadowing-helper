@@ -73,24 +73,30 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   )
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-950">
-      <div className="mx-auto grid max-w-5xl gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <main className="min-h-screen bg-surface px-6 py-10 text-ink">
+      <div className="mx-auto grid max-w-5xl gap-8">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
-            <p className="text-sm font-medium text-indigo-600">Project detail</p>
-            <h1 className="text-3xl font-semibold tracking-tight">{project.title}</h1>
-            <p className="mt-2 text-sm text-zinc-500">{projectStatusLabel} · {projectStatusDetail}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+              project · detail
+            </p>
+            <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
+              {project.title}
+            </h1>
+            <p className="mt-2 text-sm text-ink-muted">
+              {projectStatusLabel} · {projectStatusDetail}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-3 text-sm">
+          <div className="flex flex-wrap gap-2 text-sm">
             <Link
               href="/"
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-medium text-zinc-900 transition hover:border-zinc-900"
+              className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
-              🏠 ホーム
+              ホーム
             </Link>
             <Link
               href="/projects"
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-medium text-zinc-900 transition hover:border-zinc-900"
+              className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
               一覧へ戻る
             </Link>
@@ -115,14 +121,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           }))}
         />
 
-        <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+        <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-950">台本画像</h2>
-            <p className="mt-2 text-sm text-zinc-600">アップロード順に表示しています。</p>
+            <h2 className="font-display text-2xl font-semibold tracking-tight">台本画像</h2>
+            <p className="mt-2 text-sm text-ink-muted">アップロード順に表示しています。</p>
           </div>
 
           {project.sourceImages.length === 0 ? (
-            <p className="text-sm text-zinc-500">画像はまだありません。</p>
+            <p className="text-sm text-ink-faint">画像はまだありません。</p>
           ) : (
             <div className={`grid gap-4 ${project.sourceImages.length >= 5 ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {project.sourceImages.map((image) => (
@@ -130,28 +136,28 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                   <img
                     src={`/api/projects/${project.id}/images/${image.id}`}
                     alt={image.originalName}
-                    className="w-full h-auto rounded-2xl border border-zinc-200 shadow-sm"
+                    className="w-full h-auto rounded-inset border border-ink-line"
                   />
-                  <p className="text-xs text-zinc-500 text-center">{image.originalName}</p>
+                  <p className="text-xs text-ink-muted text-center">{image.originalName}</p>
                 </div>
               ))}
             </div>
           )}
         </section>
         {/* prev / next project navigation */}
-        <nav className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+        <nav className="flex items-center justify-between gap-4 rounded-card border border-ink-line bg-paper px-4 py-3">
           {prevProject ? (
             <Link
               href={`/projects/${prevProject.id}`}
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
-              <span className="text-zinc-400">←</span>
+              <span className="text-ink-faint">←</span>
               <span className="max-w-48 truncate">{prevProject.title}</span>
             </Link>
           ) : (
             <Link
               href="/projects"
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
               <span>＋</span>
               <span>プロジェクトを追加</span>
@@ -160,15 +166,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {nextProject ? (
             <Link
               href={`/projects/${nextProject.id}`}
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-600"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
               <span className="max-w-48 truncate">{nextProject.title}</span>
-              <span className="text-zinc-400">→</span>
+              <span className="text-ink-faint">→</span>
             </Link>
           ) : (
             <Link
               href="/projects"
-              className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+              className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
               <span>プロジェクトを追加</span>
               <span>＋</span>

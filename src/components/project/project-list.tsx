@@ -66,10 +66,10 @@ type ProjectCardProps = {
 }
 
 const statusStyles = {
-  gray: 'bg-zinc-100 text-zinc-500',
-  indigo: 'bg-indigo-50 text-indigo-600',
-  green: 'bg-green-50 text-green-700',
-  yellow: 'bg-yellow-50 text-yellow-700',
+  gray: 'bg-paper-soft text-ink-muted',
+  indigo: 'bg-accent-faint text-accent-deep',
+  green: 'bg-ink text-paper',
+  yellow: 'bg-accent-soft text-accent-deep',
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -96,46 +96,54 @@ export function ProjectCard({ project }: ProjectCardProps) {
   }
 
   return (
-    <article className="relative rounded-3xl border border-black/5 bg-white p-6 shadow-sm transition hover:border-zinc-900/20 hover:shadow-md">
+    <article className="relative rounded-card border border-ink-line bg-paper p-6 shadow-[0_1px_0_rgba(29,27,24,0.03),0_18px_40px_-30px_rgba(29,27,24,0.4)] transition hover:border-ink hover:shadow-[0_1px_0_rgba(29,27,24,0.06),0_20px_44px_-26px_rgba(29,27,24,0.5)]">
       <Link
         href={projectHref}
         aria-label={`${project.title} の詳細を開く`}
-        className="absolute inset-0 rounded-3xl"
+        className="absolute inset-0 rounded-card"
       />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-2">
-          <h2 className="text-xl font-semibold">{project.title}</h2>
-          <p className="text-sm text-zinc-500">
-            音声: {project.audioOriginalName} / 画像: {project.sourceImages.length} 枚
+          <h2 className="font-display text-2xl font-semibold tracking-tight">
+            {project.title}
+          </h2>
+          <p className="text-sm text-ink-muted">
+            音声: {project.audioOriginalName} · 画像: {project.sourceImages.length} 枚
           </p>
         </div>
         <div className="relative z-10 flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyles[color]}`}>
+          <span className={`rounded-chip px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] ${statusStyles[color]}`}>
             {label}
           </span>
           <Link
             href={projectHref}
-            className="rounded-2xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+            className="rounded-chip border border-ink-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:border-ink hover:text-ink"
           >
             詳細
           </Link>
           <button
             onClick={handleDelete}
             disabled={isPending || isDeleting}
-            className="rounded-2xl border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-chip border border-accent-soft bg-paper px-3 py-1.5 text-sm font-medium text-accent transition hover:border-accent hover:bg-accent-faint disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isDeleting ? '削除中...' : '削除'}
           </button>
         </div>
       </div>
-      <dl className="mt-5 grid gap-3 text-sm text-zinc-600 sm:grid-cols-2">
+      <dl className="mt-5 grid gap-3 text-sm text-ink-muted sm:grid-cols-2">
         <div>
-          <dt className="font-medium text-zinc-900">作成日</dt>
-          <dd suppressHydrationWarning>{new Date(project.createdAt).toLocaleString('ja-JP')}</dd>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
+            作成日
+          </dt>
+          <dd className="mt-1 text-ink" suppressHydrationWarning>
+            {new Date(project.createdAt).toLocaleString('ja-JP')}
+          </dd>
         </div>
         <div>
-          <dt className="font-medium text-zinc-900">進捗</dt>
-          <dd>{detail}</dd>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
+            進捗
+          </dt>
+          <dd className="mt-1 text-ink">{detail}</dd>
         </div>
       </dl>
     </article>
@@ -149,7 +157,7 @@ type ProjectListProps = {
 export function ProjectList({ projects }: ProjectListProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-sm leading-7 text-zinc-600">
+      <div className="rounded-card border border-dashed border-ink-line bg-paper p-8 text-sm leading-7 text-ink-muted">
         まだプロジェクトがありません。トップページから音声と台本画像をアップロードしてください。
       </div>
     )
