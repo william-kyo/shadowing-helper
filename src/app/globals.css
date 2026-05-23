@@ -116,3 +116,87 @@ nav {
   position: relative;
   z-index: 1;
 }
+
+/* --- Streak hero entrance animation -------------------------------- */
+@keyframes streak-spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(12px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-2px);
+  }
+  80% {
+    transform: scale(0.97) translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-streak-in {
+  animation: streak-spring-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* --- Glass player bar ---------------------------------------------- */
+.glass-player {
+  background: rgba(250, 244, 230, 0.72);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+
+/* --- Waveform progress bar ----------------------------------------- */
+.waveform-track {
+  --bar-count: 48;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+}
+
+.waveform-bar {
+  flex: 1;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: background-color 0.15s ease;
+}
+
+/* range thumb on waveform */
+input[type="range"].waveform-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"].waveform-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200, 52, 42, 0.18);
+  cursor: pointer;
+}
+
+input[type="range"].waveform-input::-moz-range-thumb {
+  width: 3px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200, 52, 42, 0.18);
+  cursor: pointer;
+}
+
+input[type="range"].waveform-input::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 28px;
+}
+
+input[type="range"].waveform-input::-moz-range-track {
+  background: transparent;
+  height: 28px;
+}

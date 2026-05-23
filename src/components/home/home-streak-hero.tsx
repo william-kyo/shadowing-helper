@@ -1,9 +1,43 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+
 import { HABIT_GOAL_DAYS, growthStage } from '@/lib/streak'
 
 type HomeStreakHeroProps = {
   currentStreak: number
   longestStreak: number
   hasPracticedToday: boolean
+}
+
+function AnimatedNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0)
+  const rafRef = useRef<number>(0)
+
+  useEffect(() => {
+    if (value === 0) {
+      setDisplay(0)
+      return
+    }
+
+    const duration = 600
+    const start = performance.now()
+
+    const step = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplay(Math.round(eased * value))
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(step)
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [value])
+
+  return <>{display}</>
 }
 
 export function HomeStreakHero({
@@ -30,8 +64,8 @@ export function HomeStreakHero({
               継続中 · streak
             </p>
             <p className="mt-2 flex items-baseline gap-2">
-              <span className="font-display text-6xl font-semibold leading-none tracking-tight text-accent">
-                {currentStreak}
+              <span className="animate-streak-in font-display text-6xl font-semibold leading-none tracking-tighter text-accent sm:text-7xl">
+                <AnimatedNumber value={currentStreak} />
               </span>
               <span className="text-base font-medium text-ink-muted">日連続</span>
             </p>
@@ -73,8 +107,8 @@ export function HomeStreakHero({
             21日チャレンジ
           </p>
           <p className="mt-2 flex items-baseline gap-2">
-            <span className="font-display text-5xl font-semibold leading-none tracking-tight text-ink">
-              Day {completed}
+            <span className="animate-streak-in font-display text-5xl font-semibold leading-none tracking-tighter text-ink sm:text-6xl">
+              Day <AnimatedNumber value={completed} />
             </span>
             <span className="text-base font-medium text-ink-faint">/ {goal}</span>
           </p>

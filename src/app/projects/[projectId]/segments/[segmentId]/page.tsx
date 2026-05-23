@@ -206,7 +206,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
       {/* fixed bottom audio player — always visible for quick mobile playback control.
           The nav row below the slider doubles as a buffer against the iOS bottom
           gesture area so the progress bar thumb stays comfortably draggable. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-line bg-paper shadow-[0_-4px_24px_rgba(29,27,24,0.08)]">
+      <div className="glass-player fixed inset-x-0 bottom-0 z-30 border-t border-ink-line/60 shadow-[0_-4px_24px_rgba(29,27,24,0.06)]">
         <div
           className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
