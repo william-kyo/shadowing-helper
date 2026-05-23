@@ -92,8 +92,8 @@ export function SegmentStageWorkspace({
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
+      <section className="overflow-hidden rounded-3xl border border-black/10 bg-white px-3 py-4 sm:px-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           <h2 className="text-sm font-semibold text-zinc-500">Stage 1–5</h2>
           <StageProgressTracker
             progress={progress}

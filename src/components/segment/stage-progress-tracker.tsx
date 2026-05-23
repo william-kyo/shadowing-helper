@@ -39,7 +39,7 @@ export function StageProgressTracker({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3">
       {STAGES.map((stage) => {
         const status = getStatus(stage)
         const isSelected = selectedStage === stage
@@ -49,7 +49,7 @@ export function StageProgressTracker({
             type="button"
             onClick={() => onStageSelect(stage)}
             aria-pressed={isSelected}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer ${getStatusClasses(status)} ${isSelected ? 'ring-4 ring-indigo-200 ring-offset-2' : ''}`}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer sm:h-9 sm:w-9 ${getStatusClasses(status)} ${isSelected ? 'ring-4 ring-indigo-200 ring-offset-2' : ''}`}
             title={`Stage ${stage} ${STAGE_META[stage]?.label ?? ''}`}
           >
             {status === 'completed' ? (

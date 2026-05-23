@@ -13,7 +13,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-surface px-6 py-10 text-ink">
+    <main className="relative flex min-h-[100dvh] flex-col bg-surface px-4 py-8 text-ink sm:px-6 sm:py-10 lg:overflow-hidden">
       {/* oversized vermillion brushstroke marker — pure decoration */}
       <span
         aria-hidden
@@ -22,26 +22,25 @@ export default async function LoginPage() {
         影
       </span>
 
-      <div className="relative mx-auto grid w-full max-w-5xl gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="grid gap-6 self-center">
+      <div className="relative mx-auto grid w-full max-w-5xl flex-1 items-center gap-8 lg:gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="grid gap-4 sm:gap-6">
           <div className="inline-flex w-fit items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-accent-deep">
             <span className="h-1.5 w-1.5 rounded-chip bg-accent" />
             internal access only
           </div>
-          <div className="grid gap-5">
-            <h1 className="max-w-2xl font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl">
+          <div className="grid gap-4 sm:gap-5">
+            <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               Shadowing
               <br />
               <span className="text-accent">Helper.</span>
             </h1>
-            <p className="max-w-xl text-base leading-8 text-ink-muted sm:text-lg">
-              社内で発行したアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに
-              入れます。登録は公開せず、Supabase 管理画面から内部ユーザーだけを追加します。
+            <p className="max-w-xl text-sm leading-7 text-ink-muted sm:text-base sm:leading-8">
+              社内で発行したアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに入れます。登録は公開せず、Supabase管理画面から内部ユーザーだけを追加します。
             </p>
           </div>
         </section>
 
-        <section className="self-center">
+        <section className="self-center pb-4 lg:pb-0">
           <LoginForm />
         </section>
       </div>

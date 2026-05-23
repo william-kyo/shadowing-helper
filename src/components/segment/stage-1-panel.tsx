@@ -106,8 +106,8 @@ export function Stage1Panel({
   }
 
   return (
-    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-3 sm:p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="group relative">
           <h3 className="cursor-default text-sm font-semibold text-indigo-700">
             Stage {activeStage} — {STAGE_META[activeStage]?.label}

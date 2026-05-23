@@ -100,15 +100,15 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   )
 
   return (
-    <main className="min-h-screen bg-surface text-ink">
-      <div className="mx-auto grid max-w-2xl gap-8 px-6 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
+    <main className="min-h-screen overflow-x-hidden bg-surface text-ink">
+      <div className="mx-auto grid max-w-2xl gap-8 px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:px-6 sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
         {/* header */}
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-5">
-          <div>
+        <div className="flex flex-wrap items-end justify-between gap-2 border-b border-ink-line/70 pb-5 sm:gap-4">
+          <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
               segment · 練習
             </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">
+            <h1 className="mt-2 truncate font-display text-2xl font-semibold tracking-tight sm:text-3xl">
               {segment.title ?? `Segment ${segment.index + 1}`}
             </h1>
             <p className="mt-1 text-sm text-ink-muted">
