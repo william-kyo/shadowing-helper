@@ -23,7 +23,7 @@ export default async function LoginPage() {
       </span>
 
       <div className="relative mx-auto grid w-full max-w-5xl flex-1 items-center gap-8 lg:gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="grid gap-4 sm:gap-6">
+        <section className="grid gap-4 px-2 sm:gap-6 sm:px-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-accent-deep">
             <span className="h-1.5 w-1.5 rounded-chip bg-accent" />
             internal access only
