@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Block commits that introduce credential literals. Tool-agnostic: runs for any
+# client (CLI, opencode, codex, claude code) since they all invoke `git commit`.
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+status=0
+
+# Custom credential-literal scan on the staged diff (the primary gate — catches
+# plain passwords that entropy/token scanners miss).
+git diff --cached --no-color -U0 --diff-filter=ACM \
+  | node "$root/.githooks/secret-scan.mjs" || status=1
+
+# Optional: gitleaks for known provider token formats. No-op if not installed.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner >/dev/null 2>&1
+  if [ "$?" -eq 1 ]; then
+    echo "⛔ gitleaks found a secret in staged changes (run: gitleaks protect --staged --verbose)" >&2
+    status=1
+  fi
+fi
+
+exit "$status"

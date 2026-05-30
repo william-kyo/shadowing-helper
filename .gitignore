@@ -59,6 +59,9 @@ CLAUDE.local.md
 # claude code local scratch (worktrees, helper scripts, etc.)
 /.claude/
 
+# local-only secret deny-list consumed by .githooks/secret-scan.mjs
+.githooks/secret-denylist.local
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

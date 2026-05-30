@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Last local gate before remote: scan the commit range being pushed. Catches
+# anything that slipped past pre-commit (e.g. committed by a different client).
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+ZERO="0000000000000000000000000000000000000000"
+status=0
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _localref localsha _remoteref remotesha; do
+  [ -z "${localsha:-}" ] && continue
+  [ "$localsha" = "$ZERO" ] && continue            # branch deletion — nothing to scan
+  base="$remotesha"
+  [ "$remotesha" = "$ZERO" ] && base="$EMPTY_TREE" # new branch — scan all introduced content
+
+  git diff --no-color -U0 --diff-filter=ACM "$base" "$localsha" \
+    | node "$root/.githooks/secret-scan.mjs" || status=1
+
+  if [ "$base" != "$EMPTY_TREE" ] && command -v gitleaks >/dev/null 2>&1; then
+    gitleaks detect --redact --no-banner --log-opts="$base..$localsha" >/dev/null 2>&1
+    [ "$?" -eq 1 ] && { echo "⛔ gitleaks found a secret in pushed commits" >&2; status=1; }
+  fi
+done
+
+exit "$status"
