@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+
+const PAGE_SIZE = 5
 
 type SegmentSummary = {
   progress: { stage: number; status: string }[]
@@ -155,6 +157,15 @@ type ProjectListProps = {
 }
 
 export function ProjectList({ projects }: ProjectListProps) {
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+
+  // Clamp the active page when the list shrinks (e.g. after a deletion).
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
   if (projects.length === 0) {
     return (
       <div className="rounded-card border border-dashed border-ink-line bg-paper p-8 text-sm leading-7 text-ink-muted">
@@ -163,11 +174,53 @@ export function ProjectList({ projects }: ProjectListProps) {
     )
   }
 
+  const start = (currentPage - 1) * PAGE_SIZE
+  const visibleProjects = projects.slice(start, start + PAGE_SIZE)
+
   return (
     <div className="grid gap-4">
-      {projects.map((project) => (
+      {visibleProjects.map((project) => (
         <ProjectCard key={project.id} project={project} />
       ))}
+
+      {totalPages > 1 ? (
+        <nav
+          aria-label="プロジェクトページング"
+          className="mt-2 flex flex-wrap items-center justify-center gap-2"
+        >
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="rounded-chip border border-ink-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ‹ 前へ
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+            <button
+              key={pageNumber}
+              type="button"
+              onClick={() => setPage(pageNumber)}
+              aria-current={pageNumber === currentPage ? 'page' : undefined}
+              className={`min-w-9 rounded-chip border px-3 py-1.5 text-sm font-medium tabular-nums transition ${
+                pageNumber === currentPage
+                  ? 'border-ink bg-ink text-paper'
+                  : 'border-ink-line bg-paper text-ink-muted hover:border-ink hover:text-ink'
+              }`}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="rounded-chip border border-ink-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            次へ ›
+          </button>
+        </nav>
+      ) : null}
     </div>
   )
 }
