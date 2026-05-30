@@ -1,4 +1,27 @@
+import { existsSync, readFileSync } from 'node:fs'
+
 import { defineConfig, devices } from '@playwright/test'
+
+// Load credentials/secrets from gitignored env files into the test runner's
+// process.env (e.g. TEST_EMAIL / TEST_PASSWORD for auth.setup.ts).
+// Never hard-code secrets in committed test files.
+for (const envFile of ['.env.local', '.env']) {
+  if (!existsSync(envFile)) continue
+  for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)\s*$/)
+    if (!match) continue
+    const key = match[1]
+    if (process.env[key] !== undefined) continue
+    let value = match[2].trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    process.env[key] = value
+  }
+}
 
 export default defineConfig({
   testDir: './e2e',
