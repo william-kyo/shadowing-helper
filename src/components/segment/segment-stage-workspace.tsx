@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
@@ -10,6 +10,13 @@ type StageStatus = 'not_started' | 'in_progress' | 'completed'
 type StageProgress = {
   stage: number
   status: StageStatus
+}
+
+// Status cycles forward on each toggle: untouched → active → done → untouched.
+const nextStatus: Record<StageStatus, StageStatus> = {
+  not_started: 'in_progress',
+  in_progress: 'completed',
+  completed: 'not_started',
 }
 
 type SegmentStageWorkspaceProps = {
@@ -89,6 +96,26 @@ export function SegmentStageWorkspace({
       setIsUpdatingStatus(false)
     }
   }
+
+  // Press "s" to cycle the selected stage's status — mirrors the audio player's
+  // Space / j / k shortcuts and skips while typing in a field.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const tag = target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        if (isUpdatingStatus) return
+        void updateStageStatus(selectedStage, nextStatus[getStatus(selectedStage)])
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStage, progress, isUpdatingStatus])
 
   return (
     <div className="grid gap-6">

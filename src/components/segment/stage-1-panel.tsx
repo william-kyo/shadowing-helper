@@ -168,6 +168,7 @@ export function Stage1Panel({
           type="button"
           onClick={() => onStageStatusChange(nextStatus[stageStatus])}
           disabled={isStatusUpdating}
+          title="ステータスを更新 (s)"
           className={`rounded-chip border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${getStatusChipClasses(stageStatus)}`}
         >
           {isStatusUpdating ? '更新中…' : getStatusLabel(stageStatus)}
