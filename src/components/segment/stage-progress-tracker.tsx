@@ -20,11 +20,11 @@ const STAGES = [1, 2, 3, 4, 5]
 function getStatusClasses(status: StageStatus) {
   switch (status) {
     case 'not_started':
-      return 'border-2 border-zinc-300 bg-white text-zinc-400 hover:border-indigo-400 hover:text-indigo-600'
+      return 'border-2 border-ink-line bg-paper text-ink-faint hover:border-accent hover:text-accent'
     case 'in_progress':
-      return 'border-2 border-indigo-400 bg-indigo-50 text-indigo-600 animate-pulse'
+      return 'border-2 border-accent bg-accent-faint text-accent'
     case 'completed':
-      return 'border-2 border-green-500 bg-green-500 text-white hover:bg-green-600'
+      return 'border-2 border-ink bg-ink text-paper hover:bg-paper-deep'
   }
 }
 
@@ -49,7 +49,7 @@ export function StageProgressTracker({
             type="button"
             onClick={() => onStageSelect(stage)}
             aria-pressed={isSelected}
-            className={`relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer sm:h-9 sm:w-9 ${getStatusClasses(status)} ${isSelected ? 'ring-4 ring-indigo-200 ring-offset-2' : ''}`}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer sm:h-9 sm:w-9 ${getStatusClasses(status)} ${isSelected ? 'ring-2 ring-accent/30 ring-offset-2 ring-offset-paper' : ''}`}
             title={`Stage ${stage} ${STAGE_META[stage]?.label ?? ''}`}
           >
             {status === 'completed' ? (
@@ -65,8 +65,8 @@ export function StageProgressTracker({
               </svg>
             ) : status === 'in_progress' ? (
               <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-indigo-500"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60"></span>
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-accent"></span>
               </span>
             ) : (
               stage

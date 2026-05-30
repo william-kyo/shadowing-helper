@@ -100,7 +100,7 @@ describe('HomePage – authenticated', () => {
     expect(recentLinks.length).toBeGreaterThanOrEqual(2)
     expect(recentLinks[1]).toHaveAttribute('href', '/projects/proj-1/segments/seg-1')
 
-    expect(screen.getByText('今週の記録')).toBeInTheDocument()
+    expect(screen.getByText(/今週の記録/)).toBeInTheDocument()
   })
 
   it('falls back to a project segment when no in-progress activity exists', async () => {

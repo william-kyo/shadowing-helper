@@ -25,6 +25,7 @@ describe('ProjectSegmentWorkspace', () => {
     render(
       <ProjectSegmentWorkspace
         projectId="project-1"
+        projectStatus="ready"
         audioSrc="/api/projects/project-1/audio"
         audioMimeType="audio/wav"
         audioOriginalName="lesson.wav"
@@ -75,6 +76,7 @@ describe('ProjectSegmentWorkspace', () => {
     render(
       <ProjectSegmentWorkspace
         projectId="project-1"
+        projectStatus="ready"
         audioSrc="/api/projects/project-1/audio"
         audioMimeType="audio/wav"
         audioOriginalName="lesson.wav"

@@ -116,7 +116,7 @@ export function ProjectSegmentWorkspace({
       <button
         type="button"
         onClick={() => setIsCreateFormOpen(true)}
-        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+        className="inline-flex items-center justify-center rounded-chip bg-ink px-6 py-3 text-sm font-semibold text-paper transition hover:bg-accent"
       >
         セグメントを追加
       </button>
@@ -124,46 +124,46 @@ export function ProjectSegmentWorkspace({
   )
 
   const segmentListSection = (
-    <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+    <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">セグメント一覧</h2>
-        <p className="mt-2 text-sm text-zinc-600">切り出した学習単位をここに並べます。</p>
+        <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">セグメント一覧</h2>
+        <p className="mt-2 text-sm text-ink-muted">切り出した学習単位をここに並べます。</p>
       </div>
 
       {segments.length === 0 ? (
-        <p className="text-sm text-zinc-500">まだセグメントはありません。上のフォームから追加してください。</p>
+        <p className="text-sm text-ink-faint">まだセグメントはありません。上のフォームから追加してください。</p>
       ) : (
         <ul className="grid gap-3">
           {segments.map((segment) => {
             const { currentStage, allCompleted } = computeCurrentStage(segment.progress)
             return (
-            <li key={segment.id} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
+            <li key={segment.id} className="flex items-center gap-3 rounded-inset border border-ink-line bg-paper-soft px-4 py-3 transition hover:border-accent hover:bg-accent-faint">
               <Link
                 href={`/projects/${projectId}/segments/${segment.id}`}
                 className="flex-1"
               >
-                <div className="flex items-center gap-2 font-medium text-zinc-950">
+                <div className="flex items-center gap-2 font-medium text-ink">
                   <span>
                     {segment.index + 1}. {segment.title ?? 'Untitled segment'}
                   </span>
                   {allCompleted ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
-                      <span aria-hidden>✅</span>
+                    <span className="inline-flex items-center gap-1 rounded-chip border border-ink bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
+                      <span aria-hidden>✓</span>
                       完了
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                    <span className="inline-flex items-center gap-1 rounded-chip border border-accent-soft bg-accent-faint px-2 py-0.5 text-xs font-semibold text-accent-deep">
                       Stage {currentStage} 進行中
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-sm text-zinc-600">
+                <div className="mt-1 font-mono text-xs tabular-nums text-ink-muted">
                   {Math.round((segment.startMs ?? 0) / 1000)}s – {Math.round((segment.endMs ?? 0) / 1000)}s
                 </div>
               </Link>
               <button
                 onClick={() => handleDeleteSegment(segment.id)}
-                className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:border-red-400 hover:bg-red-50"
+                className="shrink-0 rounded-chip border border-accent-soft bg-paper px-3 py-1.5 text-sm font-medium text-accent transition hover:border-accent hover:bg-accent-faint"
               >
                 削除
               </button>
@@ -177,10 +177,10 @@ export function ProjectSegmentWorkspace({
 
   return (
     <section className="grid gap-6">
-      <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+      <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">元音声</h2>
-          <p className="mt-1 text-sm text-zinc-500">{audioOriginalName}</p>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">元音声</h2>
+          <p className="mt-1 text-sm text-ink-faint">{audioOriginalName}</p>
         </div>
 
         <audio
@@ -202,7 +202,7 @@ export function ProjectSegmentWorkspace({
           type="button"
           onClick={handleAutoSegment}
           disabled={isAutoSegmenting || projectStatus === 'segmenting'}
-          className="inline-flex items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-3 text-sm font-medium text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center rounded-chip border border-accent-soft bg-accent-faint px-6 py-3 text-sm font-medium text-accent-deep transition hover:border-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isAutoSegmenting || projectStatus === 'segmenting' ? (
             <>

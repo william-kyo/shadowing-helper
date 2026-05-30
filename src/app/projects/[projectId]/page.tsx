@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { ProjectSegmentWorkspace } from '@/components/project/project-segment-workspace'
+import { ScriptImageGallery } from '@/components/project/script-image-gallery'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
@@ -73,7 +74,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   )
 
   return (
-    <main className="min-h-screen bg-surface px-6 py-10 text-ink">
+    <main className="min-h-screen bg-surface px-6 pt-10 pb-28 text-ink">
       <div className="mx-auto grid max-w-5xl gap-8">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
@@ -130,18 +131,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {project.sourceImages.length === 0 ? (
             <p className="text-sm text-ink-faint">画像はまだありません。</p>
           ) : (
-            <div className={`grid gap-4 ${project.sourceImages.length >= 5 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              {project.sourceImages.map((image) => (
-                <div key={image.id} className="flex flex-col items-center gap-2">
-                  <img
-                    src={`/api/projects/${project.id}/images/${image.id}`}
-                    alt={image.originalName}
-                    className="w-full h-auto rounded-inset border border-ink-line"
-                  />
-                  <p className="text-xs text-ink-muted text-center">{image.originalName}</p>
-                </div>
-              ))}
-            </div>
+            <ScriptImageGallery
+              projectId={project.id}
+              images={project.sourceImages.map((image) => ({
+                id: image.id,
+                originalName: image.originalName,
+              }))}
+            />
           )}
         </section>
         {/* prev / next project navigation */}

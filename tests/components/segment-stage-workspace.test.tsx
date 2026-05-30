@@ -23,11 +23,15 @@ describe('SegmentStageWorkspace', () => {
       />,
     )
 
-    expect(screen.getByText(/Stage 2 — サイレント・シャドーイング/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Stage 2 — サイレント・シャドーイング/ }),
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByTitle('Stage 4 スクリプト付きシャドーイング'))
 
-    expect(screen.getByText(/Stage 4 — スクリプト付きシャドーイング/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Stage 4 — スクリプト付きシャドーイング/ }),
+    ).toBeInTheDocument()
   })
 
   it('updates the selected stage status from the panel header', async () => {
@@ -56,10 +60,10 @@ describe('SegmentStageWorkspace', () => {
     expect(screen.getByRole('button', { name: '◐ 進行中' })).toBeInTheDocument()
   })
 
-  it('keeps saved script and notes when switching stages without a page refresh', async () => {
+  it('autosaves edits and keeps script and notes when switching stages without a page refresh', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({ text: 'saved script', notes: 'saved notes' }),
+      json: async () => ({ text: 'edited script', notes: 'edited notes' }),
     } as Response)
 
     render(
@@ -73,15 +77,21 @@ describe('SegmentStageWorkspace', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '表示' }))
-    fireEvent.change(screen.getByDisplayValue('old script'), { target: { value: 'saved script' } })
-    fireEvent.change(screen.getByDisplayValue('old notes'), { target: { value: 'saved notes' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    fireEvent.change(screen.getByDisplayValue('old script'), { target: { value: 'edited script' } })
+    fireEvent.change(screen.getByDisplayValue('old notes'), { target: { value: 'edited notes' } })
 
-    expect(await screen.findByText('保存しました')).toBeInTheDocument()
+    // Edits persist via debounced autosave — no manual save button.
+    expect(await screen.findByText('✓ 自動保存しました', {}, { timeout: 2500 })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/segments/seg-1',
+        expect.objectContaining({ method: 'PATCH' }),
+      )
+    })
 
     fireEvent.click(screen.getByTitle('Stage 2 サイレント・シャドーイング'))
 
-    expect(screen.getByDisplayValue('saved script')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('saved notes')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('edited script')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('edited notes')).toBeInTheDocument()
   })
 })

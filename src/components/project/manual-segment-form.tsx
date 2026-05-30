@@ -78,11 +78,11 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
   }
 
   return (
-    <section className="grid gap-4 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+    <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">手動でセグメントを追加</h2>
-          <p className="mt-2 text-sm text-zinc-600">
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">手動でセグメントを追加</h2>
+          <p className="mt-2 text-sm text-ink-muted">
             元音声を再生しながら開始位置と終了位置を決めて、1 つずつ segment を切り出します。
           </p>
         </div>
@@ -90,7 +90,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
           <button
             type="button"
             onClick={onCollapse}
-            className="rounded-2xl border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-900 hover:text-zinc-900"
+            className="rounded-chip border border-ink-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:border-ink hover:text-ink"
           >
             閉じる
           </button>
@@ -98,7 +98,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium text-zinc-900" htmlFor="segment-title">
+        <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-title">
           セグメント名
         </label>
         <input
@@ -106,14 +106,14 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
           type="text"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+          className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
           placeholder="例: Intro / Paragraph 1"
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-zinc-900" htmlFor="segment-start-seconds">
+          <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-start-seconds">
             開始秒
           </label>
           <input
@@ -122,19 +122,19 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
             step="0.01"
             value={startSeconds}
             onChange={(event) => setStartSeconds(Number(event.target.value))}
-            className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+            className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
           />
           <button
             type="button"
             onClick={() => setCurrentTime('start')}
-            className="rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
+            className="rounded-chip border border-ink-line bg-paper-soft px-4 py-3 text-sm font-medium text-ink transition hover:border-ink"
           >
             現在位置を開始にセット
           </button>
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-zinc-900" htmlFor="segment-end-seconds">
+          <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-end-seconds">
             終了秒
           </label>
           <input
@@ -143,12 +143,12 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
             step="0.01"
             value={endSeconds}
             onChange={(event) => setEndSeconds(Number(event.target.value))}
-            className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+            className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
           />
           <button
             type="button"
             onClick={() => setCurrentTime('end')}
-            className="rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:border-zinc-900"
+            className="rounded-chip border border-ink-line bg-paper-soft px-4 py-3 text-sm font-medium text-ink transition hover:border-ink"
           >
             現在位置を終了にセット
           </button>
@@ -156,7 +156,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
       </div>
 
       {errorMessage ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
           {errorMessage}
         </p>
       ) : null}
@@ -167,7 +167,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
           void handleSave()
         }}
         disabled={isSubmitting}
-        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-500"
+        className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? '保存中…' : 'セグメントを保存'}
       </button>

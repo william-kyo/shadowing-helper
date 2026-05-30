@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Fraunces, Geist_Mono, Noto_Sans_JP } from 'next/font/google'
 
 import { AuthFetchInterceptor } from '@/components/auth/auth-fetch-interceptor'
+import { BottomNav } from '@/components/nav/bottom-nav'
 import { WebVitals } from '@/components/perf/web-vitals'
 
 import './globals.css'
@@ -49,6 +50,7 @@ export default function RootLayout({
         <WebVitals />
         <AuthFetchInterceptor />
         {children}
+        <BottomNav />
       </body>
     </html>
   )

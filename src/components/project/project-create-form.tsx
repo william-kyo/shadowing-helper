@@ -183,12 +183,12 @@ export function ProjectCreateForm() {
 
   return (
     <form
-      className="grid gap-5 rounded-3xl border border-black/10 bg-white p-6 shadow-sm"
+      className="grid gap-5 rounded-card border border-ink-line bg-paper p-6"
       onSubmit={onSubmit}
       noValidate
     >
       <div className="grid gap-2">
-        <label className="text-sm font-medium text-zinc-900" htmlFor="title">
+        <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="title">
           プロジェクト名
         </label>
         <input
@@ -196,16 +196,16 @@ export function ProjectCreateForm() {
           type="text"
           placeholder="例: NHK ニュース shadowing 01"
           aria-invalid={errors.title ? 'true' : 'false'}
-          className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none transition focus:border-zinc-900"
+          className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
           {...register('title')}
         />
         {errors.title ? (
-          <p className="text-sm text-red-600">{errors.title.message}</p>
+          <p className="text-sm text-accent-deep">{errors.title.message}</p>
         ) : null}
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium text-zinc-900" htmlFor="audio">
+        <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="audio">
           音声ファイル
         </label>
         <input
@@ -223,25 +223,25 @@ export function ProjectCreateForm() {
         <button
           type="button"
           onClick={() => audioRef.current?.click()}
-          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm transition hover:border-zinc-500 hover:bg-zinc-100"
+          className="flex items-center gap-3 rounded-inset border border-dashed border-ink-line bg-paper-soft px-4 py-4 text-sm transition hover:border-ink hover:bg-paper"
         >
           {audioFileName ? (
-            <span className="truncate text-zinc-800">{audioFileName}</span>
+            <span className="truncate text-ink">{audioFileName}</span>
           ) : (
             <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-faint">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-zinc-400">ファイルを選択</span>
+              <span className="text-ink-faint">ファイルを選択</span>
             </>
           )}
         </button>
-        <p className="text-xs text-zinc-500">mp3 / wav / m4a / webm / ogg を想定。まずはローカル保存のみ行います。</p>
-        {errors.audio ? <p className="text-sm text-red-600">{errors.audio.message as string}</p> : null}
+        <p className="text-xs text-ink-muted">mp3 / wav / m4a / webm / ogg を想定。まずはローカル保存のみ行います。</p>
+        {errors.audio ? <p className="text-sm text-accent-deep">{errors.audio.message as string}</p> : null}
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium text-zinc-900" htmlFor="images">
+        <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="images">
           台本画像（任意）
         </label>
         <input
@@ -260,31 +260,31 @@ export function ProjectCreateForm() {
         <button
           type="button"
           onClick={() => imagesRef.current?.click()}
-          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm transition hover:border-zinc-500 hover:bg-zinc-100"
+          className="flex items-center gap-3 rounded-inset border border-dashed border-ink-line bg-paper-soft px-4 py-4 text-sm transition hover:border-ink hover:bg-paper"
         >
           {imageFileNames.length > 0 ? (
-            <span className="truncate text-zinc-800">{imageFileNames.join('、')}</span>
+            <span className="truncate text-ink">{imageFileNames.join('、')}</span>
           ) : (
             <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-faint">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-zinc-400">ファイルを選択（複数可）</span>
+              <span className="text-ink-faint">ファイルを選択（複数可）</span>
             </>
           )}
         </button>
-        <p className="text-xs text-zinc-500">png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。</p>
-        {errors.images ? <p className="text-sm text-red-600">{errors.images.message as string}</p> : null}
+        <p className="text-xs text-ink-muted">png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。</p>
+        {errors.images ? <p className="text-sm text-accent-deep">{errors.images.message as string}</p> : null}
       </div>
 
       {errorMessage ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
           {errorMessage}
         </p>
       ) : null}
 
       {successMessage ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <p className="rounded-inset border border-ink-line bg-paper-soft px-4 py-3 text-sm text-ink">
           {successMessage}
         </p>
       ) : null}
@@ -295,7 +295,7 @@ export function ProjectCreateForm() {
           void onSubmit(event)
         }}
         disabled={isSubmitting}
-        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-500"
+        className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? '保存中…' : 'プロジェクトを作成'}
       </button>

@@ -29,7 +29,7 @@ export default async function ProjectsPage() {
   )
 
   return (
-    <main className="min-h-screen bg-surface px-6 py-10 text-ink">
+    <main className="min-h-screen bg-surface px-6 pt-10 pb-28 text-ink">
       <div className="mx-auto grid max-w-5xl gap-8">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>

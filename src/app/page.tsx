@@ -204,7 +204,7 @@ export default async function HomePage() {
     })
 
     return (
-      <main className="min-h-screen bg-surface px-4 py-6 text-ink sm:px-6 sm:py-10">
+      <main className="min-h-screen bg-surface px-4 pt-6 pb-28 text-ink sm:px-6 sm:pt-10 sm:pb-32">
         <div className="mx-auto grid max-w-2xl gap-6">
           <header className="flex items-end justify-between gap-3 border-b border-ink-line/70 pb-4">
             <div className="min-w-0">

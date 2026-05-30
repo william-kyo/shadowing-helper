@@ -1,7 +1,7 @@
 'use client'
 
 import type { ChangeEvent } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 type SegmentAudioPlayerProps = {
@@ -21,6 +21,7 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
+// Synthetic fallback shape, used only if the real audio can't be decoded.
 function generateWaveformHeights(count: number): number[] {
   const heights: number[] = []
   for (let i = 0; i < count; i++) {
@@ -32,8 +33,31 @@ function generateWaveformHeights(count: number): number[] {
   return heights
 }
 
+// Downsample decoded PCM into `count` normalized RMS peaks (0.15–1) so each bar
+// reflects the actual loudness at that point in the clip.
+function computeWaveformPeaks(audioBuffer: AudioBuffer, count: number): number[] {
+  const channel = audioBuffer.getChannelData(0)
+  const blockSize = Math.max(1, Math.floor(channel.length / count))
+  const peaks: number[] = []
+  let max = 0
+  for (let i = 0; i < count; i++) {
+    const start = i * blockSize
+    let sumSquares = 0
+    for (let j = 0; j < blockSize; j++) {
+      const sample = channel[start + j] ?? 0
+      sumSquares += sample * sample
+    }
+    const rms = Math.sqrt(sumSquares / blockSize)
+    peaks.push(rms)
+    if (rms > max) max = rms
+  }
+  return peaks.map((peak) => Math.max(0.15, max > 0 ? peak / max : 0.15))
+}
+
 export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments }: SegmentAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const speedMenuRef = useRef<HTMLDivElement>(null)
+  const tocMenuRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -41,7 +65,39 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [showTocMenu, setShowTocMenu] = useState(false)
 
-  const waveformHeights = useMemo(() => generateWaveformHeights(BAR_COUNT), [])
+  const [waveformHeights, setWaveformHeights] = useState<number[]>(() =>
+    generateWaveformHeights(BAR_COUNT),
+  )
+
+  // Decode the real audio once to render a true waveform; fall back silently to
+  // the synthetic shape on any failure (unsupported codec, fetch error, etc).
+  useEffect(() => {
+    const AudioCtor =
+      window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioCtor) return
+
+    let cancelled = false
+    const audioContext = new AudioCtor()
+
+    void (async () => {
+      try {
+        const res = await fetch(src)
+        const arrayBuffer = await res.arrayBuffer()
+        const decoded = await audioContext.decodeAudioData(arrayBuffer)
+        if (!cancelled) {
+          setWaveformHeights(computeWaveformPeaks(decoded, BAR_COUNT))
+        }
+      } catch {
+        // keep synthetic fallback
+      } finally {
+        void audioContext.close()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [src])
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -108,6 +164,34 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
       audioRef.current.playbackRate = playbackRate
     }
   }, [playbackRate])
+
+  // Close the speed / table-of-contents popovers on outside click or Escape.
+  useEffect(() => {
+    if (!showSpeedMenu && !showTocMenu) return
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (speedMenuRef.current?.contains(target) || tocMenuRef.current?.contains(target)) {
+        return
+      }
+      setShowSpeedMenu(false)
+      setShowTocMenu(false)
+    }
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSpeedMenu(false)
+        setShowTocMenu(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showSpeedMenu, showTocMenu])
 
   const handleSpeedChange = (rate: number) => {
     setPlaybackRate(rate)
@@ -187,7 +271,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
       {/* time + controls row */}
       <div className="flex items-center justify-between">
         {/* playback speed */}
-        <div className="relative">
+        <div className="relative" ref={speedMenuRef}>
           <button
             onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowTocMenu(false) }}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"
@@ -271,7 +355,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
         </div>
 
         {/* table of contents */}
-        <div className="relative">
+        <div className="relative" ref={tocMenuRef}>
           <button
             onClick={() => { setShowTocMenu(!showTocMenu); setShowSpeedMenu(false) }}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"

@@ -61,7 +61,7 @@ describe('ProjectDetailPage', () => {
   it('shows a home link pointing to / in the header', async () => {
     render(await ProjectDetailPage({ params: Promise.resolve({ projectId: 'project-1' }) }))
 
-    const homeLink = screen.getByRole('link', { name: /🏠 ホーム/ })
+    const homeLink = screen.getByRole('link', { name: 'ホーム' })
     expect(homeLink).toBeInTheDocument()
     expect(homeLink).toHaveAttribute('href', '/')
   })

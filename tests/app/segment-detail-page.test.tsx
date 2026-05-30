@@ -74,7 +74,7 @@ describe('SegmentDetailPage', () => {
       }),
     )
 
-    const homeLink = screen.getByRole('link', { name: /🏠 ホーム/ })
+    const homeLink = screen.getByRole('link', { name: 'ホーム' })
     expect(homeLink).toBeInTheDocument()
     expect(homeLink).toHaveAttribute('href', '/')
   })
