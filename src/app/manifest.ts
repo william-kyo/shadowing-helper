@@ -7,8 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Stage-based audio shadowing practice',
     start_url: '/projects',
     display: 'standalone',
-    background_color: '#fafafa',
-    theme_color: '#4f46e5',
+    // Warm-paper brand surface (was stale indigo/grey from the pre-redesign theme)
+    background_color: '#f4ecdc',
+    theme_color: '#f4ecdc',
     icons: [
       {
         src: '/icon-192.png',
