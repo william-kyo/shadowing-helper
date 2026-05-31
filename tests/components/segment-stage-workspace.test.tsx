@@ -1,11 +1,18 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+const pushMock = vi.fn()
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock, refresh: vi.fn(), replace: vi.fn() }),
+}))
+
 import { SegmentStageWorkspace } from '@/components/segment/segment-stage-workspace'
 
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  pushMock.mockReset()
 })
 
 describe('SegmentStageWorkspace', () => {
@@ -20,6 +27,7 @@ describe('SegmentStageWorkspace', () => {
         initialText="sample text"
         initialNotes="sample notes"
         initialStage={2}
+        nextIncompleteHref={null}
       />,
     )
 
@@ -44,6 +52,7 @@ describe('SegmentStageWorkspace', () => {
         initialText="sample text"
         initialNotes={null}
         initialStage={3}
+        nextIncompleteHref={null}
       />,
     )
 
@@ -73,6 +82,7 @@ describe('SegmentStageWorkspace', () => {
         initialText="old script"
         initialNotes="old notes"
         initialStage={1}
+        nextIncompleteHref={null}
       />,
     )
 
@@ -93,5 +103,60 @@ describe('SegmentStageWorkspace', () => {
 
     expect(screen.getByDisplayValue('edited script')).toBeInTheDocument()
     expect(screen.getByDisplayValue('edited notes')).toBeInTheDocument()
+  })
+
+  it('jumps to the next incomplete segment once the final stage is completed', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
+
+    render(
+      <SegmentStageWorkspace
+        segmentId="seg-1"
+        initialProgress={[
+          { stage: 1, status: 'completed' },
+          { stage: 2, status: 'completed' },
+          { stage: 3, status: 'completed' },
+          { stage: 4, status: 'completed' },
+          { stage: 5, status: 'in_progress' },
+        ]}
+        initialText="sample text"
+        initialNotes={null}
+        initialStage={5}
+        nextIncompleteHref="/projects/proj-2/segments/seg-9"
+      />,
+    )
+
+    // Completing the last in-progress stage marks the segment fully done.
+    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
+
+    expect(await screen.findByText('セグメント完了')).toBeInTheDocument()
+    await waitFor(
+      () => expect(pushMock).toHaveBeenCalledWith('/projects/proj-2/segments/seg-9'),
+      { timeout: 2000 },
+    )
+  })
+
+  it('falls back to home when nothing is left to complete', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
+
+    render(
+      <SegmentStageWorkspace
+        segmentId="seg-1"
+        initialProgress={[
+          { stage: 1, status: 'completed' },
+          { stage: 2, status: 'completed' },
+          { stage: 3, status: 'completed' },
+          { stage: 4, status: 'completed' },
+          { stage: 5, status: 'in_progress' },
+        ]}
+        initialText="sample text"
+        initialNotes={null}
+        initialStage={5}
+        nextIncompleteHref={null}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/'), { timeout: 2000 })
   })
 })

@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
+import { computeCurrentStage } from '@/lib/stage-progress'
 
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
@@ -19,12 +21,27 @@ const nextStatus: Record<StageStatus, StageStatus> = {
   completed: 'not_started',
 }
 
+// Pure: return progress with `stage` set to `status` (inserting a row if absent).
+function applyStatus(
+  progress: StageProgress[],
+  stage: number,
+  status: StageStatus,
+): StageProgress[] {
+  if (progress.some((item) => item.stage === stage)) {
+    return progress.map((item) => (item.stage === stage ? { ...item, status } : item))
+  }
+  return [...progress, { stage, status }].sort((a, b) => a.stage - b.stage)
+}
+
 type SegmentStageWorkspaceProps = {
   segmentId: string
   initialProgress: StageProgress[]
   initialText: string
   initialNotes: string | null
   initialStage: number
+  // Where to go once all five stages are completed: the next segment needing
+  // work (or the next project's first such segment). Null when nothing is left.
+  nextIncompleteHref: string | null
 }
 
 export function SegmentStageWorkspace({
@@ -33,12 +50,16 @@ export function SegmentStageWorkspace({
   initialText,
   initialNotes,
   initialStage,
+  nextIncompleteHref,
 }: SegmentStageWorkspaceProps) {
+  const router = useRouter()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
   const [selectedStage, setSelectedStage] = useState(initialStage)
   const [segmentText, setSegmentText] = useState(initialText)
   const [segmentNotes, setSegmentNotes] = useState(initialNotes ?? '')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+  const completeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [, startTransition] = useTransition()
 
   const getStatus = (stage: number): StageStatus => {
@@ -46,20 +67,23 @@ export function SegmentStageWorkspace({
     return found?.status ?? 'not_started'
   }
 
-  const updateStageStatus = async (stage: number, nextStatus: StageStatus) => {
+  // All five stages done — acknowledge briefly, then jump to the next target.
+  const handleSegmentComplete = () => {
+    setIsCompleting(true)
+    completeTimer.current = setTimeout(() => {
+      router.push(nextIncompleteHref ?? '/')
+    }, 900)
+  }
+
+  const updateStageStatus = async (stage: number, status: StageStatus) => {
+    if (isCompleting) return
+
+    const existedBefore = progress.some((item) => item.stage === stage)
     const previousStatus = getStatus(stage)
+    const updated = applyStatus(progress, stage, status)
 
     startTransition(() => {
-      setProgress((prev) => {
-        const exists = prev.find((item) => item.stage === stage)
-        if (exists) {
-          return prev.map((item) =>
-            item.stage === stage ? { ...item, status: nextStatus } : item,
-          )
-        }
-
-        return [...prev, { stage, status: nextStatus }].sort((a, b) => a.stage - b.stage)
-      })
+      setProgress(updated)
     })
 
     setIsUpdatingStatus(true)
@@ -68,28 +92,33 @@ export function SegmentStageWorkspace({
       const res = await fetch(`/api/segments/${segmentId}/progress`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ stage, status: nextStatus }),
+        body: JSON.stringify({ stage, status }),
       })
 
       if (!res.ok) {
         throw new Error('Failed to update stage status')
       }
 
-      // Auto-advance to next stage when marking completed, unless already on stage 5
-      if (nextStatus === 'completed' && stage < 5) {
-        setSelectedStage(stage + 1)
+      if (status === 'completed') {
+        // Completing the last remaining stage finishes the segment — navigate on.
+        if (computeCurrentStage(updated).allCompleted) {
+          handleSegmentComplete()
+          return
+        }
+        // Otherwise auto-advance to the next stage (unless already on stage 5).
+        if (stage < 5) {
+          setSelectedStage(stage + 1)
+        }
       }
     } catch {
       startTransition(() => {
         setProgress((prev) => {
-          const exists = prev.find((item) => item.stage === stage)
-          if (exists) {
-            return prev.map((item) =>
-              item.stage === stage ? { ...item, status: previousStatus } : item,
-            )
+          if (!existedBefore) {
+            return prev.filter((item) => item.stage !== stage)
           }
-
-          return prev.filter((item) => item.stage !== stage)
+          return prev.map((item) =>
+            item.stage === stage ? { ...item, status: previousStatus } : item,
+          )
         })
       })
     } finally {
@@ -107,7 +136,7 @@ export function SegmentStageWorkspace({
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault()
-        if (isUpdatingStatus) return
+        if (isUpdatingStatus || isCompleting) return
         void updateStageStatus(selectedStage, nextStatus[getStatus(selectedStage)])
       }
     }
@@ -115,10 +144,36 @@ export function SegmentStageWorkspace({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStage, progress, isUpdatingStatus])
+  }, [selectedStage, progress, isUpdatingStatus, isCompleting])
+
+  useEffect(() => () => {
+    if (completeTimer.current) clearTimeout(completeTimer.current)
+  }, [])
 
   return (
     <div className="grid gap-6">
+      {isCompleting ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-0 top-6 z-50 flex justify-center px-4"
+        >
+          <div className="flex items-center gap-3 rounded-chip border border-accent-soft bg-paper px-5 py-3 shadow-[0_8px_24px_rgba(29,27,24,0.12)] animate-streak-in">
+            <span className="flex h-7 w-7 items-center justify-center rounded-chip bg-accent text-sm text-paper">
+              ✓
+            </span>
+            <div className="grid">
+              <span className="font-display text-sm font-semibold tracking-tight text-ink">
+                セグメント完了
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                {nextIncompleteHref ? '次のセグメントへ →' : 'すべて完了 →'}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="overflow-hidden rounded-card border border-ink-line bg-paper px-3 py-4 sm:px-4">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">Stage 1–5</h2>
@@ -137,7 +192,7 @@ export function SegmentStageWorkspace({
         activeStage={selectedStage}
         stageStatus={getStatus(selectedStage)}
         isStatusUpdating={isUpdatingStatus}
-        onStageStatusChange={(nextStatus) => updateStageStatus(selectedStage, nextStatus)}
+        onStageStatusChange={(status) => updateStageStatus(selectedStage, status)}
         onContentSaved={({ text, notes }) => {
           setSegmentText(text)
           setSegmentNotes(notes ?? '')

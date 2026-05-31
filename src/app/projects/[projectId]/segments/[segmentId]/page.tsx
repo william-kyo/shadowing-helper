@@ -9,6 +9,7 @@ import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
+import { findNextIncompleteSegment } from '@/lib/segment-navigation'
 import { computeCurrentStage } from '@/lib/stage-progress'
 
 type SegmentDetailPageProps = {
@@ -99,6 +100,22 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     ]),
   )
 
+  // Where to send the learner once every stage of this segment is completed:
+  // the next segment still needing work, then the next project's first such
+  // segment. Null means there's nothing left ahead.
+  const nextIncomplete = await measureStep('db.segment.find_next_incomplete', () =>
+    findNextIncompleteSegment({
+      userId: currentUser.id,
+      projectId,
+      projectCreatedAt: project.createdAt,
+      segmentIndex: segment.index,
+    }),
+  )
+
+  const nextIncompleteHref = nextIncomplete
+    ? `/projects/${nextIncomplete.projectId}/segments/${nextIncomplete.segmentId}`
+    : null
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface text-ink">
       <div className="mx-auto grid max-w-2xl gap-8 px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:px-6 sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
@@ -133,6 +150,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               segment.progress.map((p) => ({ stage: p.stage, status: p.status })),
             ).currentStage
           }
+          nextIncompleteHref={nextIncompleteHref}
         />
 
         {/* prev / next navigation */}

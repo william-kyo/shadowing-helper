@@ -14,12 +14,16 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 const projectFindFirst = vi.fn()
+const projectFindMany = vi.fn()
 const segmentFindFirst = vi.fn()
 const segmentFindMany = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   db: {
-    project: { findFirst: (...args: unknown[]) => projectFindFirst(...args) },
+    project: {
+      findFirst: (...args: unknown[]) => projectFindFirst(...args),
+      findMany: (...args: unknown[]) => projectFindMany(...args),
+    },
     segment: {
       findFirst: (...args: unknown[]) => segmentFindFirst(...args),
       findMany: (...args: unknown[]) => segmentFindMany(...args),
@@ -55,6 +59,8 @@ function setupDefaultMocks() {
     .mockResolvedValueOnce(BASE_PROJECT)    // main project
     .mockResolvedValueOnce(null)            // prevProject
     .mockResolvedValueOnce(null)            // nextProject
+  // findNextIncompleteSegment: no later projects to scan
+  projectFindMany.mockResolvedValue([])
 }
 
 afterEach(() => {
