@@ -4,7 +4,7 @@ import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { transcribeAudioWithSegments } from '@/lib/groq'
-import { addPunctuation, analyzeTopicBoundaries } from '@/lib/segment-analysis'
+import { analyzeSegments } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { computePcmHash } from '@/lib/audio-fingerprint'
 import {
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
             mimeType: titleResult.data.audioMimeType,
           })
 
-          const topicSegments = await analyzeTopicBoundaries(whisperResponse.segments)
+          const topicSegments = await analyzeSegments(whisperResponse.segments)
           const resolvedSegments = topicSegments
             .map((seg) => {
               const startWhisperSeg = whisperResponse.segments[seg.startIndex]
@@ -183,10 +183,6 @@ export async function POST(request: Request) {
           const filteredSegments = resolvedSegments.filter(
             (seg) => (seg.endSeconds - seg.startSeconds) >= 3,
           )
-          const punctuatedTexts = await addPunctuation(filteredSegments.map((seg) => seg.text))
-          punctuatedTexts.forEach((text, i) => {
-            filteredSegments[i].text = text
-          })
           limitedSegments = filteredSegments.slice(0, 20)
         }
 

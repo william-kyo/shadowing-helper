@@ -1,5 +1,5 @@
-import { env } from '@/lib/env'
 import type { WhisperSegment } from '@/lib/groq'
+import { chatJson } from '@/lib/llm'
 
 export interface TopicSegment {
   title: string
@@ -8,157 +8,130 @@ export interface TopicSegment {
   text: string
 }
 
-export async function analyzeTopicBoundaries(segments: WhisperSegment[]): Promise<TopicSegment[]> {
-  const apiKey = env.GROQ_API_KEY
+// Gap (in seconds) below which two segments are unlikely to be a topic break;
+// surfaced to the model as a boundary signal.
+const BOUNDARY_GAP_HINT = 1.0
 
-  const segmentsText = segments
-    .map((s, i) => `[${i}] "${s.text}"`)
-    .join('\n')
-
-  const prompt = `You are given a transcript of an audio file, segmented by Whisper into sentences. Your task is to identify topic/theme changes and group consecutive segments into coherent paragraphs.
-
-Each segment has:
-- Index number (0-based, in order of appearance)
-- The transcribed text
-
-Analyze the transcript and identify where topic changes occur. Group consecutive segments that discuss the same topic into paragraphs.
-
-Return a JSON object with a "paragraphs" array where each item represents a paragraph/topic with:
-- "title": A short descriptive title (in Japanese, 5-15 characters)
-- "startIndex": The index of the FIRST segment in this topic (use the exact index from the input)
-- "endIndex": The index of the LAST segment in this topic (use the exact index from the input)
-- "text": The combined text of all segments in this topic (join the text fields with spaces)
-
-Rules:
-1. Use EXACT segment indices from the input (0, 1, 2, etc.) - do not skip or reorder
-2. startIndex must be <= endIndex
-3. Groups should be consecutive indices (no gaps)
-4. Titles should be concise and descriptive (e.g., "天気の話", "約束事", "今日の予定")
-5. Return ONLY the JSON object with "paragraphs" array, no markdown code blocks
-
-Transcript:
-${segmentsText}`
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Groq LLM API error ${response.status}: ${errorText}`)
-  }
-
-  const json = await response.json()
-  const content = json.choices?.[0]?.message?.content
-
-  if (!content) {
-    throw new Error('No content in LLM response')
-  }
-
-  const parsed = JSON.parse(content)
-
-  if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
-    return parsed.paragraphs as TopicSegment[]
-  }
-
-  if (parsed.topics && Array.isArray(parsed.topics)) {
-    return parsed.topics as TopicSegment[]
-  }
-
-  if (parsed.segments && Array.isArray(parsed.segments)) {
-    return parsed.segments as TopicSegment[]
-  }
-
-  if (Array.isArray(parsed)) {
-    return parsed as TopicSegment[]
-  }
-
-  throw new Error(`Unexpected LLM response format: ${JSON.stringify(Object.keys(parsed))}`)
+// Reconstruct the authoritative paragraph text straight from the Whisper
+// segments — never trust an LLM-rebuilt text, and never join with spaces
+// (Japanese has no inter-word spaces).
+function reconstructText(segments: WhisperSegment[], startIndex: number, endIndex: number): string {
+  return segments
+    .slice(startIndex, endIndex + 1)
+    .map((s) => s.text.trim())
+    .join('')
 }
 
-export async function addPunctuation(texts: string[]): Promise<string[]> {
-  if (texts.length === 0) return []
+function extractParagraphs(parsed: unknown): unknown[] {
+  if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>
+    for (const key of ['paragraphs', 'topics', 'segments']) {
+      if (Array.isArray(obj[key])) return obj[key] as unknown[]
+    }
+  }
+  if (Array.isArray(parsed)) return parsed
+  throw new Error(`Unexpected LLM response format: ${JSON.stringify(parsed)?.slice(0, 200)}`)
+}
 
-  const apiKey = env.GROQ_API_KEY
+// Clamp/repair the model's index ranges so the result contiguously covers
+// [0, N-1] with no gaps or overlaps. Falls back to a single paragraph if the
+// model output is unusable.
+function normalize(rawParagraphs: unknown[], segments: WhisperSegment[]): TopicSegment[] {
+  const lastIndex = segments.length - 1
 
-  const textsWithIndex = texts.map((t, i) => `[${i}] ${t}`).join('\n')
+  const candidates = rawParagraphs
+    .map((p) => {
+      const obj = (p ?? {}) as Record<string, unknown>
+      const start = Number(obj.startIndex)
+      const end = Number(obj.endIndex)
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return null
+      return {
+        title: typeof obj.title === 'string' ? obj.title : '',
+        startIndex: Math.max(0, Math.min(lastIndex, Math.trunc(start))),
+        endIndex: Math.max(0, Math.min(lastIndex, Math.trunc(end))),
+        text: typeof obj.text === 'string' ? obj.text.trim() : '',
+      }
+    })
+    .filter((p): p is TopicSegment => p !== null && p.startIndex <= p.endIndex)
+    .sort((a, b) => a.startIndex - b.startIndex)
 
-  const prompt = `Add appropriate Japanese punctuation (。！？、) to each line. Return a JSON object with an "indexed_texts" array.
+  if (candidates.length === 0) {
+    return [{ title: '本文', startIndex: 0, endIndex: lastIndex, text: reconstructText(segments, 0, lastIndex) }]
+  }
+
+  // Walk the sorted ranges, closing gaps and trimming overlaps so coverage is
+  // contiguous from index 0 onward.
+  const result: TopicSegment[] = []
+  let cursor = 0
+  for (const candidate of candidates) {
+    if (candidate.endIndex < cursor) continue // fully overlapped by a prior paragraph
+    const startIndex = Math.max(cursor, candidate.startIndex)
+    const endIndex = candidate.endIndex
+    const rawText = reconstructText(segments, startIndex, endIndex)
+    result.push({
+      title: candidate.title || '本文',
+      startIndex,
+      endIndex,
+      // Keep the model's punctuated text only when it preserves the original
+      // wording (ignoring punctuation/spaces); otherwise fall back to raw.
+      text: isWordingPreserved(candidate.text, rawText) ? candidate.text : rawText,
+    })
+    cursor = endIndex + 1
+  }
+
+  // Any tail segments the model dropped become a final paragraph.
+  if (cursor <= lastIndex) {
+    result.push({ title: '本文', startIndex: cursor, endIndex: lastIndex, text: reconstructText(segments, cursor, lastIndex) })
+  }
+
+  return result
+}
+
+const PUNCTUATION_AND_SPACE = /[\s。、．，！？!?,.：:；;「」『』（）()]/g
+
+// Guard against hallucination: the punctuated text must match the raw text once
+// punctuation and whitespace are stripped.
+function isWordingPreserved(modelText: string, rawText: string): boolean {
+  if (!modelText) return false
+  const strip = (s: string) => s.replace(PUNCTUATION_AND_SPACE, '')
+  return strip(modelText) === strip(rawText)
+}
+
+// Single merged pass: group consecutive Whisper segments into topics AND return
+// each paragraph's text with correct Japanese punctuation. Silence gaps between
+// segments are fed in as boundary signals.
+export async function analyzeSegments(segments: WhisperSegment[]): Promise<TopicSegment[]> {
+  if (segments.length === 0) return []
+
+  const transcript = segments
+    .map((s, i) => {
+      const prev = segments[i - 1]
+      const gap = prev ? Math.max(0, s.start - prev.end) : 0
+      return `[${i}] (gap ${gap.toFixed(1)}s) "${s.text.trim()}"`
+    })
+    .join('\n')
+
+  const prompt = `You are given a Japanese audio transcript, split by Whisper into short segments in chronological order. Each line has:
+- [index]: zero-based segment index
+- (gap Ns): silence before this segment in seconds. A large gap (>= ${BOUNDARY_GAP_HINT}s) is a strong signal of a topic/paragraph break.
+- the transcribed text in quotes
+
+Do two things in one pass:
+1. Group consecutive segments that share one topic into paragraphs. Use BOTH the silence gaps and the meaning to decide where boundaries fall.
+2. For each paragraph, output its combined text with correct Japanese punctuation (。、！？). Preserve the original wording EXACTLY — only insert punctuation. Never add, remove, translate, or rephrase words. Never put spaces between Japanese characters.
+
+Return ONLY a JSON object:
+{ "paragraphs": [ { "title": string, "startIndex": number, "endIndex": number, "text": string } ] }
 
 Rules:
-1. Keep each text on a single line with punctuation added
-2. Preserve the original [index] prefix at the start of each line
-3. Do NOT add spaces between Japanese characters
-4. Output only the JSON object, no markdown
+1. "title": concise Japanese, 5-15 characters (e.g. "天気の話", "今日の予定").
+2. Use EXACT input indices. startIndex must be <= endIndex.
+3. Paragraphs must be consecutive and cover every segment from 0 to ${segments.length - 1} with no gaps and no overlaps.
+4. No markdown, no commentary — just the JSON object.
 
-Input:
-${textsWithIndex}`
+Transcript:
+${transcript}`
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Groq LLM API error ${response.status}: ${errorText}`)
-  }
-
-  const json = await response.json()
-  const content = json.choices?.[0]?.message?.content
-
-  if (!content) {
-    throw new Error('No content in LLM response')
-  }
-
-  const parsed = JSON.parse(content)
-
-  if (parsed.indexed_texts && Array.isArray(parsed.indexed_texts)) {
-    return parsed.indexed_texts.map((item: string | { text: string }, idx: number) => {
-      if (typeof item === 'string') {
-        return item.replace(/^\[\d+\]\s*/, '')
-      }
-      return item.text ?? texts[idx] ?? ''
-    })
-  }
-
-  if (Array.isArray(parsed)) {
-    return parsed.map((item: string | { text: string }, idx: number) => {
-      if (typeof item === 'string') {
-        return item.replace(/^\[\d+\]\s*/, '')
-      }
-      return item.text ?? texts[idx] ?? ''
-    })
-  }
-
-  return texts
+  const parsed = await chatJson({ prompt, temperature: 0.3 })
+  return normalize(extractParagraphs(parsed), segments)
 }
