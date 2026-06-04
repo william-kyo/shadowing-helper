@@ -39,6 +39,7 @@ export function ProjectSegmentWorkspace({
   const [segments, setSegments] = useState(initialSegments)
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(initialSegments.length === 0)
   const [isAutoSegmenting, setIsAutoSegmenting] = useState(false)
+  const [dialogueMode, setDialogueMode] = useState(false)
 
   function handleDeleteSegment(segmentId: string) {
     const seg = segments.find((s) => s.id === segmentId)
@@ -66,7 +67,7 @@ export function ProjectSegmentWorkspace({
     fetch(`/api/projects/${projectId}/auto-segment`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ minDurationSeconds: 3, maxSegments: 20 }),
+      body: JSON.stringify({ minDurationSeconds: 3, maxSegments: 20, dialogue: dialogueMode }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -92,7 +93,7 @@ export function ProjectSegmentWorkspace({
         const response = await fetch(`/api/projects/${projectId}/segments`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify({ ...values, dialogue: dialogueMode }),
         })
 
         const result = (await response.json()) as {
@@ -197,7 +198,16 @@ export function ProjectSegmentWorkspace({
       {segments.length === 0 ? createSegmentForm : segmentListSection}
       {segments.length === 0 ? segmentListSection : createSegmentForm}
 
-      <div className="flex justify-center pt-2">
+      <div className="flex flex-col items-center gap-3 pt-2">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
+          <input
+            type="checkbox"
+            checked={dialogueMode}
+            onChange={(event) => setDialogueMode(event.target.checked)}
+            className="h-4 w-4 accent-accent"
+          />
+          対話モード（話者ごとに A: / B: で改行）
+        </label>
         <button
           type="button"
           onClick={handleAutoSegment}

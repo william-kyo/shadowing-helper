@@ -36,34 +36,52 @@ function parseJsonContent(content: string): unknown {
   return JSON.parse(fenced ? fenced[1] : content)
 }
 
+const MAX_ATTEMPTS = 3
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export async function chatJson(params: { prompt: string; temperature?: number }): Promise<unknown> {
   const provider = resolveChatProvider()
-
-  const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${provider.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages: [{ role: 'user', content: params.prompt }],
-      temperature: params.temperature ?? 0.3,
-      response_format: { type: 'json_object' },
-    }),
+  const body = JSON.stringify({
+    model: provider.model,
+    messages: [{ role: 'user', content: params.prompt }],
+    temperature: params.temperature ?? 0.3,
+    response_format: { type: 'json_object' },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`LLM API error ${response.status}: ${errorText}`)
+  let lastError: unknown
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      })
+
+      // Retry transient upstream failures (the opencode Go endpoint 5xx's
+      // intermittently); surface 4xx immediately since retrying won't help.
+      if (response.status >= 500) {
+        throw new Error(`LLM API error ${response.status}: ${await response.text()}`)
+      }
+      if (!response.ok) {
+        throw Object.assign(new Error(`LLM API error ${response.status}: ${await response.text()}`), { fatal: true })
+      }
+
+      const json = await response.json()
+      const content = json.choices?.[0]?.message?.content
+      if (!content) {
+        throw new Error('No content in LLM response')
+      }
+      return parseJsonContent(content)
+    } catch (err) {
+      lastError = err
+      if ((err as { fatal?: boolean })?.fatal || attempt === MAX_ATTEMPTS) break
+      await sleep(attempt * 600)
+    }
   }
 
-  const json = await response.json()
-  const content = json.choices?.[0]?.message?.content
-
-  if (!content) {
-    throw new Error('No content in LLM response')
-  }
-
-  return parseJsonContent(content)
+  throw lastError
 }

@@ -15,6 +15,7 @@ import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, get
 const autoSegmentSchema = z.object({
   minDurationSeconds: z.number().min(1).max(300).default(5),
   maxSegments: z.number().min(1).max(50).default(20),
+  dialogue: z.boolean().default(false),
 })
 
 type RouteContext = {
@@ -83,7 +84,7 @@ export async function POST(request: Request, context: RouteContext) {
       addPerfAttrs({ 'whisper.segments_count': whisperResponse.segments.length })
 
       const topicSegments = await measureStep('llm.analyze_topics', () =>
-        analyzeSegments(whisperResponse.segments),
+        analyzeSegments(whisperResponse.segments, { dialogue: parsed.data.dialogue }),
       )
 
       const resolvedSegments = topicSegments
