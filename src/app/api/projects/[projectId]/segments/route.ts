@@ -8,6 +8,7 @@ import { db } from '@/lib/db'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { transcribeAudio } from '@/lib/groq'
+import { punctuateText } from '@/lib/segment-analysis'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
 
@@ -121,9 +122,10 @@ export async function POST(request: Request, context: RouteContext) {
           fileName: storedName,
           mimeType: project.audioMimeType,
         })
+        const punctuatedText = await punctuateText(transcribedText)
         await db.segment.update({
           where: { id: segment.id },
-          data: { text: transcribedText },
+          data: { text: punctuatedText },
         })
       } catch (err) {
         console.error(`[transcribe] Failed for segment ${segment.id}:`, err)

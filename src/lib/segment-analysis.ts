@@ -135,3 +135,31 @@ ${transcript}`
   const parsed = await chatJson({ prompt, temperature: 0.3 })
   return normalize(extractParagraphs(parsed), segments)
 }
+
+// Punctuate a single transcribed segment text (e.g. manually added segments,
+// whose text comes from a plain Whisper transcription with weak punctuation).
+// Returns the original text unchanged if the model fails or drifts from the
+// source wording.
+export async function punctuateText(text: string): Promise<string> {
+  const trimmed = text.trim()
+  if (!trimmed) return trimmed
+
+  const prompt = `Add correct Japanese punctuation (。、！？) to the transcribed text below. Preserve the wording EXACTLY — only insert punctuation, never add, remove, translate, or rephrase words. Never put spaces between Japanese characters.
+
+Return ONLY a JSON object: { "text": string }
+
+Input:
+${trimmed}`
+
+  try {
+    const parsed = await chatJson({ prompt, temperature: 0.1 })
+    const out = (parsed as { text?: unknown })?.text
+    if (typeof out === 'string' && isWordingPreserved(out, trimmed)) {
+      return out.trim()
+    }
+  } catch (err) {
+    console.error('[punctuateText] failed, keeping raw text:', err)
+  }
+
+  return trimmed
+}

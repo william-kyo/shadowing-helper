@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { transcribeAudio } from '@/lib/groq'
+import { punctuateText } from '@/lib/segment-analysis'
 import { measureStep, withApiPerf } from '@/lib/perf'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { downloadStorageObject } from '@/lib/storage'
@@ -61,10 +62,13 @@ export async function POST(request: Request, context: RouteContext) {
           mimeType: segment.project.audioMimeType,
         }),
       )
+      const punctuatedText = await measureStep('llm.punctuate.fire_and_forget', () =>
+        punctuateText(text),
+      )
       await measureStep('db.segment.update_text.fire_and_forget', () =>
         db.segment.update({
           where: { id: segmentId },
-          data: { text },
+          data: { text: punctuatedText },
         }),
       )
     } catch (err) {
