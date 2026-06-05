@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
+import { Stage4Panel } from '@/components/segment/stage-4-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
 import { computeCurrentStage } from '@/lib/stage-progress'
+import type { Stage4Metadata } from '@/lib/stage-4-completion'
+import type { Stage4Sentence } from '@/lib/stage-4-server'
 
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
@@ -42,6 +45,10 @@ type SegmentStageWorkspaceProps = {
   // Where to go once all five stages are completed: the next segment needing
   // work (or the next project's first such segment). Null when nothing is left.
   nextIncompleteHref: string | null
+  // Stage 4 inputs — empty array when the segment hasn't been transcribed yet
+  // and there's no persisted fallback to show.
+  stage4Sentences?: Stage4Sentence[]
+  stage4InitialMetadata?: Stage4Metadata | null
 }
 
 export function SegmentStageWorkspace({
@@ -51,6 +58,8 @@ export function SegmentStageWorkspace({
   initialNotes,
   initialStage,
   nextIncompleteHref,
+  stage4Sentences = [],
+  stage4InitialMetadata = null,
 }: SegmentStageWorkspaceProps) {
   const router = useRouter()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
@@ -126,8 +135,16 @@ export function SegmentStageWorkspace({
     }
   }
 
+  // Stage 4 owns its own completion flow — when the last sentence passes
+  // the panel calls onComplete, which reuses the same status-merge +
+  // handleSegmentComplete path as the manual `s` shortcut.
+  const handleStage4Complete = useCallback(() => {
+    void updateStageStatus(4, 'completed')
+  }, [])
+
   // Press "s" to cycle the selected stage's status — mirrors the audio player's
-  // Space / j / k shortcuts and skips while typing in a field.
+  // Space / j / k shortcuts and skips while typing in a field. Stage 4 owns
+  // its own state machine, so the shortcut is a no-op there.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -137,6 +154,7 @@ export function SegmentStageWorkspace({
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault()
         if (isUpdatingStatus || isCompleting) return
+        if (selectedStage === 4) return
         void updateStageStatus(selectedStage, nextStatus[getStatus(selectedStage)])
       }
     }
@@ -185,19 +203,29 @@ export function SegmentStageWorkspace({
         </div>
       </section>
 
-      <Stage1Panel
-        segmentId={segmentId}
-        initialText={segmentText}
-        initialNotes={segmentNotes}
-        activeStage={selectedStage}
-        stageStatus={getStatus(selectedStage)}
-        isStatusUpdating={isUpdatingStatus}
-        onStageStatusChange={(status) => updateStageStatus(selectedStage, status)}
-        onContentSaved={({ text, notes }) => {
-          setSegmentText(text)
-          setSegmentNotes(notes ?? '')
-        }}
-      />
+      {selectedStage === 4 ? (
+        <Stage4Panel
+          segmentId={segmentId}
+          sentences={stage4Sentences}
+          initialMetadata={stage4InitialMetadata}
+          isStatusUpdating={isUpdatingStatus}
+          onComplete={handleStage4Complete}
+        />
+      ) : (
+        <Stage1Panel
+          segmentId={segmentId}
+          initialText={segmentText}
+          initialNotes={segmentNotes}
+          activeStage={selectedStage}
+          stageStatus={getStatus(selectedStage)}
+          isStatusUpdating={isUpdatingStatus}
+          onStageStatusChange={(status) => updateStageStatus(selectedStage, status)}
+          onContentSaved={({ text, notes }) => {
+            setSegmentText(text)
+            setSegmentNotes(notes ?? '')
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
 import { findNextIncompleteSegment } from '@/lib/segment-navigation'
 import { computeCurrentStage } from '@/lib/stage-progress'
+import { loadStage4Setup } from '@/lib/stage-4-server'
 
 type SegmentDetailPageProps = {
   params: Promise<{
@@ -116,6 +117,16 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     ? `/projects/${nextIncomplete.projectId}/segments/${nextIncomplete.segmentId}`
     : null
 
+  // Prefetch stage 4 sentence list so the panel renders immediately when the
+  // learner navigates to it. The lib is shared with the sentences API, so
+  // server-side and client-side reads can't drift.
+  const stage4Setup = await measureStep('stage4.prefetch', () =>
+    loadStage4Setup({
+      segmentId: segment.id,
+      user: { id: currentUser.id, supabaseUserId: currentUser.supabaseUserId },
+    }),
+  )
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface text-ink">
       <div className="mx-auto grid max-w-2xl gap-8 px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:px-6 sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
@@ -151,6 +162,8 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             ).currentStage
           }
           nextIncompleteHref={nextIncompleteHref}
+          stage4Sentences={stage4Setup?.sentences ?? []}
+          stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
         />
 
         {/* prev / next navigation */}

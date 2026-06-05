@@ -1,0 +1,268 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { Stage4Panel } from '@/components/segment/stage-4-panel'
+
+type MediaRecorderEvent = { data?: Blob; error?: Error }
+type MediaRecorderListener = (event: MediaRecorderEvent) => void
+
+// The hook drives the recorder through addEventListener (not the onX callback
+// props), so the stub mirrors that contract.
+class FakeMediaRecorder {
+  static isTypeSupported = vi.fn().mockReturnValue(true)
+  state: 'inactive' | 'recording' = 'inactive'
+  mimeType = 'audio/webm'
+  private listeners = new Map<string, Set<MediaRecorderListener>>()
+
+  constructor(public stream: MediaStream) {}
+
+  addEventListener(type: string, handler: MediaRecorderListener) {
+    const set = this.listeners.get(type) ?? new Set<MediaRecorderListener>()
+    set.add(handler)
+    this.listeners.set(type, set)
+  }
+
+  removeEventListener(type: string, handler: MediaRecorderListener) {
+    this.listeners.get(type)?.delete(handler)
+  }
+
+  private emit(type: string, event: MediaRecorderEvent) {
+    this.listeners.get(type)?.forEach((handler) => handler(event))
+  }
+
+  start() {
+    this.state = 'recording'
+  }
+  stop() {
+    this.state = 'inactive'
+    this.emit('dataavailable', { data: new Blob(['fake-bytes'], { type: 'audio/webm' }) })
+    this.emit('stop', {})
+  }
+}
+
+function installMediaRecorderStub() {
+  ;(globalThis as { MediaRecorder?: unknown }).MediaRecorder = FakeMediaRecorder
+  if (!navigator.mediaDevices) {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: { getUserMedia: vi.fn() },
+      configurable: true,
+    })
+  }
+  const getUserMedia = vi.fn().mockResolvedValue({
+    getTracks: () => [{ stop: vi.fn() }],
+  } as unknown as MediaStream)
+  Object.defineProperty(navigator, 'mediaDevices', {
+    value: { getUserMedia },
+    configurable: true,
+  })
+  return getUserMedia
+}
+
+function removeMediaRecorderStub() {
+  delete (globalThis as { MediaRecorder?: unknown }).MediaRecorder
+}
+
+const SENTENCES = [
+  { index: 0, text: 'こんにちは', startMs: 0, endMs: 1500, refAudioUrl: '/api/segments/seg-1/stage4/sentences/0/audio' },
+  { index: 1, text: 'さようなら', startMs: 1500, endMs: 3000, refAudioUrl: '/api/segments/seg-1/stage4/sentences/1/audio' },
+]
+
+beforeEach(() => {
+  installMediaRecorderStub()
+  // Audio elements in jsdom don't actually play; override .play to resolve.
+  window.HTMLMediaElement.prototype.play = function play() {
+    return Promise.resolve()
+  } as typeof HTMLMediaElement.prototype.play
+})
+
+// Fire the `ended` event on the panel's <audio> element. In real browsers
+// this happens after the clip finishes; in jsdom we have to drive it.
+function fireRefAudioEnded() {
+  const audio = document.querySelector('audio')
+  if (audio) {
+    fireEvent.ended(audio)
+  }
+}
+
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  removeMediaRecorderStub()
+})
+
+describe('Stage4Panel', () => {
+  it('renders the first sentence and progress dot count', () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('こんにちは')).toBeInTheDocument()
+    expect(screen.getByText('文 1 / 2')).toBeInTheDocument()
+  })
+
+  it('shows a helpful empty state when no sentences are available', () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/このセグメントには文が見つかりませんでした/)).toBeInTheDocument()
+  })
+
+  it('plays the reference audio when the user taps "開始する" and transitions to recording on ended', async () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+
+    // After permission grant, the reference audio starts playing. In jsdom we
+    // don't get a real `ended` event, so the panel stays in `playingRef` and
+    // the ready-state buttons aren't shown until the user re-listens.
+    expect(await screen.findByText('お手本を再生中…')).toBeInTheDocument()
+  })
+
+  it('uploads a recording and shows the score on a perfect transcript', async () => {
+    const fetchMock = vi
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          recordingId: 'rec-1',
+          score: 1,
+          pass: true,
+          transcript: 'こんにちは',
+          expected: 'こんにちは',
+          distance: 0,
+          expectedLength: 5,
+          actualLength: 5,
+          threshold: 0.8,
+          stageComplete: false,
+          passingSentences: 1,
+          totalSentences: 2,
+        }),
+      } as Response)
+
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    // Wait for the async permission round-trip to land us in `playingRef`
+    // before driving the audio lifecycle: in jsdom the play() promise resolves
+    // immediately, but the `ended` event never fires on its own.
+    await screen.findByText('お手本を再生中…')
+    fireRefAudioEnded()
+
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/segments/seg-1/stage4/recordings',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+
+    // The result badge ("✓ 合格 100%") is distinct from the per-sentence
+    // summary ("✓ 合格済み"); match the full badge text to stay unambiguous.
+    expect(await screen.findByText(/✓ 合格 100%/)).toBeInTheDocument()
+    expect(await screen.findByText(/次の文へ/)).toBeInTheDocument()
+  })
+
+  it('marks stage 4 complete via onComplete when the last sentence passes', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        recordingId: 'rec-x',
+        score: 1,
+        pass: true,
+        transcript: 'さようなら',
+        expected: 'さようなら',
+        distance: 0,
+        expectedLength: 5,
+        actualLength: 5,
+        threshold: 0.8,
+        stageComplete: true,
+        passingSentences: 2,
+        totalSentences: 2,
+      }),
+    } as Response)
+
+    const onComplete = vi.fn()
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={{
+          sentences: [
+            { index: 0, score: 0.95, transcript: 'こんにちは', attempts: 1, passedAt: '2026-06-01T00:00:00.000Z' },
+          ],
+        }}
+        isStatusUpdating={false}
+        onComplete={onComplete}
+      />,
+    )
+
+    expect(screen.getByText('さようなら')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    await screen.findByText('お手本を再生中…')
+    fireRefAudioEnded()
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalledTimes(1)
+    })
+    expect(await screen.findByText(/ステージ4完了/)).toBeInTheDocument()
+  })
+
+  it('calls the skip endpoint and triggers onComplete', async () => {
+    const fetchMock = vi
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: true, json: async () => ({}) } as Response)
+    const onComplete = vi.fn()
+
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={onComplete}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'このステージをスキップ' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/segments/seg-1/stage4/complete', { method: 'POST' })
+    })
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalled()
+    })
+  })
+})

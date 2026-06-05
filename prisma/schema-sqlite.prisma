@@ -66,20 +66,21 @@ model SourceImage {
 }
 
 model Segment {
-  id         String          @id @default(cuid())
-  projectId  String
-  index      Int
-  title      String?
-  text       String
-  audioPath  String
-  startMs    Int?
-  endMs      Int?
-  notes      String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  progress   StageProgress[]
-  recordings Recording[]
+  id              String          @id @default(cuid())
+  projectId       String
+  index           Int
+  title           String?
+  text            String
+  audioPath       String
+  startMs         Int?
+  endMs           Int?
+  notes           String?
+  whisperSegments Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  progress        StageProgress[]
+  recordings      Recording[]
 
   @@unique([projectId, index])
 }
@@ -92,6 +93,7 @@ model StageProgress {
   dictationInput String?
   studyNotes     String?
   textVisible    Boolean?
+  metadata       Json?
   completedAt    DateTime?
   updatedAt      DateTime    @updatedAt
   segment        Segment     @relation(fields: [segmentId], references: [id], onDelete: Cascade)
@@ -100,11 +102,12 @@ model StageProgress {
 }
 
 model Recording {
-  id         String   @id @default(cuid())
-  segmentId  String
-  stage      Int
-  filePath   String
-  durationMs Int?
-  createdAt  DateTime @default(now())
-  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  segmentId     String
+  stage         Int
+  filePath      String
+  durationMs    Int?
+  sentenceIndex Int?
+  createdAt     DateTime @default(now())
+  segment       Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 }

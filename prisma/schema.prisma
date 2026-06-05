@@ -67,20 +67,24 @@ model SourceImage {
 }
 
 model Segment {
-  id         String          @id @default(cuid())
-  projectId  String
-  index      Int
-  title      String?
-  text       String
-  audioPath  String
-  startMs    Int?
-  endMs      Int?
-  notes      String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  progress   StageProgress[]
-  recordings Recording[]
+  id              String          @id @default(cuid())
+  projectId       String
+  index           Int
+  title           String?
+  text            String
+  audioPath       String
+  startMs         Int?
+  endMs           Int?
+  notes           String?
+  // Persisted Whisper sub-segments used by stage 4 (script-following shadowing)
+  // to drive sentence-by-sentence playback and recording. Shape:
+  // [{ index: number, text: string, startMs: number, endMs: number }]
+  whisperSegments Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  progress        StageProgress[]
+  recordings      Recording[]
 
   @@unique([projectId, index])
 }
@@ -93,6 +97,9 @@ model StageProgress {
   dictationInput String?
   studyNotes     String?
   textVisible    Boolean?
+  // Per-stage scratchpad. For stage 4 this stores per-sentence scoring state:
+  // { sentences: [{ index, score, transcript, attempts, passedAt }] }
+  metadata       Json?
   completedAt    DateTime?
   updatedAt      DateTime    @updatedAt
   segment        Segment     @relation(fields: [segmentId], references: [id], onDelete: Cascade)
@@ -101,11 +108,14 @@ model StageProgress {
 }
 
 model Recording {
-  id         String   @id @default(cuid())
-  segmentId  String
-  stage      Int
-  filePath   String
-  durationMs Int?
-  createdAt  DateTime @default(now())
-  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  segmentId     String
+  stage         Int
+  filePath      String
+  durationMs    Int?
+  // Stage 4 binds each recording to a specific sentence (0-based) so a single
+  // failed attempt can be retried without losing the history of the others.
+  sentenceIndex Int?
+  createdAt     DateTime @default(now())
+  segment       Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 }
