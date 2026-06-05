@@ -78,3 +78,7 @@ npm run storage:migrate-local
 
 The script signs in as that user with the normal publishable key, uploads project audio, source images, segment audio, and recordings to `STORAGE_BUCKET`, then rewrites the corresponding DB paths to Storage object keys.
 Because it respects your existing RLS policies, one run migrates one user's files.
+
+## License
+
+Released under the [MIT License](LICENSE).

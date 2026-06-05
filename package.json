@@ -2,6 +2,7 @@
   "name": "shadowing-helper",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
     "dev": "prisma generate --schema prisma/schema-sqlite.prisma && next dev",
