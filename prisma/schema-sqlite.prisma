@@ -63,6 +63,8 @@ model SourceImage {
   ocrText      String?
   createdAt    DateTime @default(now())
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model Segment {
@@ -99,6 +101,7 @@ model StageProgress {
   segment        Segment     @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 
   @@unique([segmentId, stage])
+  @@index([segmentId])
 }
 
 model Recording {
@@ -110,4 +113,6 @@ model Recording {
   sentenceIndex Int?
   createdAt     DateTime @default(now())
   segment       Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@index([segmentId])
 }
