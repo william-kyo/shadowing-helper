@@ -51,6 +51,21 @@ Then open:
 - Project media is stored in Supabase Storage.
 - SQLite database is configured through `DATABASE_URL`.
 
+## Production database migrations
+
+Production (Vercel + Supabase Postgres) keeps its schema in sync automatically:
+`npm run build` runs `scripts/db-deploy.mjs` before `next build`, which executes
+`prisma db push` against the production database. This only happens on Vercel
+**production** builds (`VERCEL_ENV=production`); local and preview builds skip it.
+
+- Additive schema changes (new nullable columns, new tables) apply on deploy.
+- Destructive changes are **not** auto-applied: `db push` runs without
+  `--accept-data-loss`, so they abort the build and must be handled manually.
+
+Prerequisite: the Vercel **Production** environment must define `DIRECT_URL`
+(the direct, non-pooler Postgres connection — port 5432, not the 6543 pgbouncer
+URL used by the app at runtime). Without it the build fails fast with guidance.
+
 ## Migrate local media to Supabase Storage
 
 If you already have local files saved under `STORAGE_ROOT`, set `MIGRATION_USER_EMAIL` and `MIGRATION_USER_PASSWORD` in `.env` for the target user, then run:

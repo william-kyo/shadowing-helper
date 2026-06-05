@@ -5,7 +5,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
     "dev": "prisma generate --schema prisma/schema-sqlite.prisma && next dev",
-    "build": "prisma generate --schema prisma/schema.prisma && next build",
+    "build": "prisma generate --schema prisma/schema.prisma && node scripts/db-deploy.mjs && next build",
     "build:rpi": "bash scripts/build-rpi.sh",
     "start": "next start",
     "lint": "eslint",
