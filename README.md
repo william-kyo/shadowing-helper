@@ -62,9 +62,11 @@ Production (Vercel + Supabase Postgres) keeps its schema in sync automatically:
 - Destructive changes are **not** auto-applied: `db push` runs without
   `--accept-data-loss`, so they abort the build and must be handled manually.
 
-Prerequisite: the Vercel **Production** environment must define `DIRECT_URL`
-(the direct, non-pooler Postgres connection — port 5432, not the 6543 pgbouncer
-URL used by the app at runtime). Without it the build fails fast with guidance.
+Connection: the script derives Supabase's **session pooler** URL (port 5432,
+IPv4, DDL-capable) from `DATABASE_URL` automatically. This is required because
+Vercel build containers can't reach the direct connection (IPv6-only) and the
+transaction pooler (6543/pgbouncer) can't run DDL. No extra env var is needed;
+set `MIGRATE_DATABASE_URL` only if you want to override the migration target.
 
 ## Migrate local media to Supabase Storage
 
