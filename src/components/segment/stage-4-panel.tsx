@@ -62,6 +62,23 @@ function formatMs(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
+// Tiny keycap badge appended to a control to advertise its keyboard shortcut.
+// `tone` matches the host button: "light" for solid accent buttons (pale text),
+// "dark" for outlined paper buttons.
+function KeyHint({ label, tone = 'light' }: { label: string; tone?: 'light' | 'dark' }) {
+  return (
+    <kbd
+      aria-hidden
+      className={[
+        'ml-2 inline-block rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase leading-none tracking-wide',
+        tone === 'light' ? 'border-paper/40 text-paper/80' : 'border-ink-line text-ink-faint',
+      ].join(' ')}
+    >
+      {label}
+    </kbd>
+  )
+}
+
 function describeState(score: SentenceScore) {
   return {
     bestScore: score.score,
@@ -278,6 +295,50 @@ export function Stage4Panel({
     }
   }, [segmentId, onComplete, clearAdvanceTimer])
 
+  // Keyboard shortcuts mirror the on-screen controls so the learner can run the
+  // whole listen → repeat → score loop hands-free. Space (or Enter) fires the
+  // phase's primary CTA; R handles the secondary "re-listen / retry" action.
+  // The bottom audio player is unmounted while Stage 4 is active, so there's no
+  // contention for Space.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const tag = target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      const isPrimary = e.code === 'Space' || e.key === 'Enter'
+      const isSecondary = e.key === 'r' || e.key === 'R'
+      if (!isPrimary && !isSecondary) return
+
+      let action: (() => void) | null = null
+      if (isPrimary) {
+        if (phase === 'idle') action = handleStartPractice
+        else if (phase === 'ready') action = handleStartRecording
+        else if (phase === 'recording') action = handleStop
+        else if (phase === 'result') action = handleNext
+      } else {
+        // R: re-listen to the reference (ready) or retry the take (result).
+        if (phase === 'ready') action = handleStartPractice
+        else if (phase === 'result') action = handleRetry
+      }
+
+      if (!action) return
+      e.preventDefault()
+      action()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    phase,
+    handleStartPractice,
+    handleStartRecording,
+    handleStop,
+    handleNext,
+    handleRetry,
+  ])
+
   if (totalSentences === 0) {
     return (
       <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
@@ -363,6 +424,7 @@ export function Stage4Panel({
             className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"
           >
             🎤 開始する
+            <KeyHint label="Space" />
           </button>
         )}
 
@@ -374,6 +436,7 @@ export function Stage4Panel({
               className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
             >
               🔊 もう一度聴く
+              <KeyHint label="R" tone="dark" />
             </button>
             <button
               type="button"
@@ -381,6 +444,7 @@ export function Stage4Panel({
               className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
             >
               🎤 復唱する
+              <KeyHint label="Space" />
             </button>
           </>
         )}
@@ -399,6 +463,7 @@ export function Stage4Panel({
             className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
           >
             ⏹ 停止 ({formatMs(recorder.elapsedMs)})
+            <KeyHint label="Space" />
           </button>
         )}
 
@@ -417,6 +482,7 @@ export function Stage4Panel({
               className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
             >
               🔁 もう一度
+              <KeyHint label="R" tone="dark" />
             </button>
             {result.pass ? (
               <button
@@ -425,6 +491,7 @@ export function Stage4Panel({
                 className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
               >
                 {sentenceIndex + 1 >= totalSentences ? '✓ 完了' : '次の文へ →'}
+                <KeyHint label="Space" />
               </button>
             ) : (
               <button
@@ -433,6 +500,7 @@ export function Stage4Panel({
                 className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
               >
                 スキップ →
+                <KeyHint label="Space" tone="dark" />
               </button>
             )}
           </>

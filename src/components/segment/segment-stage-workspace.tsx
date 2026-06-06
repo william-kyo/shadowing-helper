@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
@@ -49,6 +49,9 @@ type SegmentStageWorkspaceProps = {
   // and there's no persisted fallback to show.
   stage4Sentences?: Stage4Sentence[]
   stage4InitialMetadata?: Stage4Metadata | null
+  // Fixed bottom audio dock, rendered here so it can be unmounted while Stage 4
+  // is active (Stage 4 owns the Space shortcut; the player's would collide).
+  bottomDock?: ReactNode
 }
 
 export function SegmentStageWorkspace({
@@ -60,6 +63,7 @@ export function SegmentStageWorkspace({
   nextIncompleteHref,
   stage4Sentences = [],
   stage4InitialMetadata = null,
+  bottomDock,
 }: SegmentStageWorkspaceProps) {
   const router = useRouter()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
@@ -169,6 +173,7 @@ export function SegmentStageWorkspace({
   }, [])
 
   return (
+    <>
     <div className="grid gap-6">
       {isCompleting ? (
         <div
@@ -227,5 +232,22 @@ export function SegmentStageWorkspace({
         />
       )}
     </div>
+
+      {/* fixed bottom audio player — always visible for quick mobile playback
+          control, but unmounted on Stage 4 so the script-following panel can
+          claim Space / Enter without the player toggling playback underneath.
+          The nav row below the slider doubles as a buffer against the iOS bottom
+          gesture area so the progress bar thumb stays comfortably draggable. */}
+      {bottomDock && selectedStage !== 4 ? (
+        <div className="glass-player fixed inset-x-0 bottom-0 z-30 border-t border-ink-line/60 shadow-[0_-4px_24px_rgba(29,27,24,0.06)]">
+          <div
+            className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
+          >
+            {bottomDock}
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }

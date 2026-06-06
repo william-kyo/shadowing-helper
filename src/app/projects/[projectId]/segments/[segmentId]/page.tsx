@@ -117,6 +117,38 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     ? `/projects/${nextIncomplete.projectId}/segments/${nextIncomplete.segmentId}`
     : null
 
+  // The fixed bottom audio player. Handed to the workspace so it can unmount
+  // the dock while Stage 4 is active — Stage 4 reclaims the Space shortcut for
+  // its own controls, and the player's global Space listener would otherwise
+  // fight it.
+  const bottomDock = (
+    <>
+      <SegmentAudioPlayer
+        src={`/api/segments/${segment.id}/audio`}
+        title={segment.title ?? ''}
+        projectId={projectId}
+        segmentId={segment.id}
+        segments={allSegments}
+      />
+
+      <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
+        >
+          ホーム
+        </Link>
+        <Link
+          href={`/projects/${projectId}`}
+          aria-label="プロジェクトに戻る"
+          className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
+        >
+          ← 戻る
+        </Link>
+      </div>
+    </>
+  )
+
   // Prefetch stage 4 sentence list so the panel renders immediately when the
   // learner navigates to it. The lib is shared with the sentences API, so
   // server-side and client-side reads can't drift.
@@ -164,6 +196,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           nextIncompleteHref={nextIncompleteHref}
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
+          bottomDock={bottomDock}
         />
 
         {/* prev / next navigation */}
@@ -232,40 +265,6 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             </Link>
           )}
         </nav>
-      </div>
-
-      {/* fixed bottom audio player — always visible for quick mobile playback control.
-          The nav row below the slider doubles as a buffer against the iOS bottom
-          gesture area so the progress bar thumb stays comfortably draggable. */}
-      <div className="glass-player fixed inset-x-0 bottom-0 z-30 border-t border-ink-line/60 shadow-[0_-4px_24px_rgba(29,27,24,0.06)]">
-        <div
-          className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
-        >
-          <SegmentAudioPlayer
-            src={`/api/segments/${segment.id}/audio`}
-            title={segment.title ?? ''}
-            projectId={projectId}
-            segmentId={segment.id}
-            segments={allSegments}
-          />
-
-          <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
-            >
-              ホーム
-            </Link>
-            <Link
-              href={`/projects/${projectId}`}
-              aria-label="プロジェクトに戻る"
-              className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
-            >
-              ← 戻る
-            </Link>
-          </div>
-        </div>
       </div>
     </main>
   )
