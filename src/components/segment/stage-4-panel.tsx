@@ -140,30 +140,40 @@ export function Stage4Panel({
     setResult(null)
     clearAdvanceTimer()
 
-    // Snapshot whether the mic stream is already live (re-listens after the
-    // first session skip the permission round-trip).
-    const alreadyReady = recorder.phase === 'ready'
-    if (!alreadyReady) {
-      await recorder.requestPermission()
-    }
-
-    // The hook's phase flips on the next render; we proceed optimistically
-    // since the user gesture is the trigger for both mic and audio.play().
-    setPhase('playingRef')
-
     const audio = refAudioRef.current
     if (!audio) {
       setError('お手本を読み込めませんでした。')
       setPhase('ready')
       return
     }
+
+    // iOS Safari only honours getUserMedia and HTMLMediaElement.play() while
+    // the tap's transient user-activation is live — and that activation is
+    // gone the instant we `await` anything. So both native calls must be
+    // *initiated* synchronously here, before yielding: start playback first,
+    // then the mic permission, and only await afterwards. Awaiting permission
+    // before play() (the previous order) is exactly what made iOS reject the
+    // reference clip, so onEnded never fired and recording never auto-started.
+    // The clip runs for a few seconds, covering the permission round-trip; the
+    // recorder itself is started later from the audio's onEnded handler.
+    setPhase('playingRef')
+    audio.currentTime = 0
+    const playPromise = audio.play()
+    const permissionPromise =
+      recorder.phase === 'ready' ? Promise.resolve() : recorder.requestPermission()
+
     try {
-      audio.currentTime = 0
-      await audio.play()
+      await playPromise
     } catch {
-      // Autoplay blocked; user can re-tap.
+      // Autoplay refused even inside the gesture (rare) — surface it instead of
+      // silently stalling, and drop back to ready so the learner can retry or
+      // record manually.
+      setError('お手本を再生できませんでした。「もう一度聴く」を押してください。')
       setPhase('ready')
     }
+
+    // Ensure the mic stream is live before onEnded fires the recorder.
+    await permissionPromise
   }, [currentSentence, recorder, clearAdvanceTimer])
 
   const handleStartRecording = useCallback(() => {
@@ -549,10 +559,11 @@ export function Stage4Panel({
         </div>
       )}
 
-      {/* error */}
-      {error ? (
+      {/* error — local playback/scoring errors take precedence, then surface
+          mic/recorder failures from the hook (permission denied, no device). */}
+      {error || recorder.error ? (
         <div className="mt-3 rounded-inset border border-accent-soft bg-accent-faint px-3 py-2 text-sm text-accent-deep">
-          {error}
+          {error ?? recorder.error?.message}
         </div>
       ) : null}
 
