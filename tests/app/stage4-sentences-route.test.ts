@@ -53,6 +53,10 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { GET } from '@/app/api/segments/[segmentId]/stage4/sentences/route'
 
+// Fixed so the cache-busting `?v=` suffix on refAudioUrl is deterministic.
+const SEG_UPDATED_AT = new Date('2024-01-02T00:00:00.000Z')
+const V = SEG_UPDATED_AT.getTime()
+
 function buildRequest() {
   return new Request('http://localhost/api/segments/seg-1/stage4/sentences', {
     method: 'GET',
@@ -75,6 +79,7 @@ describe('GET /api/segments/[segmentId]/stage4/sentences', () => {
       audioPath: 'sb-user-1/audio/seg-1.mp3',
       startMs: 0,
       endMs: 10000,
+      updatedAt: SEG_UPDATED_AT,
       whisperSegments: [
         { text: '一文目', startMs: 100, endMs: 1500 },
         { text: '二文目', startMs: 1700, endMs: 3200 },
@@ -91,8 +96,8 @@ describe('GET /api/segments/[segmentId]/stage4/sentences', () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.sentences).toEqual([
-      { index: 0, text: '一文目', startMs: 100, endMs: 1500, refAudioUrl: '/api/segments/seg-1/stage4/sentences/0/audio' },
-      { index: 1, text: '二文目', startMs: 1700, endMs: 3200, refAudioUrl: '/api/segments/seg-1/stage4/sentences/1/audio' },
+      { index: 0, text: '一文目', startMs: 100, endMs: 1500, refAudioUrl: `/api/segments/seg-1/stage4/sentences/0/audio?v=${V}` },
+      { index: 1, text: '二文目', startMs: 1700, endMs: 3200, refAudioUrl: `/api/segments/seg-1/stage4/sentences/1/audio?v=${V}` },
     ])
     expect(json.initialMetadata).toBeNull()
     expect(transcribeAudioWithSegments).not.toHaveBeenCalled()
@@ -106,6 +111,7 @@ describe('GET /api/segments/[segmentId]/stage4/sentences', () => {
       audioPath: 'sb-user-1/audio/seg-1.mp3',
       startMs: 0,
       endMs: 10000,
+      updatedAt: SEG_UPDATED_AT,
       whisperSegments: null,
       project: { id: 'proj-1', audioMimeType: 'audio/mpeg' },
       progress: [],
@@ -157,6 +163,7 @@ describe('GET /api/segments/[segmentId]/stage4/sentences', () => {
       audioPath: 'sb-user-1/audio/seg-1.mp3',
       startMs: 0,
       endMs: 10000,
+      updatedAt: SEG_UPDATED_AT,
       whisperSegments: [
         { text: '一文目', startMs: 100, endMs: 1500 },
       ],

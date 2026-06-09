@@ -41,6 +41,7 @@ const BASE_SEGMENT = {
   endMs: 5000,
   text: 'Hello there.',
   notes: null,
+  updatedAt: new Date('2024-01-02'),
   progress: [{ stage: 1, status: 'completed' }],
 }
 

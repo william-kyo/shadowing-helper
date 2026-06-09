@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { SegmentStageWorkspace } from '@/components/segment/segment-stage-workspace'
+import { SegmentRangeEditor } from '@/components/segment/segment-range-editor'
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -28,7 +29,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   const project = await measureStep('db.project.find_segment_page', () =>
     db.project.findFirst({
       where: { id: projectId, userId: currentUser.id },
-      select: { id: true, title: true, createdAt: true },
+      select: { id: true, title: true, createdAt: true, audioDurationMs: true },
     }),
   )
 
@@ -124,7 +125,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   const bottomDock = (
     <>
       <SegmentAudioPlayer
-        src={`/api/segments/${segment.id}/audio`}
+        src={`/api/segments/${segment.id}/audio?v=${segment.updatedAt.getTime()}`}
         title={segment.title ?? ''}
         projectId={projectId}
         segmentId={segment.id}
@@ -197,6 +198,13 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
           bottomDock={bottomDock}
+        />
+
+        <SegmentRangeEditor
+          segmentId={segment.id}
+          startMs={segment.startMs}
+          endMs={segment.endMs}
+          audioDurationMs={project.audioDurationMs}
         />
 
         {/* prev / next navigation */}

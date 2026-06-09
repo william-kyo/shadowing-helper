@@ -43,6 +43,7 @@ export type Stage4SetupSegmentRow = {
   audioPath: string
   startMs: number | null
   endMs: number | null
+  updatedAt: Date
   whisperSegments: unknown
   project: { id: string; audioMimeType: string }
   progress: { metadata: unknown }[]
@@ -57,6 +58,7 @@ async function loadStage4Segment(segmentId: string, userId: string): Promise<Sta
       audioPath: true,
       startMs: true,
       endMs: true,
+      updatedAt: true,
       whisperSegments: true,
       project: { select: { id: true, audioMimeType: true } },
       progress: {
@@ -162,7 +164,9 @@ export async function loadStage4Setup(params: {
   return {
     sentences: units.map((unit) => ({
       ...unit,
-      refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio`,
+      // `?v=` busts the client <audio> cache after a re-split swaps the
+      // underlying sentence clips while the URL path stays the same.
+      refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio?v=${segment.updatedAt.getTime()}`,
     })),
     initialMetadata: buildMetadata(segment),
     audioMimeType: segment.project.audioMimeType,
