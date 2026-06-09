@@ -12,6 +12,7 @@
 // ends. The user taps "停止" to finalize their take (or the 30s cap fires).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
 
 import { useShadowingRecorder, type RecordingResult } from '@/hooks/use-shadowing-recorder'
 import { STAGE_META } from '@/lib/stage-meta'
@@ -98,6 +99,8 @@ export function Stage4Panel({
   const refAudioRef = useRef<HTMLAudioElement | null>(null)
   const stopRecordingPromiseRef = useRef<Promise<RecordingResult | undefined> | null>(null)
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Touch-start position for horizontal swipe detection on the sentence card.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [sentenceIndex, setSentenceIndex] = useState(() => {
@@ -187,8 +190,12 @@ export function Stage4Panel({
   }, [phase, recorder])
 
   const handleRefAudioEnded = useCallback(() => {
+    // Only auto-start recording when the clip was initiated by handleStartPractice
+    // (which sets phase to 'playingRef'). Plain card-tap replays leave phase as
+    // 'ready' or 'result', so we do nothing there.
+    if (phase !== 'playingRef') return
     handleStartRecording()
-  }, [handleStartRecording])
+  }, [phase, handleStartRecording])
 
   const submitRecording = useCallback(
     async (result: RecordingResult) => {
@@ -305,11 +312,77 @@ export function Stage4Panel({
     }
   }, [segmentId, onComplete, clearAdvanceTimer])
 
+  // Navigate to the previous sentence (idle / ready / result phases only).
+  const handlePrev = useCallback(() => {
+    if (phase !== 'idle' && phase !== 'ready' && phase !== 'result') return
+    if (sentenceIndex <= 0) return
+    const audio = refAudioRef.current
+    if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
+    clearAdvanceTimer()
+    setSentenceIndex((i) => i - 1)
+    setResult(null)
+    setError(null)
+    setPhase(phase === 'idle' ? 'idle' : 'ready')
+  }, [phase, sentenceIndex, clearAdvanceTimer])
+
+  // Navigate to the next sentence without completing the stage (arrows / swipe).
+  const handleNavNext = useCallback(() => {
+    if (phase !== 'idle' && phase !== 'ready' && phase !== 'result') return
+    if (sentenceIndex + 1 >= totalSentences) return
+    const audio = refAudioRef.current
+    if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
+    clearAdvanceTimer()
+    setSentenceIndex((i) => i + 1)
+    setResult(null)
+    setError(null)
+    setPhase(phase === 'idle' ? 'idle' : 'ready')
+  }, [phase, sentenceIndex, totalSentences, clearAdvanceTimer])
+
+  // Replay the reference clip without changing phase or triggering recording.
+  // handleRefAudioEnded guards against auto-recording unless phase is 'playingRef'.
+  const handlePlayRefOnly = useCallback(() => {
+    const audio = refAudioRef.current
+    if (!audio) return
+    audio.currentTime = 0
+    void audio.play().catch(() => {})
+  }, [])
+
+  // Stop and reload the audio element whenever we switch sentences so old
+  // playback doesn't bleed into the newly displayed sentence.
+  useEffect(() => {
+    const audio = refAudioRef.current
+    if (!audio) return
+    audio.pause()
+    audio.load()
+  }, [sentenceIndex])
+
+  // Swipe-left / swipe-right on the sentence card to navigate between sentences.
+  const handleCardTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0]
+    if (!t) return
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+  }, [])
+
+  const handleCardTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const t = e.changedTouches[0]
+    if (!t) return
+    const dx = t.clientX - touchStartRef.current.x
+    const dy = Math.abs(t.clientY - touchStartRef.current.y)
+    touchStartRef.current = null
+    // Ignore taps (< 50 px) or primarily vertical movements (scroll).
+    if (Math.abs(dx) < 50 || dy > 80) return
+    // Horizontal swipe confirmed — prevent the synthetic click from also firing.
+    e.preventDefault()
+    if (dx < 0) handleNavNext()  // swipe left → next sentence
+    else handlePrev()             // swipe right → prev sentence
+  }, [handleNavNext, handlePrev])
+
   // Keyboard shortcuts mirror the on-screen controls so the learner can run the
   // whole listen → repeat → score loop hands-free. Space (or Enter) fires the
   // phase's primary CTA; R handles the secondary "re-listen / retry" action.
-  // The bottom audio player is unmounted while Stage 4 is active, so there's no
-  // contention for Space.
+  // Arrow keys navigate between sentences. The bottom audio player is unmounted
+  // while Stage 4 is active, so there's no contention for Space.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -319,18 +392,26 @@ export function Stage4Panel({
 
       const isPrimary = e.code === 'Space' || e.key === 'Enter'
       const isSecondary = e.key === 'r' || e.key === 'R'
-      if (!isPrimary && !isSecondary) return
+      const isArrowPrev = e.key === 'ArrowLeft'
+      const isArrowNext = e.key === 'ArrowRight'
+      if (!isPrimary && !isSecondary && !isArrowPrev && !isArrowNext) return
 
+      const canNav = phase === 'idle' || phase === 'ready' || phase === 'result'
       let action: (() => void) | null = null
+
       if (isPrimary) {
         if (phase === 'idle') action = handleStartPractice
         else if (phase === 'ready') action = handleStartRecording
         else if (phase === 'recording') action = handleStop
         else if (phase === 'result') action = handleNext
-      } else {
+      } else if (isSecondary) {
         // R: re-listen to the reference (ready) or retry the take (result).
         if (phase === 'ready') action = handleStartPractice
         else if (phase === 'result') action = handleRetry
+      } else if (isArrowPrev && canNav) {
+        action = handlePrev
+      } else if (isArrowNext && canNav) {
+        action = handleNavNext
       }
 
       if (!action) return
@@ -347,6 +428,8 @@ export function Stage4Panel({
     handleStop,
     handleNext,
     handleRetry,
+    handlePrev,
+    handleNavNext,
   ])
 
   if (totalSentences === 0) {
@@ -366,6 +449,12 @@ export function Stage4Panel({
     return null
   }
 
+  // Derived rendering helpers — not memoised, computed fresh each render.
+  const canNavigate = phase === 'idle' || phase === 'ready' || phase === 'result'
+  // Card is tappable in ready/result to replay the reference clip without
+  // triggering the full practice flow (no recording auto-start).
+  const isCardInteractive = phase === 'ready' || phase === 'result'
+
   return (
     <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
       {/* hidden ref audio element — driven by handleStartPractice */}
@@ -376,18 +465,62 @@ export function Stage4Panel({
         onEnded={handleRefAudioEnded}
       />
 
-      {/* header */}
+      {/* header — sentence counter with prev/next chevrons */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
           <span className="text-accent">Stage 4</span> — {STAGE_META[4]?.label}
         </h3>
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-          文 {sentenceIndex + 1} / {totalSentences}
-        </span>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={handlePrev}
+            disabled={sentenceIndex === 0 || !canNavigate}
+            aria-label="前の文へ"
+            className="rounded p-1.5 text-ink-faint transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-25"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path d="M9 11.5L4.5 7 9 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <span className="min-w-[4.5rem] text-center font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+            文 {sentenceIndex + 1} / {totalSentences}
+          </span>
+          <button
+            type="button"
+            onClick={handleNavNext}
+            disabled={sentenceIndex + 1 >= totalSentences || !canNavigate}
+            aria-label="次の文へ"
+            className="rounded p-1.5 text-ink-faint transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-25"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path d="M5 2.5L9.5 7 5 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* sentence display */}
-      <div className="rounded-inset border border-ink-line bg-paper-soft px-4 py-5">
+      {/* sentence display
+          - tap to replay the reference clip (ready / result phases)
+          - swipe left/right to navigate to next/prev sentence */}
+      <div
+        className={[
+          'relative rounded-inset border border-ink-line bg-paper-soft px-4 py-5 select-none',
+          isCardInteractive
+            ? 'cursor-pointer transition-colors hover:border-accent/40 active:bg-ink-line/10'
+            : '',
+        ].join(' ')}
+        onClick={isCardInteractive ? handlePlayRefOnly : undefined}
+        onTouchStart={handleCardTouchStart}
+        onTouchEnd={handleCardTouchEnd}
+        role={isCardInteractive ? 'button' : undefined}
+        aria-label={isCardInteractive ? 'タップしてお手本を再生' : undefined}
+        tabIndex={isCardInteractive ? 0 : undefined}
+      >
+        {isCardInteractive && (
+          <span className="absolute right-3 top-3 text-sm text-ink-faint/50" aria-hidden>
+            🔊
+          </span>
+        )}
         <p className="text-center font-display text-xl font-medium leading-relaxed text-ink sm:text-2xl">
           {currentSentence.text}
         </p>
