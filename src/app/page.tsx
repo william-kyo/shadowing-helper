@@ -55,7 +55,7 @@ export default async function HomePage() {
         seenSegments.add(row.segmentId)
         recentSegmentIds.push(row.segmentId)
       }
-      if (recentSegmentIds.length >= 6) break
+      if (recentSegmentIds.length >= 10) break
     }
 
     const recentSegmentRecords = recentSegmentIds.length === 0
@@ -190,7 +190,7 @@ export default async function HomePage() {
       }
     }
 
-    const recentItems: HomeRecentItem[] = orderedRecent.slice(0, 5).map((s) => {
+    const toRecentItem = (s: (typeof orderedRecent)[number]): HomeRecentItem => {
       const completed = s.progress.filter((p) => p.status === 'completed').length
       return {
         id: s.id,
@@ -201,7 +201,26 @@ export default async function HomePage() {
         totalStages: TOTAL_STAGES,
         lastPracticedAt: lastPracticedBySegment.get(s.id) ?? new Date(),
       }
+    }
+
+    const recentCompleted = orderedRecent.find((s) => {
+      const { allCompleted } = computeCurrentStage(
+        s.progress.map((p) => ({ stage: p.stage, status: p.status })),
+      )
+      return allCompleted
     })
+
+    const recentInProgress = orderedRecent.find((s) => {
+      const { allCompleted } = computeCurrentStage(
+        s.progress.map((p) => ({ stage: p.stage, status: p.status })),
+      )
+      return !allCompleted
+    })
+
+    const recentItems: HomeRecentItem[] = [
+      recentInProgress ? toRecentItem(recentInProgress) : null,
+      recentCompleted ? toRecentItem(recentCompleted) : null,
+    ].filter((item): item is HomeRecentItem => item !== null).slice(0, 2)
 
     return (
       <main className="min-h-screen bg-surface px-4 pt-6 pb-28 text-ink sm:px-6 sm:pt-10 sm:pb-32">
