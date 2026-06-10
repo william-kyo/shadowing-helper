@@ -42,8 +42,9 @@ export function ProjectSegmentWorkspace({
   const [dialogueMode, setDialogueMode] = useState(false)
 
   function handleDeleteSegment(segmentId: string) {
-    const seg = segments.find((s) => s.id === segmentId)
-    if (!seg || !confirm(`セグメント「${seg.title ?? seg.index + 1}」を削除しますか？`)) {
+    const position = segments.findIndex((s) => s.id === segmentId)
+    const seg = segments[position]
+    if (!seg || !confirm(`セグメント「${seg.title ?? position + 1}」を削除しますか？`)) {
       return
     }
     fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
@@ -135,7 +136,7 @@ export function ProjectSegmentWorkspace({
         <p className="text-sm text-ink-faint">まだセグメントはありません。上のフォームから追加してください。</p>
       ) : (
         <ul className="grid gap-3">
-          {segments.map((segment) => {
+          {segments.map((segment, position) => {
             const { currentStage, allCompleted } = computeCurrentStage(segment.progress)
             return (
             <li key={segment.id} className="flex items-center gap-3 rounded-inset border border-ink-line bg-paper-soft px-4 py-3 transition hover:border-accent hover:bg-accent-faint">
@@ -145,7 +146,7 @@ export function ProjectSegmentWorkspace({
               >
                 <div className="flex items-center gap-2 font-medium text-ink">
                   <span>
-                    {segment.index + 1}. {segment.title ?? 'Untitled segment'}
+                    {position + 1}. {segment.title ?? 'Untitled segment'}
                   </span>
                   {allCompleted ? (
                     <span className="inline-flex items-center gap-1 rounded-chip border border-ink bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
