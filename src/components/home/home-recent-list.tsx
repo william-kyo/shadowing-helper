@@ -33,7 +33,7 @@ export function HomeRecentList({ items }: HomeRecentListProps) {
     <section aria-label="最近の練習" className="grid gap-3">
       <div className="flex items-center justify-between">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          最近の練習 · recent
+          最近の練習
         </h2>
         <Link
           href="/projects"

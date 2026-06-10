@@ -146,7 +146,7 @@ export function ProjectSegmentWorkspace({
               >
                 <div className="flex items-center gap-2 font-medium text-ink">
                   <span>
-                    {position + 1}. {segment.title ?? 'Untitled segment'}
+                    {position + 1}. {segment.title ?? '無題セグメント'}
                   </span>
                   {allCompleted ? (
                     <span className="inline-flex items-center gap-1 rounded-chip border border-ink bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
@@ -155,7 +155,7 @@ export function ProjectSegmentWorkspace({
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-chip border border-accent-soft bg-accent-faint px-2 py-0.5 text-xs font-semibold text-accent-deep">
-                      Stage {currentStage} 進行中
+                      ステージ{currentStage} 進行中
                     </span>
                   )}
                 </div>

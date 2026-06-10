@@ -95,7 +95,7 @@ export default async function HomePage() {
         id: s.id,
         projectId: s.project.id,
         projectTitle: s.project.title,
-        segmentTitle: s.title ?? `Segment ${s.index + 1}`,
+        segmentTitle: s.title ?? `セグメント${s.index + 1}`,
         currentStage,
         completedStages: completed,
         totalStages: TOTAL_STAGES,
@@ -141,7 +141,7 @@ export default async function HomePage() {
               id: nextInProject.id,
               projectId: project.id,
               projectTitle: project.title,
-              segmentTitle: nextInProject.title ?? `Segment ${nextInProject.index + 1}`,
+              segmentTitle: nextInProject.title ?? `セグメント${nextInProject.index + 1}`,
               currentStage,
               completedStages: completed,
               totalStages: TOTAL_STAGES,
@@ -181,7 +181,7 @@ export default async function HomePage() {
             id: next.id,
             projectId: fallbackProject.id,
             projectTitle: fallbackProject.title,
-            segmentTitle: next.title ?? `Segment ${next.index + 1}`,
+            segmentTitle: next.title ?? `セグメント${next.index + 1}`,
             currentStage,
             completedStages: completed,
             totalStages: TOTAL_STAGES,
@@ -196,7 +196,7 @@ export default async function HomePage() {
         id: s.id,
         projectId: s.project.id,
         projectTitle: s.project.title,
-        segmentTitle: s.title ?? `Segment ${s.index + 1}`,
+        segmentTitle: s.title ?? `セグメント${s.index + 1}`,
         completedStages: completed,
         totalStages: TOTAL_STAGES,
         lastPracticedAt: lastPracticedBySegment.get(s.id) ?? new Date(),
@@ -228,7 +228,7 @@ export default async function HomePage() {
           <header className="flex items-end justify-between gap-3 border-b border-ink-line/70 pb-4">
             <div className="min-w-0">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-                影 · shadowing
+                影 · シャドーイング
               </p>
               <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight">
                 {currentUser.email}

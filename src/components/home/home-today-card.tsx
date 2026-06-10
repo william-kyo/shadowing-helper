@@ -37,7 +37,7 @@ export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps
   }
 
   const href = `/projects/${segment.projectId}/segments/${segment.id}`
-  const stageLabel = `STAGE ${segment.currentStage} / ${segment.totalStages}`
+  const stageLabel = `ステージ${segment.currentStage} / ${segment.totalStages}`
   const heading = hasPracticedToday ? '今日もう一本、いける？' : '今日の練習 · 5分から'
   const ctaLabel = hasPracticedToday ? '続けて練習する' : '練習を始める'
   const pct = Math.round((segment.completedStages / segment.totalStages) * 100)
@@ -52,7 +52,7 @@ export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps
         aria-hidden
         className="pointer-events-none absolute -right-6 -top-6 grid h-24 w-24 place-items-center rounded-chip border border-accent/40 font-display text-[10px] uppercase tracking-[0.3em] text-accent/70"
       >
-        SHADOW
+        シャドウ
       </span>
 
       <div className="flex items-center justify-between">

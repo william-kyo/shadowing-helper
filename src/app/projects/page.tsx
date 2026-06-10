@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-              project dashboard
+              プロジェクトダッシュボード
             </p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
               プロジェクト一覧

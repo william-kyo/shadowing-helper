@@ -263,7 +263,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           step={100}
           value={Math.min(currentTime, duration || currentTime)}
           onChange={handleProgressChange}
-          aria-label={`${title || 'Segment'} audio progress`}
+          aria-label={`${title || 'セグメント'}の再生位置`}
           className="waveform-input absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </div>
@@ -383,7 +383,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
                   {seg.id === segmentId && (
                     <span className="flex h-2 w-2 shrink-0 rounded-full bg-accent" />
                   )}
-                  <span className="truncate">{seg.title ?? `Segment ${seg.index + 1}`}</span>
+                  <span className="truncate">{seg.title ?? `セグメント${seg.index + 1}`}</span>
                 </Link>
               ))}
             </div>

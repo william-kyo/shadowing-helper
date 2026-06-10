@@ -158,7 +158,7 @@ export function Stage1Panel({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="group relative">
           <h3 className="cursor-default font-display text-base font-semibold tracking-tight text-ink">
-            <span className="text-accent">Stage {activeStage}</span> — {STAGE_META[activeStage]?.label}
+            <span className="text-accent">ステージ{activeStage}</span> — {STAGE_META[activeStage]?.label}
           </h3>
           <div className="pointer-events-none absolute left-0 top-full z-10 mt-1.5 hidden w-72 rounded-inset border border-ink-line bg-paper-deep px-3 py-2.5 text-xs leading-relaxed text-paper/85 shadow-lg group-hover:block">
             {STAGE_META[activeStage]?.description}

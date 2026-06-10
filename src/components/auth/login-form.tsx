@@ -41,7 +41,7 @@ export function LoginForm() {
           htmlFor="email"
           className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
         >
-          Email
+メールアドレス
         </label>
         <input
           id="email"
@@ -60,7 +60,7 @@ export function LoginForm() {
           htmlFor="password"
           className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
         >
-          Password
+パスワード
         </label>
         <input
           id="password"

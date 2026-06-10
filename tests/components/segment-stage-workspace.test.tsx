@@ -32,13 +32,13 @@ describe('SegmentStageWorkspace', () => {
     )
 
     expect(
-      screen.getByRole('heading', { name: /Stage 2 — サイレント・シャドーイング/ }),
+      screen.getByRole('heading', { name: /ステージ2 — サイレント・シャドーイング/ }),
     ).toBeInTheDocument()
 
-    fireEvent.click(screen.getByTitle('Stage 4 スクリプト付きシャドーイング'))
+    fireEvent.click(screen.getByTitle('ステージ4 スクリプト付きシャドーイング'))
 
     expect(
-      screen.getByRole('heading', { name: /Stage 4 — スクリプト付きシャドーイング/ }),
+      screen.getByRole('heading', { name: /ステージ4 — スクリプト付きシャドーイング/ }),
     ).toBeInTheDocument()
   })
 
@@ -99,7 +99,7 @@ describe('SegmentStageWorkspace', () => {
       )
     })
 
-    fireEvent.click(screen.getByTitle('Stage 2 サイレント・シャドーイング'))
+    fireEvent.click(screen.getByTitle('ステージ2 サイレント・シャドーイング'))
 
     expect(screen.getByDisplayValue('edited script')).toBeInTheDocument()
     expect(screen.getByDisplayValue('edited notes')).toBeInTheDocument()

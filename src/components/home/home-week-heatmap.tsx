@@ -14,7 +14,7 @@ export function HomeWeekHeatmap({ days }: HomeWeekHeatmapProps) {
     >
       <div className="flex items-center justify-between">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          今週の記録 · this week
+          今週の記録
         </h2>
         <span className="font-mono text-xs tabular-nums text-ink-muted">
           {activeCount} / 7

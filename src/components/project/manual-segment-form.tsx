@@ -83,7 +83,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
         <div>
           <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">手動でセグメントを追加</h2>
           <p className="mt-2 text-sm text-ink-muted">
-            元音声を再生しながら開始位置と終了位置を決めて、1 つずつ segment を切り出します。
+            元音声を再生しながら開始位置と終了位置を決めて、1つずつセグメントを切り出します。
           </p>
         </div>
         {onCollapse ? (

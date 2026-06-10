@@ -26,13 +26,13 @@ export default async function LoginPage() {
         <section className="grid gap-4 px-2 sm:gap-6 sm:px-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-accent-deep">
             <span className="h-1.5 w-1.5 rounded-chip bg-accent" />
-            internal access only
+            内部アクセスのみ
           </div>
           <div className="grid gap-4 sm:gap-5">
             <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Shadowing
+              シャドーイング
               <br />
-              <span className="text-accent">Helper.</span>
+              <span className="text-accent">ヘルパー.</span>
             </h1>
             <p className="max-w-xl text-sm leading-7 text-ink-muted sm:text-base sm:leading-8">
               社内で発行したアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに入れます。登録は公開せず、Supabase管理画面から内部ユーザーだけを追加します。

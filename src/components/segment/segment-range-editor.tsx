@@ -100,7 +100,7 @@ export function SegmentRangeEditor({
         <div className="grid gap-4 border-t border-ink-line/70 px-4 py-4">
           <p className="text-xs text-ink-muted">
             開始・終了を秒で指定して音声を切り直します。スクリプトは新しい範囲から再生成され、
-            <span className="text-ink">Stage 4 の採点はリセット</span>されます。
+            <span className="text-ink">ステージ4の採点はリセット</span>されます。
           </p>
 
           <div className="flex flex-wrap items-end gap-3">

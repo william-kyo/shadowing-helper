@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Shadowing Helper',
-    short_name: 'Shadowing',
-    description: 'Stage-based audio shadowing practice',
+name: 'シャドーイングヘルパー',
+  short_name: 'シャドーイング',
+  description: 'ステージベースのシャドーイング練習',
     start_url: '/projects',
     display: 'standalone',
     // Warm-paper brand surface (was stale indigo/grey from the pre-redesign theme)

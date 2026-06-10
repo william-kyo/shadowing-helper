@@ -23,7 +23,7 @@ function StageIcon({ stage, status, onClick }: StageIconProps) {
     <button
       onClick={onClick}
       className={`${baseClasses} ${statusClasses[status]}`}
-      title={`Stage ${stage}`}
+      title={`ステージ${stage}`}
     >
       {status === 'completed' ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

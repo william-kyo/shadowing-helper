@@ -50,7 +50,7 @@ export function StageProgressTracker({
             onClick={() => onStageSelect(stage)}
             aria-pressed={isSelected}
             className={`relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer sm:h-9 sm:w-9 ${getStatusClasses(status)} ${isSelected ? 'ring-2 ring-accent/30 ring-offset-2 ring-offset-paper' : ''}`}
-            title={`Stage ${stage} ${STAGE_META[stage]?.label ?? ''}`}
+            title={`ステージ${stage} ${STAGE_META[stage]?.label ?? ''}`}
           >
             {status === 'completed' ? (
               <svg

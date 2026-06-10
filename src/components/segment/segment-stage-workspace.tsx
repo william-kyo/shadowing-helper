@@ -199,7 +199,7 @@ export function SegmentStageWorkspace({
 
       <section className="overflow-hidden rounded-card border border-ink-line bg-paper px-3 py-4 sm:px-4">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">Stage 1–5</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">ステージ 1–5</h2>
           <StageProgressTracker
             progress={progress}
             selectedStage={selectedStage}

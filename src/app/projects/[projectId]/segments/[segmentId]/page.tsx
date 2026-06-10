@@ -167,10 +167,10 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
         <div className="flex flex-wrap items-end justify-between gap-2 border-b border-ink-line/70 pb-5 sm:gap-4">
           <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-              segment · 練習
+              セグメント · 練習
             </p>
             <h1 className="mt-2 truncate font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              {segment.title ?? `Segment ${segment.index + 1}`}
+              {segment.title ?? `セグメント${segment.index + 1}`}
             </h1>
             <p className="mt-1 text-sm text-ink-muted">
               {project.title} · {segment.index + 1}番目
@@ -216,7 +216,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
               <span className="text-ink-faint">←</span>
-              <span className="max-w-32 truncate">{prevSegment.title ?? `Segment ${prevSegment.index + 1}`}</span>
+              <span className="max-w-32 truncate">{prevSegment.title ?? `セグメント${prevSegment.index + 1}`}</span>
             </Link>
           ) : prevProjectEntry ? (
             <Link
@@ -229,7 +229,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             >
               <span>←</span>
               <span className="max-w-40 truncate">{prevProjectEntry.title}</span>
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">prev</span>
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">前へ</span>
             </Link>
           ) : (
             <Link
@@ -247,7 +247,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               href={`/projects/${projectId}/segments/${nextSegment.id}`}
               className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
-              <span className="max-w-32 truncate">{nextSegment.title ?? `Segment ${nextSegment.index + 1}`}</span>
+              <span className="max-w-32 truncate">{nextSegment.title ?? `セグメント${nextSegment.index + 1}`}</span>
               <span className="text-ink-faint">→</span>
             </Link>
           ) : nextProjectEntry ? (
@@ -259,7 +259,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
               }
               className="flex items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-4 py-2 text-sm font-medium text-accent-deep transition hover:border-accent hover:bg-accent-soft"
             >
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">next</span>
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/70">次へ</span>
               <span className="max-w-40 truncate">{nextProjectEntry.title}</span>
               <span>→</span>
             </Link>

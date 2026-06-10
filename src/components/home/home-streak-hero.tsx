@@ -61,7 +61,7 @@ export function HomeStreakHero({
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-              継続中 · streak
+              継続中
             </p>
             <p className="mt-2 flex items-baseline gap-2">
               <span className="animate-streak-in font-display text-6xl font-semibold leading-none tracking-tighter text-accent sm:text-7xl">
@@ -108,7 +108,7 @@ export function HomeStreakHero({
           </p>
           <p className="mt-2 flex items-baseline gap-2">
             <span className="animate-streak-in font-display text-5xl font-semibold leading-none tracking-tighter text-ink sm:text-6xl">
-              Day <AnimatedNumber value={completed} />
+              <AnimatedNumber value={completed} />日目
             </span>
             <span className="text-base font-medium text-ink-faint">/ {goal}</span>
           </p>
@@ -142,10 +142,10 @@ export function HomeStreakHero({
           />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
-          <span>D1</span>
-          <span>D7</span>
-          <span>D14</span>
-          <span>D21</span>
+          <span>1日</span>
+          <span>7日</span>
+          <span>14日</span>
+          <span>21日</span>
         </div>
       </div>
     </section>

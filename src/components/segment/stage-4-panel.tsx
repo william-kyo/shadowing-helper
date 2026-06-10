@@ -436,7 +436,7 @@ export function Stage4Panel({
     return (
       <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-          <span className="text-accent">Stage 4</span> — {STAGE_META[4]?.label}
+          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
         </h3>
         <p className="mt-3 text-sm text-ink-muted">
           このセグメントには文が見つかりませんでした。文字起こしを実行してから再度お試しください。
@@ -468,7 +468,7 @@ export function Stage4Panel({
       {/* header — sentence counter with prev/next chevrons */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-          <span className="text-accent">Stage 4</span> — {STAGE_META[4]?.label}
+          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
         </h3>
         <div className="flex items-center gap-0.5">
           <button

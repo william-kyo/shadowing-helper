@@ -78,7 +78,7 @@ export function BottomNav() {
                   {tab.icon(active)}
                 </span>
                 <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
-                  {tab.reading}
+                  {tab.label}
                 </span>
               </Link>
             </li>
