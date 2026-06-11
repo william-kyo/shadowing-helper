@@ -162,7 +162,7 @@ export async function POST(request: Request) {
             mimeType: titleResult.data.audioMimeType,
           })
 
-          const topicSegments = await analyzeSegments(whisperResponse.segments)
+          const topicSegments = await analyzeSegments(whisperResponse.segments, { dialogue: true })
           const resolvedSegments = topicSegments
             .map((seg) => {
               const startWhisperSeg = whisperResponse.segments[seg.startIndex]
