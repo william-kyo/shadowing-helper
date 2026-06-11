@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 3
 
 type SegmentSummary = {
   progress: { stage: number; status: string }[]
