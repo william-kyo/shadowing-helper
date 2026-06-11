@@ -15,7 +15,6 @@ export default async function ProjectsPage() {
     db.project.findMany({
       where: { userId: currentUser.id },
       orderBy: { createdAt: 'desc' },
-      take: 3,
       include: {
         sourceImages: true,
         segments: {
