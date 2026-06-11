@@ -135,6 +135,61 @@ describe('SegmentStageWorkspace', () => {
     )
   })
 
+  it('keeps in-session stage completions when stage 4 is skipped', async () => {
+    // Regression: the stage-4 panel's onComplete used to fire a stale closure
+    // that reverted progress to the initial snapshot, wiping stages completed
+    // earlier in the same session.
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response)
+
+    render(
+      <SegmentStageWorkspace
+        segmentId="seg-1"
+        initialProgress={[{ stage: 1, status: 'in_progress' }]}
+        initialText="sample text"
+        initialNotes={null}
+        initialStage={1}
+        nextIncompleteHref={null}
+        stage4Sentences={[
+          { index: 0, text: 'はい', startMs: 0, endMs: 500, refAudioUrl: 'blob:ref-0' },
+        ]}
+      />,
+    )
+
+    const isCompleted = (stage: number) =>
+      screen.getByTitle(new RegExp(`^ステージ${stage} `)).querySelector('polyline') !== null
+
+    // Complete stage 1 (in_progress → completed), which auto-advances to stage 2.
+    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
+    await waitFor(() => expect(isCompleted(1)).toBe(true))
+
+    // Complete stage 2 (not_started → in_progress → completed), advances to 3.
+    fireEvent.click(await screen.findByRole('button', { name: '○ 未着手' }))
+    fireEvent.click(await screen.findByRole('button', { name: '◐ 進行中' }))
+    await waitFor(() => expect(isCompleted(2)).toBe(true))
+
+    // Complete stage 3, advances to stage 4 and renders the stage-4 panel.
+    fireEvent.click(await screen.findByRole('button', { name: '○ 未着手' }))
+    fireEvent.click(await screen.findByRole('button', { name: '◐ 進行中' }))
+    await waitFor(() => expect(isCompleted(3)).toBe(true))
+
+    // Skip stage 4 — must not clobber stages 1–3.
+    fireEvent.click(await screen.findByRole('button', { name: 'このステージをスキップ' }))
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith('/api/segments/seg-1/stage4/complete', {
+        method: 'POST',
+      }),
+    )
+
+    await waitFor(() => expect(isCompleted(4)).toBe(true))
+    expect(isCompleted(1)).toBe(true)
+    expect(isCompleted(2)).toBe(true)
+    expect(isCompleted(3)).toBe(true)
+  })
+
   it('falls back to home when nothing is left to complete', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
 

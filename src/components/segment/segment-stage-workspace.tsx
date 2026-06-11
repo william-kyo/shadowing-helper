@@ -67,6 +67,13 @@ export function SegmentStageWorkspace({
 }: SegmentStageWorkspaceProps) {
   const router = useRouter()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
+  // Mirror the latest progress in a ref so async/memoized callbacks (e.g. the
+  // stage-4 panel's onComplete) read fresh state instead of a stale closure
+  // snapshot, which would otherwise clobber in-session stage completions.
+  const progressRef = useRef(progress)
+  useEffect(() => {
+    progressRef.current = progress
+  }, [progress])
   const [selectedStage, setSelectedStage] = useState(initialStage)
   const [segmentText, setSegmentText] = useState(initialText)
   const [segmentNotes, setSegmentNotes] = useState(initialNotes ?? '')
@@ -91,10 +98,12 @@ export function SegmentStageWorkspace({
   const updateStageStatus = async (stage: number, status: StageStatus) => {
     if (isCompleting) return
 
-    const existedBefore = progress.some((item) => item.stage === stage)
-    const previousStatus = getStatus(stage)
-    const updated = applyStatus(progress, stage, status)
+    const current = progressRef.current
+    const existedBefore = current.some((item) => item.stage === stage)
+    const previousStatus = current.find((item) => item.stage === stage)?.status ?? 'not_started'
+    const updated = applyStatus(current, stage, status)
 
+    progressRef.current = updated
     startTransition(() => {
       setProgress(updated)
     })
@@ -124,15 +133,14 @@ export function SegmentStageWorkspace({
         }
       }
     } catch {
-      startTransition(() => {
-        setProgress((prev) => {
-          if (!existedBefore) {
-            return prev.filter((item) => item.stage !== stage)
-          }
-          return prev.map((item) =>
+      const reverted = !existedBefore
+        ? updated.filter((item) => item.stage !== stage)
+        : updated.map((item) =>
             item.stage === stage ? { ...item, status: previousStatus } : item,
           )
-        })
+      progressRef.current = reverted
+      startTransition(() => {
+        setProgress(reverted)
       })
     } finally {
       setIsUpdatingStatus(false)
@@ -141,9 +149,13 @@ export function SegmentStageWorkspace({
 
   // Stage 4 owns its own completion flow — when the last sentence passes
   // the panel calls onComplete, which reuses the same status-merge +
-  // handleSegmentComplete path as the manual `s` shortcut.
+  // handleSegmentComplete path as the manual `s` shortcut. Kept identity-stable
+  // (empty deps) so the panel's onComplete reference doesn't churn; freshness of
+  // progress is guaranteed by progressRef inside updateStageStatus, not by the
+  // closure captured here.
   const handleStage4Complete = useCallback(() => {
     void updateStageStatus(4, 'completed')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Press "s" to cycle the selected stage's status — mirrors the audio player's
