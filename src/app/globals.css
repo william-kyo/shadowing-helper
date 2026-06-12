@@ -15,7 +15,10 @@
   /* ink */
   --ink: #1d1b18;
   --ink-muted: #6b6358;
-  --ink-faint: #a39a8c;
+  /* faint tier — darkened from #a39a8c so secondary text (counts, timestamps,
+     labels) clears WCAG AA-Large (>=3:1) on every paper surface while staying a
+     clear step below --ink-muted. */
+  --ink-faint: #857a68;
   --ink-line: #d6cbb3;
 
   /* single accent: japanese vermillion */
