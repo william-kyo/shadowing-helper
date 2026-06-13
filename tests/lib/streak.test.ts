@@ -5,10 +5,13 @@ import {
   buildWeekHeatmap,
   computeCurrentStreak,
   computeLongestStreak,
+  countMakeupsInWindow,
+  dayDelta,
   growthStage,
   isHabitFormed,
   nextDateKey,
   previousDateKey,
+  summarizeStreak,
   toDateKey,
 } from '@/lib/streak'
 
@@ -127,6 +130,98 @@ describe('buildWeekHeatmap', () => {
     expect(days[0].active).toBe(true) // Monday
     expect(days[5].active).toBe(true) // Saturday (today)
     expect(days[1].active).toBe(false)
+  })
+})
+
+describe('dayDelta', () => {
+  it('measures whole-day distance and handles month boundaries', () => {
+    expect(dayDelta('2026-05-08', '2026-05-09')).toBe(1)
+    expect(dayDelta('2026-05-09', '2026-05-09')).toBe(0)
+    expect(dayDelta('2026-05-09', '2026-05-08')).toBe(-1)
+    expect(dayDelta('2026-02-28', '2026-03-01')).toBe(1)
+  })
+})
+
+describe('make-up (補卡) streak', () => {
+  const today = jstDate('2026-05-09T10:00:00+09:00') // Saturday in JST
+
+  it('bridges a missed day so the streak stays continuous', () => {
+    const dates = [
+      jstDate('2026-05-09T10:00:00+09:00'), // Sat (today)
+      // Fri 2026-05-08 missed
+      jstDate('2026-05-07T10:00:00+09:00'), // Thu
+      jstDate('2026-05-06T10:00:00+09:00'), // Wed
+    ]
+    expect(computeCurrentStreak(dates, today)).toBe(1)
+    expect(computeCurrentStreak(dates, today, TZ, ['2026-05-08'])).toBe(4)
+  })
+
+  it('counts make-ups in longest streak too', () => {
+    const dates = [
+      jstDate('2026-05-09T10:00:00+09:00'),
+      jstDate('2026-05-07T10:00:00+09:00'),
+      jstDate('2026-05-06T10:00:00+09:00'),
+    ]
+    expect(computeLongestStreak(dates, TZ, ['2026-05-08'])).toBe(4)
+  })
+
+  it('only counts make-ups inside the 3-day repair window against the cap', () => {
+    // delta 1 and 3 are in-window; delta 8 is an old (already-banked) make-up.
+    expect(
+      countMakeupsInWindow(['2026-05-08', '2026-05-06', '2026-05-01'], today, TZ),
+    ).toBe(2)
+  })
+})
+
+describe('buildWeekHeatmap make-up eligibility', () => {
+  const today = jstDate('2026-05-09T10:00:00+09:00') // Saturday
+
+  it('flags a recent missed day as eligible only when budget remains', () => {
+    const dates = [jstDate('2026-05-09T08:00:00+09:00')] // only today active
+    const eligible = buildWeekHeatmap(dates, today, TZ, { makeupRemaining: 2 })
+    const fri = eligible.find((d) => d.dateKey === '2026-05-08')
+    expect(fri?.makeupEligible).toBe(true)
+
+    const noBudget = buildWeekHeatmap(dates, today, TZ, { makeupRemaining: 0 })
+    expect(noBudget.find((d) => d.dateKey === '2026-05-08')?.makeupEligible).toBe(false)
+  })
+
+  it('does not offer days outside the 3-day window, today, or future', () => {
+    const dates = [jstDate('2026-05-09T08:00:00+09:00')]
+    const days = buildWeekHeatmap(dates, today, TZ, { makeupRemaining: 2 })
+    // Mon 2026-05-04 is 5 days back — beyond repair.
+    expect(days.find((d) => d.dateKey === '2026-05-04')?.makeupEligible).toBe(false)
+    // Today is never a make-up target.
+    expect(days.find((d) => d.isToday)?.makeupEligible).toBe(false)
+    // Sunday is in the future.
+    expect(days.find((d) => d.dateKey === '2026-05-10')?.makeupEligible).toBe(false)
+  })
+
+  it('marks made-up days distinctly and not as eligible', () => {
+    const dates = [jstDate('2026-05-09T08:00:00+09:00')]
+    const days = buildWeekHeatmap(dates, today, TZ, {
+      makeupKeys: ['2026-05-08'],
+      makeupRemaining: 1,
+    })
+    const fri = days.find((d) => d.dateKey === '2026-05-08')
+    expect(fri?.madeup).toBe(true)
+    expect(fri?.makeupEligible).toBe(false)
+  })
+})
+
+describe('summarizeStreak', () => {
+  const today = jstDate('2026-05-09T10:00:00+09:00')
+
+  it('reports counts, used/remaining budget, and a make-up-aware streak', () => {
+    const dates = [
+      jstDate('2026-05-09T10:00:00+09:00'), // Sat
+      jstDate('2026-05-07T10:00:00+09:00'), // Thu
+    ]
+    const summary = summarizeStreak(dates, ['2026-05-08'], today, TZ)
+    expect(summary.makeupUsed).toBe(1)
+    expect(summary.makeupRemaining).toBe(1)
+    expect(summary.currentStreak).toBe(3) // Sat + made-up Fri + Thu
+    expect(summary.heatmap).toHaveLength(7)
   })
 })
 

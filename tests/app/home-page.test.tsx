@@ -18,11 +18,13 @@ vi.mock('@/lib/auth', () => ({
 const stageProgressFindMany = vi.fn()
 const segmentFindMany = vi.fn()
 const projectFindFirst = vi.fn()
+const streakMakeupFindMany = vi.fn()
 vi.mock('@/lib/db', () => ({
   db: {
     stageProgress: { findMany: (...args: unknown[]) => stageProgressFindMany(...args) },
     segment: { findMany: (...args: unknown[]) => segmentFindMany(...args) },
     project: { findFirst: (...args: unknown[]) => projectFindFirst(...args) },
+    streakMakeup: { findMany: (...args: unknown[]) => streakMakeupFindMany(...args) },
   },
 }))
 
@@ -51,6 +53,8 @@ describe('HomePage – authenticated', () => {
       id: 'user-1',
       email: 'tester@example.com',
     })
+    // No make-ups by default; individual tests can override.
+    streakMakeupFindMany.mockResolvedValue([])
   })
 
   it('renders streak hero, today CTA, and recent practice list with deep links', async () => {

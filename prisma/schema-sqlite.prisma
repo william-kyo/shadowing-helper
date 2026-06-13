@@ -45,12 +45,30 @@ model Project {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  supabaseUserId String    @unique
-  email          String    @unique
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id             String         @id @default(cuid())
+  supabaseUserId String         @unique
+  email          String         @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   projects       Project[]
+  streakMakeups  StreakMakeup[]
+}
+
+// A streak "make-up" (補卡): the user repairs a missed past day by spending a
+// segment they fully completed today. `dateKey` is the repaired day (JST,
+// YYYY-MM-DD); `sourceSegmentId` is the full-segment completion that paid for
+// it — unique per user so a single completion can fund only one make-up.
+model StreakMakeup {
+  id              String   @id @default(cuid())
+  userId          String
+  dateKey         String
+  sourceSegmentId String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dateKey])
+  @@unique([userId, sourceSegmentId])
+  @@index([userId])
 }
 
 model SourceImage {

@@ -12,12 +12,8 @@ import { getCurrentAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
 import { TOTAL_STAGES, computeCurrentStage } from '@/lib/stage-progress'
-import {
-  buildWeekHeatmap,
-  computeCurrentStreak,
-  computeLongestStreak,
-  toDateKey,
-} from '@/lib/streak'
+import { summarizeStreak, toDateKey } from '@/lib/streak'
+import { findUnspentTodayFullSegment } from '@/lib/streak-server'
 
 export default async function HomePage() {
   const currentUser = await getCurrentAppUser()
@@ -37,9 +33,26 @@ export default async function HomePage() {
 
     const today = new Date()
     const allActivityDates = progressRows.map((p) => p.updatedAt)
-    const currentStreak = computeCurrentStreak(allActivityDates, today)
-    const longestStreak = computeLongestStreak(allActivityDates)
-    const heatmap = buildWeekHeatmap(allActivityDates, today)
+    const makeupRows = await measureStep('db.streak_makeups.find_for_home', () =>
+      db.streakMakeup.findMany({
+        where: { userId: currentUser.id },
+        select: { dateKey: true },
+      }),
+    )
+    const { currentStreak, longestStreak, heatmap, makeupRemaining } = summarizeStreak(
+      allActivityDates,
+      makeupRows.map((m) => m.dateKey),
+      today,
+    )
+
+    // Only probe for a funding segment when a repair is actually offerable —
+    // it drives the make-up hint shown on eligible days.
+    const makeupSourceAvailable =
+      makeupRemaining > 0 && heatmap.some((d) => d.makeupEligible)
+        ? (await measureStep('db.streak_makeup_source.find_for_home', () =>
+            findUnspentTodayFullSegment(currentUser.id, today),
+          )) !== null
+        : false
 
     const todayKey = toDateKey(today)
     const hasPracticedToday = allActivityDates.some((d) => toDateKey(d) === todayKey)
@@ -247,7 +260,11 @@ export default async function HomePage() {
 
           <HomeRecentList items={recentItems} />
 
-          <HomeWeekHeatmap days={heatmap} />
+          <HomeWeekHeatmap
+            days={heatmap}
+            makeupRemaining={makeupRemaining}
+            makeupSourceAvailable={makeupSourceAvailable}
+          />
 
           <div className="flex justify-center pt-2">
             <Link
