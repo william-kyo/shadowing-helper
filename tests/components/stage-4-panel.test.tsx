@@ -192,6 +192,49 @@ describe('Stage4Panel', () => {
     expect(await screen.findByText(/次の文へ/)).toBeInTheDocument()
   })
 
+  it('auto-plays the next sentence reference after a pass to keep the loop hands-free', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        recordingId: 'rec-1',
+        score: 1,
+        pass: true,
+        transcript: 'こんにちは',
+        expected: 'こんにちは',
+        distance: 0,
+        expectedLength: 5,
+        actualLength: 5,
+        threshold: 0.8,
+        stageComplete: false,
+        passingSentences: 1,
+        totalSentences: 2,
+      }),
+    } as Response)
+
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    // Sentence 1: tap to grant mic + play, end the clip, record, stop, score.
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    await screen.findByText('お手本を再生中…')
+    fireRefAudioEnded()
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+    await screen.findByText(/✓ 合格 100%/)
+
+    // After the auto-advance delay, sentence 2 should auto-play its reference
+    // with no further interaction.
+    await waitFor(() => expect(screen.getByText('さようなら')).toBeInTheDocument(), { timeout: 2000 })
+    expect(await screen.findByText('お手本を再生中…')).toBeInTheDocument()
+  })
+
   it('marks stage 4 complete via onComplete when the last sentence passes', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

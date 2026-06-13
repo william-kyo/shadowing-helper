@@ -101,6 +101,10 @@ export function Stage4Panel({
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Touch-start position for horizontal swipe detection on the sentence card.
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  // Set when advanceToNext moves the learner forward in the practice loop, so
+  // the next sentence auto-plays its reference clip and rolls straight into
+  // recording — keeping the listen → speak loop hands-free after sentence 1.
+  const autoStartNextRef = useRef(false)
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [sentenceIndex, setSentenceIndex] = useState(() => {
@@ -178,6 +182,14 @@ export function Stage4Panel({
     // Ensure the mic stream is live before onEnded fires the recorder.
     await permissionPromise
   }, [currentSentence, recorder, clearAdvanceTimer])
+
+  // Keep a stable handle on the latest handleStartPractice so the auto-start
+  // effect (keyed only on sentenceIndex) always invokes the current closure
+  // without itself re-running every render.
+  const handleStartPracticeRef = useRef(handleStartPractice)
+  useEffect(() => {
+    handleStartPracticeRef.current = handleStartPractice
+  }, [handleStartPractice])
 
   const handleStartRecording = useCallback(() => {
     // Allowed from `ready` (manual "復唱する" click) and `playingRef`
@@ -271,6 +283,9 @@ export function Stage4Panel({
       onComplete()
       return
     }
+    // Flag the upcoming sentence to auto-play its reference and resume the
+    // listen → speak loop without another tap.
+    autoStartNextRef.current = true
     setSentenceIndex((i) => i + 1)
     setResult(null)
     setPhase('ready')
@@ -354,6 +369,18 @@ export function Stage4Panel({
     if (!audio) return
     audio.pause()
     audio.load()
+  }, [sentenceIndex])
+
+  // After advancing within the practice loop, auto-play the new sentence's
+  // reference clip and chain into recording (handleStartPractice → onEnded →
+  // handleStartRecording). Runs after the reload effect above so play() acts on
+  // the freshly-loaded source. The audio element was unlocked and the mic
+  // granted by the learner's initial tap, so no further gesture is needed.
+  // Manual navigation (arrows / swipe) never sets the flag, so it stays silent.
+  useEffect(() => {
+    if (!autoStartNextRef.current) return
+    autoStartNextRef.current = false
+    void handleStartPracticeRef.current()
   }, [sentenceIndex])
 
   // Swipe-left / swipe-right on the sentence card to navigate between sentences.
