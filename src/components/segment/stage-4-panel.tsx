@@ -24,6 +24,9 @@ type Sentence = {
   startMs: number
   endMs: number
   refAudioUrl: string
+  // The learner's latest recording for this sentence (from a prior session),
+  // or null if they haven't recorded it yet.
+  userRecordingUrl: string | null
 }
 
 type Phase =
@@ -36,6 +39,7 @@ type Phase =
   | 'completed'
 
 type ResultPayload = {
+  recordingId: string
   score: number
   pass: boolean
   transcript: string
@@ -97,6 +101,9 @@ export function Stage4Panel({
 }: Stage4PanelProps) {
   const recorder = useShadowingRecorder()
   const refAudioRef = useRef<HTMLAudioElement | null>(null)
+  // Separate element for playing back the learner's own recording, so it never
+  // clobbers the reference clip (and its onEnded never triggers recording).
+  const selfAudioRef = useRef<HTMLAudioElement | null>(null)
   const stopRecordingPromiseRef = useRef<Promise<RecordingResult | undefined> | null>(null)
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Touch-start position for horizontal swipe detection on the sentence card.
@@ -123,9 +130,22 @@ export function Stage4Panel({
   )
   const [result, setResult] = useState<ResultPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Per-sentence self-playback URLs. Seeded from sentences persisted in prior
+  // sessions, then updated in-session as each new take is scored.
+  const [recordingUrlByIndex, setRecordingUrlByIndex] = useState<Record<number, string>>(
+    () => {
+      const seed: Record<number, string> = {}
+      sentences.forEach((s) => {
+        if (s.userRecordingUrl) seed[s.index] = s.userRecordingUrl
+      })
+      return seed
+    },
+  )
 
   const currentSentence = sentences[sentenceIndex] ?? null
   const totalSentences = sentences.length
+  // Self-playback URL for the current sentence (this session or a prior one).
+  const currentRecordingUrl = recordingUrlByIndex[sentenceIndex] ?? null
   const sentenceSummary = useMemo(() => {
     const map = new Map<number, ReturnType<typeof describeState>>()
     metadata.sentences.forEach((s) => map.set(s.index, describeState(s)))
@@ -228,6 +248,15 @@ export function Stage4Panel({
       }
       const data = (await res.json()) as ResultPayload
       setResult(data)
+
+      // Make the just-recorded take playable for comparison. `?v=<recordingId>`
+      // busts any cached prior take for this sentence.
+      if (data.recordingId) {
+        setRecordingUrlByIndex((prev) => ({
+          ...prev,
+          [sentenceIndex]: `/api/segments/${segmentId}/stage4/recordings/${sentenceIndex}/audio?v=${data.recordingId}`,
+        }))
+      }
 
       setMetadata((prev) => {
         const existing = prev.sentences.find((s) => s.index === sentenceIndex)
@@ -333,6 +362,8 @@ export function Stage4Panel({
     if (sentenceIndex <= 0) return
     const audio = refAudioRef.current
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
+    const self = selfAudioRef.current
+    if (self && !self.paused) { self.pause(); self.currentTime = 0 }
     clearAdvanceTimer()
     setSentenceIndex((i) => i - 1)
     setResult(null)
@@ -346,6 +377,8 @@ export function Stage4Panel({
     if (sentenceIndex + 1 >= totalSentences) return
     const audio = refAudioRef.current
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
+    const self = selfAudioRef.current
+    if (self && !self.paused) { self.pause(); self.currentTime = 0 }
     clearAdvanceTimer()
     setSentenceIndex((i) => i + 1)
     setResult(null)
@@ -356,20 +389,51 @@ export function Stage4Panel({
   // Replay the reference clip without changing phase or triggering recording.
   // handleRefAudioEnded guards against auto-recording unless phase is 'playingRef'.
   const handlePlayRefOnly = useCallback(() => {
+    const self = selfAudioRef.current
+    if (self && !self.paused) self.pause()
     const audio = refAudioRef.current
     if (!audio) return
     audio.currentTime = 0
     void audio.play().catch(() => {})
   }, [])
 
-  // Stop and reload the audio element whenever we switch sentences so old
-  // playback doesn't bleed into the newly displayed sentence.
+  // Play back the learner's own recording for the current sentence so they can
+  // compare it against the reference. Pauses the reference first to avoid an
+  // overlap, and never affects the recording state machine.
+  const handlePlaySelf = useCallback(() => {
+    const ref = refAudioRef.current
+    if (ref && !ref.paused) { ref.pause(); ref.currentTime = 0 }
+    const self = selfAudioRef.current
+    if (!self) return
+    self.currentTime = 0
+    void self.play().catch(() => {})
+  }, [])
+
+  // Stop and reload the reference element whenever we switch sentences so old
+  // playback doesn't bleed into the newly displayed sentence. The self element
+  // is paused here; its (re)load is driven by the currentRecordingUrl effect
+  // below so a fresh take recorded for the *same* sentence also loads.
   useEffect(() => {
     const audio = refAudioRef.current
-    if (!audio) return
-    audio.pause()
-    audio.load()
+    if (audio) {
+      audio.pause()
+      audio.load()
+    }
+    const self = selfAudioRef.current
+    if (self && !self.paused) {
+      self.pause()
+      self.currentTime = 0
+    }
   }, [sentenceIndex])
+
+  // Load the self element whenever its source changes — on sentence switch AND
+  // when a new take is recorded for the current sentence (retry or first take).
+  // Without this, React updates the <audio src> but `preload="none"` leaves the
+  // element unloaded and play() can fail silently on Safari/iOS.
+  useEffect(() => {
+    const self = selfAudioRef.current
+    if (self && currentRecordingUrl) self.load()
+  }, [currentRecordingUrl])
 
   // After advancing within the practice loop, auto-play the new sentence's
   // reference clip and chain into recording (handleStartPractice → onEnded →
@@ -481,6 +545,13 @@ export function Stage4Panel({
   // Card is tappable in ready/result to replay the reference clip without
   // triggering the full practice flow (no recording auto-start).
   const isCardInteractive = phase === 'ready' || phase === 'result'
+  // The compare bar is offered whenever a recording exists and we're not mid
+  // listen/record/score (which own the audio + state machine).
+  const showCompareBar =
+    Boolean(currentRecordingUrl) &&
+    phase !== 'playingRef' &&
+    phase !== 'recording' &&
+    phase !== 'uploading'
 
   return (
     <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
@@ -490,6 +561,12 @@ export function Stage4Panel({
         src={currentSentence.refAudioUrl}
         preload="auto"
         onEnded={handleRefAudioEnded}
+      />
+      {/* hidden self-recording element — driven by handlePlaySelf */}
+      <audio
+        ref={selfAudioRef}
+        src={currentRecordingUrl ?? undefined}
+        preload="none"
       />
 
       {/* header — sentence counter with prev/next chevrons */}
@@ -583,6 +660,33 @@ export function Stage4Panel({
           )
         })}
       </div>
+
+      {/* compare bar — play the reference vs. your own take side by side.
+          Shown whenever a recording exists for this sentence and we're not mid
+          listen/record/score. */}
+      {showCompareBar && (
+        <div className="mt-4 rounded-inset border border-ink-line bg-paper-soft px-3 py-2">
+          <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+            聴き比べ
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={handlePlayRefOnly}
+              className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
+            >
+              🔊 お手本
+            </button>
+            <button
+              type="button"
+              onClick={handlePlaySelf}
+              className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
+            >
+              🎙 自分の声
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* controls */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">

@@ -63,8 +63,8 @@ function removeMediaRecorderStub() {
 }
 
 const SENTENCES = [
-  { index: 0, text: 'こんにちは', startMs: 0, endMs: 1500, refAudioUrl: '/api/segments/seg-1/stage4/sentences/0/audio' },
-  { index: 1, text: 'さようなら', startMs: 1500, endMs: 3000, refAudioUrl: '/api/segments/seg-1/stage4/sentences/1/audio' },
+  { index: 0, text: 'こんにちは', startMs: 0, endMs: 1500, refAudioUrl: '/api/segments/seg-1/stage4/sentences/0/audio', userRecordingUrl: null },
+  { index: 1, text: 'さようなら', startMs: 1500, endMs: 3000, refAudioUrl: '/api/segments/seg-1/stage4/sentences/1/audio', userRecordingUrl: null },
 ]
 
 beforeEach(() => {
@@ -281,6 +281,134 @@ describe('Stage4Panel', () => {
       expect(onComplete).toHaveBeenCalledTimes(1)
     })
     expect(await screen.findByText(/ステージ4完了/)).toBeInTheDocument()
+  })
+
+  it('offers a self-playback compare control when a prior recording exists', () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[
+          { ...SENTENCES[0], userRecordingUrl: '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9' },
+          SENTENCES[1],
+        ]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('聴き比べ')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '🎙 自分の声' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '🔊 お手本' })).toBeInTheDocument()
+  })
+
+  it('plays the saved recording when 自分の声 is tapped', () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[
+          { ...SENTENCES[0], userRecordingUrl: '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9' },
+          SENTENCES[1],
+        ]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    // The self element loads its source from the userRecordingUrl.
+    const selfAudio = document.querySelectorAll('audio')[1] as HTMLAudioElement
+    expect(selfAudio.getAttribute('src')).toBe(
+      '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9',
+    )
+    fireEvent.click(screen.getByRole('button', { name: '🎙 自分の声' }))
+    expect(playSpy).toHaveBeenCalled()
+  })
+
+  it('plays the reference when 🔊 お手本 in the compare bar is tapped', () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[
+          { ...SENTENCES[0], userRecordingUrl: '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9' },
+          SENTENCES[1],
+        ]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '🔊 お手本' }))
+    expect(playSpy).toHaveBeenCalled()
+  })
+
+  it('hides the compare bar while listening/recording', async () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[
+          { ...SENTENCES[0], userRecordingUrl: '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9' },
+          SENTENCES[1],
+        ]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    // Visible at rest (idle) because a recording already exists.
+    expect(screen.getByText('聴き比べ')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    await screen.findByText('お手本を再生中…') // playingRef
+    expect(screen.queryByText('聴き比べ')).not.toBeInTheDocument()
+
+    fireRefAudioEnded() // -> recording
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    expect(screen.queryByText('聴き比べ')).not.toBeInTheDocument()
+  })
+
+  it('exposes the compare control after a take is scored', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        recordingId: 'rec-1',
+        score: 0.5,
+        pass: false,
+        transcript: 'こんちは',
+        expected: 'こんにちは',
+        distance: 1,
+        expectedLength: 5,
+        actualLength: 4,
+        threshold: 0.8,
+        stageComplete: false,
+        passingSentences: 0,
+        totalSentences: 2,
+      }),
+    } as Response)
+
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    await screen.findByText('お手本を再生中…')
+    fireRefAudioEnded()
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    // Once scored, the learner can replay their own take to compare.
+    expect(await screen.findByRole('button', { name: '🎙 自分の声' })).toBeInTheDocument()
+    // The self element points at the just-scored take, cache-busted by id.
+    const selfAudio = document.querySelectorAll('audio')[1] as HTMLAudioElement
+    expect(selfAudio.getAttribute('src')).toBe(
+      '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-1',
+    )
   })
 
   it('calls the skip endpoint and triggers onComplete', async () => {

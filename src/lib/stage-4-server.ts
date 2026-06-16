@@ -21,6 +21,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type Stage4Sentence = SentenceUnit & {
   refAudioUrl: string
+  // URL of the learner's most recent recording for this sentence, or null when
+  // they haven't recorded it yet. Cache-busted by the recording id.
+  userRecordingUrl: string | null
 }
 
 export type Stage4Setup = {
@@ -161,15 +164,45 @@ export async function loadStage4Setup(params: {
     units,
   })
 
+  // Map each sentence to its latest persisted recording (if any) so the panel
+  // can offer self-playback on resume, not just for takes made this session.
+  const latestRecordingBySentence = await loadLatestRecordingIdBySentence(segment.id)
+
   return {
-    sentences: units.map((unit) => ({
-      ...unit,
-      // `?v=` busts the client <audio> cache after a re-split swaps the
-      // underlying sentence clips while the URL path stays the same.
-      refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio?v=${segment.updatedAt.getTime()}`,
-    })),
+    sentences: units.map((unit) => {
+      const latestRecordingId = latestRecordingBySentence.get(unit.index) ?? null
+      return {
+        ...unit,
+        // `?v=` busts the client <audio> cache after a re-split swaps the
+        // underlying sentence clips while the URL path stays the same.
+        refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio?v=${segment.updatedAt.getTime()}`,
+        userRecordingUrl: latestRecordingId
+          ? `/api/segments/${segment.id}/stage4/recordings/${unit.index}/audio?v=${latestRecordingId}`
+          : null,
+      }
+    }),
     initialMetadata: buildMetadata(segment),
     audioMimeType: segment.project.audioMimeType,
     didBackfill,
   }
+}
+
+// Newest recording id per sentence index for a segment's stage 4 takes. Used to
+// build cache-bustable self-playback URLs.
+async function loadLatestRecordingIdBySentence(
+  segmentId: string,
+): Promise<Map<number, string>> {
+  const recordings = await db.recording.findMany({
+    where: { segmentId, stage: 4 },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, sentenceIndex: true },
+  })
+  const latest = new Map<number, string>()
+  for (const recording of recordings) {
+    if (recording.sentenceIndex == null) continue
+    if (!latest.has(recording.sentenceIndex)) {
+      latest.set(recording.sentenceIndex, recording.id)
+    }
+  }
+  return latest
 }

@@ -153,7 +153,7 @@ describe('SegmentStageWorkspace', () => {
         initialStage={1}
         nextIncompleteHref={null}
         stage4Sentences={[
-          { index: 0, text: 'はい', startMs: 0, endMs: 500, refAudioUrl: 'blob:ref-0' },
+          { index: 0, text: 'はい', startMs: 0, endMs: 500, refAudioUrl: 'blob:ref-0', userRecordingUrl: null },
         ]}
       />,
     )

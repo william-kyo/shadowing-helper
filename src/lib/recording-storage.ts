@@ -36,6 +36,17 @@ export function getStage4RecordingKey(params: {
   return `${paths.recordingDir}/${params.segmentId}/${STAGE4_STAGE_NUMBER}/${params.sentenceIndex}/${params.fileName}`
 }
 
+// Best-effort audio MIME for a stored recording, derived from its key's
+// extension. Recordings are saved as webm (Chrome/Firefox) or mp4 (Safari);
+// the Recording row doesn't persist the MIME, so we recover it for playback.
+export function recordingContentTypeFromKey(objectKey: string): string {
+  const lower = objectKey.toLowerCase()
+  if (lower.endsWith('.mp4') || lower.endsWith('.m4a')) return 'audio/mp4'
+  if (lower.endsWith('.ogg')) return 'audio/ogg'
+  if (lower.endsWith('.wav')) return 'audio/wav'
+  return 'audio/webm'
+}
+
 // Idempotently cut each sentence's slice from the segment audio and upload it
 // under a deterministic key. Re-running this is a no-op cost-wise (ffmpeg
 // recompute + upsert) and lets the panel stream a pre-cut clip instead of
