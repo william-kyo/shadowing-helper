@@ -12,11 +12,20 @@ type HomeStreakHeroProps = {
 
 function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(0)
+  const [previousValue, setPreviousValue] = useState(value)
   const rafRef = useRef<number>(0)
+
+  // Reset the display whenever `value` changes (including the 0 transition).
+  // Setting state during render is React's recommended pattern for syncing
+  // state to a prop change — see
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (previousValue !== value) {
+    setPreviousValue(value)
+    setDisplay(0)
+  }
 
   useEffect(() => {
     if (value === 0) {
-      setDisplay(0)
       return
     }
 

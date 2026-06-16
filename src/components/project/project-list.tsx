@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 
 const PAGE_SIZE = 3
 
@@ -159,12 +159,15 @@ type ProjectListProps = {
 export function ProjectList({ projects }: ProjectListProps) {
   const [page, setPage] = useState(1)
   const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
 
   // Clamp the active page when the list shrinks (e.g. after a deletion).
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+  // React discards the in-progress render and re-renders with the clamped
+  // value, keeping the highlighted "current" page in sync.
+  if (page > totalPages) {
+    setPage(totalPages)
+  }
+
+  const currentPage = page
 
   if (projects.length === 0) {
     return (

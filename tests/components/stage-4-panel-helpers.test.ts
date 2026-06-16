@@ -27,7 +27,6 @@ describe('Stage 4 panel scoring integration', () => {
 
   it('keeps the best score across attempts and only marks passedAt once', () => {
     const now = '2026-06-01T00:00:00.000Z'
-    const first: Stage4Metadata = { sentences: [] }
     const second: Stage4Metadata = { sentences: [{ index: 0, score: 0.6, transcript: 'a', attempts: 1, passedAt: null }] }
     const merged: SentenceScore = { ...second.sentences[0]!, transcript: 'b', score: 0.95, attempts: 2, passedAt: now }
     const composed: Stage4Metadata = { sentences: [merged] }

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useRef, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { buildStorageObjectKey, createStoredFileName, getProjectStoragePaths } from '@/lib/storage-paths'
@@ -32,9 +32,9 @@ type CreateProjectResponse = {
 export function ProjectCreateForm() {
   const router = useRouter()
   const {
+    control,
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<FormValues>()
@@ -43,8 +43,8 @@ export function ProjectCreateForm() {
 
   const audioRef = useRef<HTMLInputElement | null>(null)
   const imagesRef = useRef<HTMLInputElement | null>(null)
-  const watchedAudio = watch('audio')
-  const watchedImages = watch('images')
+  const watchedAudio = useWatch({ control, name: 'audio' })
+  const watchedImages = useWatch({ control, name: 'images' })
   const audioFileName = watchedAudio?.[0]?.name ?? null
   const imageFileNames = watchedImages ? Array.from(watchedImages).map((f) => f.name) : []
 
