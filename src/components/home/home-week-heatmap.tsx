@@ -64,7 +64,7 @@ export function HomeWeekHeatmap({
           const baseCell =
             'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-inset text-[10px] font-medium transition-colors'
           const todayRing = d.isToday
-            ? ' outline outline-2 outline-offset-2 outline-accent'
+            ? ' outline outline-2 outline-offset-2 outline-spark'
             : ''
           const isPending = pendingKey === d.dateKey
 

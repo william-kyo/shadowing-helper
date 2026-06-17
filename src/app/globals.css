@@ -1,31 +1,38 @@
 @import "tailwindcss";
 
 /* --- Design tokens ------------------------------------------------- */
-/* "Warm paper" editorial direction: cream surface, ink type, single
-   vermillion accent. Replaces the previous zinc / indigo / fuchsia /
-   amber / emerald grab-bag.                                            */
+/* "若竹 / Bamboo calm" direction: cool greige surface, pine ink, a calm
+   bamboo-green brand carried everywhere, and a single warm clay "spark"
+   reserved strictly for the *today / active* moment. Replaces the prior
+   warm-cream + vermillion theme (the templated AI default).            */
 
 :root {
-  /* surface */
-  --surface: #f4ecdc;
-  --paper: #faf4e6;
-  --paper-soft: #ede4cf;
-  --paper-deep: #1d1b18;
+  /* surface — cool greige, deliberately not warm cream */
+  --surface: #eaece6;
+  --paper: #f5f6f2;
+  --paper-soft: #e0e3da;
+  --paper-deep: #1b211a; /* dark pine surface (the "today" card) */
 
-  /* ink */
-  --ink: #1d1b18;
-  --ink-muted: #6b6358;
-  /* faint tier — darkened from #a39a8c so secondary text (counts, timestamps,
+  /* ink — pine, not warm brown */
+  --ink: #20271d;
+  --ink-muted: #586054;
+  /* faint tier — kept dark enough that secondary text (counts, timestamps,
      labels) clears WCAG AA-Large (>=3:1) on every paper surface while staying a
      clear step below --ink-muted. */
-  --ink-faint: #857a68;
-  --ink-line: #d6cbb3;
+  --ink-faint: #6f7869;
+  --ink-line: #d3d7cc;
 
-  /* single accent: japanese vermillion */
-  --accent: #c8342a;
-  --accent-deep: #8e1f17;
-  --accent-soft: #f1d6cf;
-  --accent-faint: #f7e6e1;
+  /* brand: bamboo green (若竹) — the everyday accent */
+  --accent: #3c7a55;
+  --accent-deep: #265138;
+  --accent-soft: #cfe0d3;
+  --accent-faint: #e7efe8;
+
+  /* spark: clay (赤土) — ONLY for the today / active state, never decoration */
+  --spark: #b35a30;
+  --spark-deep: #8f4422;
+  --spark-soft: #ecd6c6;
+  --spark-faint: #f6ebe2;
 
   /* radius — only three legal values */
   --radius-chip: 999px;
@@ -56,6 +63,11 @@
   --color-accent-deep: var(--accent-deep);
   --color-accent-soft: var(--accent-soft);
   --color-accent-faint: var(--accent-faint);
+
+  --color-spark: var(--spark);
+  --color-spark-deep: var(--spark-deep);
+  --color-spark-soft: var(--spark-soft);
+  --color-spark-faint: var(--spark-faint);
 
   --font-sans: var(--font-jp-sans), "Hiragino Sans", "Yu Gothic UI",
     system-ui, sans-serif;
@@ -107,8 +119,8 @@ body::before {
   z-index: 0;
   opacity: 0.5;
   background-image:
-    radial-gradient(rgba(29, 27, 24, 0.035) 1px, transparent 1px),
-    radial-gradient(rgba(29, 27, 24, 0.025) 1px, transparent 1px);
+    radial-gradient(rgba(32, 39, 29, 0.035) 1px, transparent 1px),
+    radial-gradient(rgba(32, 39, 29, 0.025) 1px, transparent 1px);
   background-size: 22px 22px, 13px 13px;
   background-position: 0 0, 11px 11px;
 }
@@ -145,7 +157,7 @@ nav {
 
 /* --- Glass player bar ---------------------------------------------- */
 .glass-player {
-  background: rgba(250, 244, 230, 0.72);
+  background: rgba(245, 246, 242, 0.72);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
 }
@@ -180,7 +192,7 @@ input[type="range"].waveform-input::-webkit-slider-thumb {
   height: 32px;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(200, 52, 42, 0.18);
+  box-shadow: 0 0 0 3px rgba(60, 122, 85, 0.2);
   cursor: pointer;
 }
 
@@ -190,7 +202,7 @@ input[type="range"].waveform-input::-moz-range-thumb {
   border: none;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(200, 52, 42, 0.18);
+  box-shadow: 0 0 0 3px rgba(60, 122, 85, 0.2);
   cursor: pointer;
 }
 

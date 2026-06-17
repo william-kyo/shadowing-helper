@@ -7,9 +7,9 @@ name: 'シャドーイングヘルパー',
   description: 'ステージベースのシャドーイング練習',
     start_url: '/projects',
     display: 'standalone',
-    // Warm-paper brand surface (was stale indigo/grey from the pre-redesign theme)
-    background_color: '#f4ecdc',
-    theme_color: '#f4ecdc',
+    // Bamboo-calm brand surface (cool greige page background)
+    background_color: '#eaece6',
+    theme_color: '#eaece6',
     icons: [
       {
         src: '/icon-192.png',

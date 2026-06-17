@@ -63,7 +63,7 @@ export function HomeStreakHero({
         aria-label="現在の継続日数"
         className={`rounded-card p-6 shadow-[0_1px_0_rgba(29,27,24,0.04),0_18px_40px_-30px_rgba(29,27,24,0.4)] ${
           hasPracticedToday
-            ? 'bg-paper-soft ring-2 ring-accent'
+            ? 'bg-paper-soft ring-2 ring-spark'
             : 'bg-paper ring-1 ring-ink-line'
         }`}
       >
@@ -83,7 +83,7 @@ export function HomeStreakHero({
             </p>
           </div>
           {hasPracticedToday ? (
-            <span className="shrink-0 rounded-chip bg-accent px-3 py-1 text-xs font-semibold text-paper">
+            <span className="shrink-0 rounded-chip bg-spark px-3 py-1 text-xs font-semibold text-paper">
               ✓ 今日完了
             </span>
           ) : (

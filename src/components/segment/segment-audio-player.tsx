@@ -323,7 +323,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           {/* play/pause */}
           <button
             onClick={togglePlay}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-paper shadow-[0_4px_16px_rgba(200,52,42,0.3)] transition hover:bg-accent-deep active:scale-95"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-paper shadow-[0_4px_16px_rgba(60,122,85,0.3)] transition hover:bg-accent-deep active:scale-95"
             title={playing ? '一時停止 (Space)' : '再生 (Space)'}
           >
             {playing ? (
