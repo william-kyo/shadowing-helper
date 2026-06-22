@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
 
 import { useShadowingRecorder, type RecordingResult } from '@/hooks/use-shadowing-recorder'
+import { WaveformCompare } from '@/components/segment/waveform-compare'
 import { STAGE_META } from '@/lib/stage-meta'
 import type { Stage4Metadata, SentenceScore } from '@/lib/stage-4-completion'
 
@@ -669,6 +670,19 @@ export function Stage4Panel({
           <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
             聴き比べ
           </p>
+          {/* Stacked waveforms on a shared time axis — tap a row to play it and
+              watch the playhead. Lets the learner see rhythm / length gaps the
+              score alone can't show. */}
+          {currentRecordingUrl && (
+            <div className="mb-3">
+              <WaveformCompare
+                referenceUrl={currentSentence.refAudioUrl}
+                recordingUrl={currentRecordingUrl}
+                referenceAudioRef={refAudioRef}
+                selfAudioRef={selfAudioRef}
+              />
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2">
             <button
               type="button"
