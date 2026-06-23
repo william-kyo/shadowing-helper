@@ -192,7 +192,7 @@ describe('Stage4Panel', () => {
     expect(await screen.findByText(/次の文へ/)).toBeInTheDocument()
   })
 
-  it('auto-plays the next sentence reference after a pass to keep the loop hands-free', async () => {
+  it('stays on the result after a pass and only advances when the learner taps 次の文へ', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -229,9 +229,19 @@ describe('Stage4Panel', () => {
     fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
     await screen.findByText(/✓ 合格 100%/)
 
-    // After the auto-advance delay, sentence 2 should auto-play its reference
-    // with no further interaction.
-    await waitFor(() => expect(screen.getByText('さようなら')).toBeInTheDocument(), { timeout: 2000 })
+    // No auto-jump: the panel stays on sentence 1's result so the learner can
+    // review the take (e.g. the waveform compare) before moving on. The counter
+    // proves we're still on sentence 1, and sentence 2's text is absent.
+    expect(screen.getByText('文 1 / 2')).toBeInTheDocument()
+    expect(screen.queryByText('さようなら')).not.toBeInTheDocument()
+    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
+
+    // Tapping 次の文へ advances and resumes the hands-free listen → speak loop,
+    // auto-playing sentence 2's reference clip.
+    // The arrow distinguishes the result CTA ("次の文へ →") from the header
+    // navigation chevron (aria-label "次の文へ").
+    fireEvent.click(screen.getByRole('button', { name: /次の文へ →/ }))
+    expect(await screen.findByText('さようなら')).toBeInTheDocument()
     expect(await screen.findByText('お手本を再生中…')).toBeInTheDocument()
   })
 

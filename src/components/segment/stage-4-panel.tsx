@@ -2,14 +2,23 @@
 
 // Stage 4 panel: script-following shadowing with per-sentence listen-then-
 // read flow. State machine walks `idle → ready → playingRef → recording →
-// uploading → result → (next | completed)`. On `result` with stageComplete,
-// the parent workspace's stage 4 status flips to "completed" via onComplete
-// and the auto-advance kicks in (segment-stage-workspace.tsx:102-112).
+// uploading → result → (next | completed)`. Advancing between sentences is
+// MANUAL: a scored sentence stays on its `result` so the learner can review
+// the take (score + waveform compare) and only moves on when they tap
+// "次の文へ" — there is no per-sentence auto-advance timer. When the last
+// sentence passes the server returns stageComplete, the panel flips to
+// 'completed' and calls onComplete, which is the parent workspace's
+// handleStage4Complete; the parent then handles segment/stage-level
+// navigation (segment-stage-workspace.tsx), not this panel.
 //
 // The "listen-then-speak" model: tapping the primary CTA grants mic access
 // (single user gesture requirement on iOS), then plays the reference clip
 // for the current sentence, then auto-starts the recorder when the clip
 // ends. The user taps "停止" to finalize their take (or the 30s cap fires).
+// Tapping "次の文へ" (handleNext → advanceToNext) sets autoStartNextRef so the
+// next sentence auto-plays its reference and chains back into recording,
+// keeping the loop hands-free after the first tap; manual navigation
+// (chevrons / swipe / arrow keys) advances silently without that auto-start.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
@@ -59,8 +68,6 @@ type Stage4PanelProps = {
   isStatusUpdating: boolean
 }
 
-const NEXT_SENTENCE_DELAY_MS = 900
-
 function formatMs(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
   const minutes = Math.floor(totalSeconds / 60)
@@ -106,7 +113,6 @@ export function Stage4Panel({
   // clobbers the reference clip (and its onEnded never triggers recording).
   const selfAudioRef = useRef<HTMLAudioElement | null>(null)
   const stopRecordingPromiseRef = useRef<Promise<RecordingResult | undefined> | null>(null)
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Touch-start position for horizontal swipe detection on the sentence card.
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   // Set when advanceToNext moves the learner forward in the practice loop, so
@@ -153,20 +159,10 @@ export function Stage4Panel({
     return map
   }, [metadata])
 
-  const clearAdvanceTimer = useCallback(() => {
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current)
-      advanceTimerRef.current = null
-    }
-  }, [])
-
-  useEffect(() => () => clearAdvanceTimer(), [clearAdvanceTimer])
-
   const handleStartPractice = useCallback(async () => {
     if (!currentSentence) return
     setError(null)
     setResult(null)
-    clearAdvanceTimer()
 
     const audio = refAudioRef.current
     if (!audio) {
@@ -202,7 +198,7 @@ export function Stage4Panel({
 
     // Ensure the mic stream is live before onEnded fires the recorder.
     await permissionPromise
-  }, [currentSentence, recorder, clearAdvanceTimer])
+  }, [currentSentence, recorder])
 
   // Keep a stable handle on the latest handleStartPractice so the auto-start
   // effect (keyed only on sentenceIndex) always invokes the current closure
@@ -322,28 +318,15 @@ export function Stage4Panel({
   }, [sentenceIndex, totalSentences, onComplete])
 
   const handleRetry = useCallback(() => {
-    clearAdvanceTimer()
     setResult(null)
     setPhase('ready')
-  }, [clearAdvanceTimer])
+  }, [])
 
   const handleNext = useCallback(() => {
-    clearAdvanceTimer()
     advanceToNext()
-  }, [clearAdvanceTimer, advanceToNext])
-
-  // Auto-advance after a successful pass: show the score briefly, then move on.
-  useEffect(() => {
-    if (phase !== 'result' || !result?.pass) return
-    clearAdvanceTimer()
-    advanceTimerRef.current = setTimeout(() => {
-      advanceToNext()
-    }, NEXT_SENTENCE_DELAY_MS)
-    return () => clearAdvanceTimer()
-  }, [phase, result, advanceToNext, clearAdvanceTimer])
+  }, [advanceToNext])
 
   const handleSkip = useCallback(async () => {
-    clearAdvanceTimer()
     try {
       const res = await fetch(`/api/segments/${segmentId}/stage4/complete`, { method: 'POST' })
       if (!res.ok) {
@@ -355,7 +338,7 @@ export function Stage4Panel({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'スキップに失敗しました。')
     }
-  }, [segmentId, onComplete, clearAdvanceTimer])
+  }, [segmentId, onComplete])
 
   // Navigate to the previous sentence (idle / ready / result phases only).
   const handlePrev = useCallback(() => {
@@ -365,12 +348,11 @@ export function Stage4Panel({
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
     const self = selfAudioRef.current
     if (self && !self.paused) { self.pause(); self.currentTime = 0 }
-    clearAdvanceTimer()
     setSentenceIndex((i) => i - 1)
     setResult(null)
     setError(null)
     setPhase(phase === 'idle' ? 'idle' : 'ready')
-  }, [phase, sentenceIndex, clearAdvanceTimer])
+  }, [phase, sentenceIndex])
 
   // Navigate to the next sentence without completing the stage (arrows / swipe).
   const handleNavNext = useCallback(() => {
@@ -380,12 +362,11 @@ export function Stage4Panel({
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
     const self = selfAudioRef.current
     if (self && !self.paused) { self.pause(); self.currentTime = 0 }
-    clearAdvanceTimer()
     setSentenceIndex((i) => i + 1)
     setResult(null)
     setError(null)
     setPhase(phase === 'idle' ? 'idle' : 'ready')
-  }, [phase, sentenceIndex, totalSentences, clearAdvanceTimer])
+  }, [phase, sentenceIndex, totalSentences])
 
   // Replay the reference clip without changing phase or triggering recording.
   // handleRefAudioEnded guards against auto-recording unless phase is 'playingRef'.
@@ -764,13 +745,20 @@ export function Stage4Panel({
 
         {phase === 'result' && result && (
           <>
+            {/* On a fail, retry is the primary recovery action, so give it the
+                accent emphasis "次の文へ →" carries on a pass. On a pass it stays
+                the outlined secondary next to the accent "次の文へ →". */}
             <button
               type="button"
               onClick={handleRetry}
-              className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
+              className={
+                result.pass
+                  ? 'rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent'
+                  : 'rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep'
+              }
             >
               🔁 もう一度
-              <KeyHint label="R" tone="dark" />
+              <KeyHint label="R" tone={result.pass ? 'dark' : 'light'} />
             </button>
             {result.pass ? (
               <button
