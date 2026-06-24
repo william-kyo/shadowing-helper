@@ -119,35 +119,39 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     : null
 
   // The fixed bottom audio player. Handed to the workspace so it can unmount
-  // the dock while Stage 4 is active — Stage 4 reclaims the Space shortcut for
+  // the player while Stage 4 is active — Stage 4 reclaims the Space shortcut for
   // its own controls, and the player's global Space listener would otherwise
   // fight it.
   const bottomDock = (
-    <>
-      <SegmentAudioPlayer
-        src={`/api/segments/${segment.id}/audio?v=${segment.updatedAt.getTime()}`}
-        title={segment.title ?? ''}
-        projectId={projectId}
-        segmentId={segment.id}
-        segments={allSegments}
-      />
+    <SegmentAudioPlayer
+      src={`/api/segments/${segment.id}/audio?v=${segment.updatedAt.getTime()}`}
+      title={segment.title ?? ''}
+      projectId={projectId}
+      segmentId={segment.id}
+      segments={allSegments}
+    />
+  )
 
-      <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
-        >
-          ホーム
-        </Link>
-        <Link
-          href={`/projects/${projectId}`}
-          aria-label="プロジェクトに戻る"
-          className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
-        >
-          ← 戻る
-        </Link>
-      </div>
-    </>
+  // Home / back navigation. Kept in the fixed bottom bar on every stage,
+  // including Stage 4 where the player above is hidden, so the learner always
+  // has an escape hatch. `mt-3` only spaces it from the player when the player
+  // renders above it; harmless when it stands alone.
+  const bottomNav = (
+    <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
+      >
+        ホーム
+      </Link>
+      <Link
+        href={`/projects/${projectId}`}
+        aria-label="プロジェクトに戻る"
+        className="inline-flex items-center gap-1 rounded-chip border border-ink-line bg-paper px-3 py-2 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
+      >
+        ← 戻る
+      </Link>
+    </div>
   )
 
   // Prefetch stage 4 sentence list so the panel renders immediately when the
@@ -198,6 +202,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
           bottomDock={bottomDock}
+          bottomNav={bottomNav}
         />
 
         <SegmentRangeEditor

@@ -49,9 +49,13 @@ type SegmentStageWorkspaceProps = {
   // and there's no persisted fallback to show.
   stage4Sentences?: Stage4Sentence[]
   stage4InitialMetadata?: Stage4Metadata | null
-  // Fixed bottom audio dock, rendered here so it can be unmounted while Stage 4
-  // is active (Stage 4 owns the Space shortcut; the player's would collide).
+  // Fixed bottom audio player, rendered here so it can be unmounted while Stage
+  // 4 is active (Stage 4 owns the Space shortcut; the player's would collide).
   bottomDock?: ReactNode
+  // Home / back navigation row. Kept in the fixed bottom bar on every stage —
+  // including Stage 4, where the player is hidden — so the learner can always
+  // leave the page.
+  bottomNav?: ReactNode
 }
 
 export function SegmentStageWorkspace({
@@ -64,6 +68,7 @@ export function SegmentStageWorkspace({
   stage4Sentences = [],
   stage4InitialMetadata = null,
   bottomDock,
+  bottomNav,
 }: SegmentStageWorkspaceProps) {
   const router = useRouter()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
@@ -245,18 +250,20 @@ export function SegmentStageWorkspace({
       )}
     </div>
 
-      {/* fixed bottom audio player — always visible for quick mobile playback
-          control, but unmounted on Stage 4 so the script-following panel can
-          claim Space / Enter without the player toggling playback underneath.
-          The nav row below the slider doubles as a buffer against the iOS bottom
-          gesture area so the progress bar thumb stays comfortably draggable. */}
-      {bottomDock && selectedStage !== 4 ? (
+      {/* fixed bottom bar. The audio player is unmounted on Stage 4 so the
+          script-following panel can claim Space / Enter without the player
+          toggling playback underneath, but the home/back nav row stays on every
+          stage so the learner can always leave the page. The nav row also
+          doubles as a buffer against the iOS bottom gesture area so the progress
+          bar thumb stays comfortably draggable. */}
+      {bottomDock || bottomNav ? (
         <div className="glass-player fixed inset-x-0 bottom-0 z-30 border-t border-ink-line/60 shadow-[0_-4px_24px_rgba(29,27,24,0.06)]">
           <div
             className="mx-auto max-w-2xl px-4 pt-3 sm:px-6 sm:pt-4"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
           >
-            {bottomDock}
+            {selectedStage !== 4 ? bottomDock : null}
+            {bottomNav}
           </div>
         </div>
       ) : null}
