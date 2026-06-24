@@ -352,6 +352,57 @@ describe('Stage4Panel', () => {
     expect(playSpy).toHaveBeenCalled()
   })
 
+  it('plays お手本 on "1" and 自分の声 on "2" while the compare bar is visible', () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={[
+          { ...SENTENCES[0], userRecordingUrl: '/api/segments/seg-1/stage4/recordings/0/audio?v=rec-9' },
+          SENTENCES[1],
+        ]}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    // Compare bar is visible at rest because a prior recording exists.
+    expect(screen.getByText('聴き比べ')).toBeInTheDocument()
+    const [refAudio, selfAudio] = Array.from(
+      document.querySelectorAll('audio'),
+    ) as HTMLAudioElement[]
+
+    // "1" plays the reference element only.
+    playSpy.mockClear()
+    fireEvent.keyDown(window, { key: '1' })
+    expect(playSpy).toHaveBeenCalledTimes(1)
+    expect(playSpy.mock.instances[0]).toBe(refAudio)
+
+    // "2" plays the recording element only.
+    playSpy.mockClear()
+    fireEvent.keyDown(window, { key: '2' })
+    expect(playSpy).toHaveBeenCalledTimes(1)
+    expect(playSpy.mock.instances[0]).toBe(selfAudio)
+  })
+
+  it('ignores the 1 / 2 compare shortcuts when no recording exists', () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    // No prior recording -> no compare bar, so the shortcuts are inert.
+    expect(screen.queryByText('聴き比べ')).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: '1' })
+    fireEvent.keyDown(window, { key: '2' })
+    expect(playSpy).not.toHaveBeenCalled()
+  })
+
   it('hides the compare bar while listening/recording', async () => {
     render(
       <Stage4Panel

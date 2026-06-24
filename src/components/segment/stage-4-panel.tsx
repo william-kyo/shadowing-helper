@@ -454,8 +454,10 @@ export function Stage4Panel({
   // Keyboard shortcuts mirror the on-screen controls so the learner can run the
   // whole listen → repeat → score loop hands-free. Space (or Enter) fires the
   // phase's primary CTA; R handles the secondary "re-listen / retry" action.
-  // Arrow keys navigate between sentences. The bottom audio player is unmounted
-  // while Stage 4 is active, so there's no contention for Space.
+  // Arrow keys navigate between sentences. 1 / 2 drive the compare bar (1 =
+  // お手本 reference, 2 = 自分の声 your take) whenever it's visible. The bottom
+  // audio player is unmounted while Stage 4 is active, so there's no contention
+  // for Space.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -467,9 +469,26 @@ export function Stage4Panel({
       const isSecondary = e.key === 'r' || e.key === 'R'
       const isArrowPrev = e.key === 'ArrowLeft'
       const isArrowNext = e.key === 'ArrowRight'
-      if (!isPrimary && !isSecondary && !isArrowPrev && !isArrowNext) return
+      const isCompareRef = e.key === '1'
+      const isCompareSelf = e.key === '2'
+      if (
+        !isPrimary &&
+        !isSecondary &&
+        !isArrowPrev &&
+        !isArrowNext &&
+        !isCompareRef &&
+        !isCompareSelf
+      )
+        return
 
       const canNav = phase === 'idle' || phase === 'ready' || phase === 'result'
+      // Mirrors `showCompareBar`: the 1/2 shortcuts are live exactly when the
+      // compare bar (and its KeyHint badges) is on screen.
+      const canCompare =
+        Boolean(currentRecordingUrl) &&
+        phase !== 'playingRef' &&
+        phase !== 'recording' &&
+        phase !== 'uploading'
       let action: (() => void) | null = null
 
       if (isPrimary) {
@@ -485,6 +504,10 @@ export function Stage4Panel({
         action = handlePrev
       } else if (isArrowNext && canNav) {
         action = handleNavNext
+      } else if (isCompareRef && canCompare) {
+        action = handlePlayRefOnly
+      } else if (isCompareSelf && canCompare) {
+        action = handlePlaySelf
       }
 
       if (!action) return
@@ -503,6 +526,9 @@ export function Stage4Panel({
     handleRetry,
     handlePrev,
     handleNavNext,
+    handlePlayRefOnly,
+    handlePlaySelf,
+    currentRecordingUrl,
   ])
 
   if (totalSentences === 0) {
@@ -671,6 +697,7 @@ export function Stage4Panel({
               className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
             >
               🔊 お手本
+              <KeyHint label="1" tone="dark" />
             </button>
             <button
               type="button"
@@ -678,6 +705,7 @@ export function Stage4Panel({
               className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
             >
               🎙 自分の声
+              <KeyHint label="2" tone="dark" />
             </button>
           </div>
         </div>
