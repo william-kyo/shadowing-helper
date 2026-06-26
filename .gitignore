@@ -53,6 +53,7 @@ prisma/*.db-journal
 
 # local docs (not for git)
 DEPLOY.md
+SECURITY_AUDIT.md
 AGENTS.local.md
 CLAUDE.local.md
 

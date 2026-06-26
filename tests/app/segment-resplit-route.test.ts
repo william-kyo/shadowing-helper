@@ -41,6 +41,10 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimitResponseOrNull: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('@/lib/groq', () => ({ transcribeAudioWithSegments }))
 vi.mock('@/lib/segment-analysis', () => ({ punctuateText }))
 vi.mock('@/lib/segment-audio', () => ({ extractAudioSegmentFromBuffer }))

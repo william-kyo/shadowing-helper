@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { analyzeSegments } from '@/lib/segment-analysis'
@@ -23,6 +24,10 @@ export async function POST(request: Request) {
     if (response || !user) {
       return response
     }
+
+    // Project creation kicks off Whisper STT on the whole upload — rate-limit it.
+    const limited = await rateLimitResponseOrNull(user.id, 'project_create')
+    if (limited) return limited
 
     const json = await measureStep('request.json', () => request.json())
     const titleResult = await measureStep('validation.project_create', async () => createProjectUploadSchema.safeParse(json))
@@ -102,6 +107,10 @@ export async function POST(request: Request) {
         if (titleResult.data.audioFileHash) {
           const fileHashMatch = await db.project.findFirst({
             where: {
+              // Scope dedup to the SAME user. Reusing another user's segments
+              // (titles/text, possibly hand-edited) would leak their content to
+              // anyone who happens to upload an identical audio file.
+              userId: user.id,
               audioFileHash: titleResult.data.audioFileHash,
               id: { not: project.id },
               segments: { some: {} },
@@ -124,6 +133,9 @@ export async function POST(request: Request) {
           pcmHash = await computePcmHash({ inputBuffer: audioBuffer, inputExtension })
           const pcmMatch = await db.project.findFirst({
             where: {
+              // Same-user scope (see fileHash dedup above) to avoid leaking
+              // another user's transcribed/segmented content across accounts.
+              userId: user.id,
               audioPcmHash: pcmHash,
               id: { not: project.id },
               segments: { some: {} },

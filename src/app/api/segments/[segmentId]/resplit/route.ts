@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { getStage4SentenceAudioKey } from '@/lib/recording-storage'
@@ -44,6 +45,10 @@ export async function POST(request: Request, context: RouteContext) {
       if (response || !user) {
         return response
       }
+
+      // Re-split re-runs Groq Whisper on the new clip — rate-limit per user.
+      const limited = await rateLimitResponseOrNull(user.id, 'resplit')
+      if (limited) return limited
 
       const { segmentId } = await measureStep('route.params', () => context.params)
       const json = await measureStep('request.json', () => request.json())

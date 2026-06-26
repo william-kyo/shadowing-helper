@@ -134,3 +134,15 @@ model Recording {
 
   @@index([segmentId])
 }
+
+// One row per accepted call to a rate-limited endpoint. A sliding-window
+// limiter (src/lib/rate-limit.ts) counts rows for (userId, bucket) within the
+// window. DB-backed so the limit holds across serverless instances.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  userId    String
+  bucket    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, bucket, createdAt])
+}

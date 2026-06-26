@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { analyzeSegments } from '@/lib/segment-analysis'
@@ -31,6 +32,10 @@ export async function POST(request: Request, context: RouteContext) {
       if (response || !user) {
         return response
       }
+
+      // Auto-segmentation runs Groq Whisper + LLM on the whole audio — rate-limit.
+      const limited = await rateLimitResponseOrNull(user.id, 'auto_segment')
+      if (limited) return limited
 
       const { projectId } = await measureStep('route.params', () => context.params)
       const json = await measureStep('request.json', () => request.json())

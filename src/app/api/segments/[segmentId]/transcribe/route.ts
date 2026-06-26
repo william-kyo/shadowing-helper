@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudio } from '@/lib/groq'
 import { punctuateText } from '@/lib/segment-analysis'
 import { measureStep, withApiPerf } from '@/lib/perf'
@@ -22,6 +23,10 @@ export async function POST(request: Request, context: RouteContext) {
   if (response || !user) {
     return response
   }
+
+  // Transcription calls Groq Whisper — rate-limit per user to cap cost.
+  const limited = await rateLimitResponseOrNull(user.id, 'transcribe')
+  if (limited) return limited
 
   const { segmentId } = await measureStep('route.params', () => context.params)
 

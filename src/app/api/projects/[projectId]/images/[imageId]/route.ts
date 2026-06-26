@@ -51,7 +51,8 @@ export async function GET(request: Request, { params }: RouteParams) {
   return new NextResponse(fileBuffer, {
     headers: {
       'Content-Type': sourceImage.mimeType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      // Per-user private media — keep it out of shared/CDN caches.
+      'Cache-Control': 'private, max-age=31536000, immutable',
     },
   })
   })

@@ -98,7 +98,9 @@ export async function GET(request: Request, context: RouteContext) {
         request,
         fileBuffer,
         contentType: segment.project.audioMimeType,
-        cacheControl: 'public, max-age=31536000, immutable',
+        // Per-user private media — `private` keeps it out of shared/CDN caches
+        // (a public cache could otherwise serve one learner's clip to another).
+        cacheControl: 'private, max-age=31536000, immutable',
       })
     } catch (error) {
       console.error('[stage4/sentences/audio] failed:', error)

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { requireAppUserForApi } from '@/lib/auth'
 import { cerScore, isPassingScore } from '@/lib/cer'
 import { db } from '@/lib/db'
+import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudio } from '@/lib/groq'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { STAGE4_STAGE_NUMBER, getStage4RecordingKey } from '@/lib/recording-storage'
@@ -45,6 +46,10 @@ export async function POST(request: Request, context: RouteContext) {
       if (response || !user) {
         return response
       }
+
+      // Each take is scored via Groq Whisper — rate-limit per user to cap cost.
+      const limited = await rateLimitResponseOrNull(user.id, 'stage4_recording')
+      if (limited) return limited
 
       const { segmentId } = await measureStep('route.params', () => context.params)
 
