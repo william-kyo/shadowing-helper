@@ -181,6 +181,28 @@ describe('POST /api/segments/[segmentId]/stage4/recordings', () => {
     expect(response.status).toBe(400)
   })
 
+  it('returns 413 when the recording exceeds the size limit', async () => {
+    const form = new FormData()
+    form.set('sentenceIndex', '0')
+    form.set(
+      'audio',
+      new File([Buffer.alloc(10 * 1024 * 1024 + 1)], 'rec.webm', { type: 'audio/webm' }),
+    )
+    const response = await POST(buildRequest(form), buildContext())
+    expect(response.status).toBe(413)
+  })
+
+  it('returns 400 when the content-type is not an accepted audio type', async () => {
+    const form = new FormData()
+    form.set('sentenceIndex', '0')
+    form.set(
+      'audio',
+      new File([Buffer.from('fake')], 'rec.webm', { type: 'text/plain' }),
+    )
+    const response = await POST(buildRequest(form), buildContext())
+    expect(response.status).toBe(400)
+  })
+
   it('returns 400 when sentenceIndex is out of range', async () => {
     segmentFindFirst.mockResolvedValue(baseSegment())
     const response = await POST(buildRequest(makeFormData('99')), buildContext())

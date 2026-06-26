@@ -8,7 +8,7 @@
 
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import type { SentenceUnit } from '@/lib/sentence-split'
-import { getProjectStoragePaths } from '@/lib/storage-paths'
+import { getProjectStoragePaths, sanitizeExtension } from '@/lib/storage-paths'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { uploadBufferToStorage } from '@/lib/storage'
 
@@ -20,8 +20,7 @@ export function getStage4SentenceAudioKey(params: {
   index: number
   extension: string
 }): string {
-  const rawExt = params.extension || ''
-  const ext = rawExt.startsWith('.') ? rawExt : `.${rawExt}`
+  const ext = sanitizeExtension(params.extension)
   return `${params.ownerSupabaseUserId}/audio/sentences/${params.segmentId}/${params.index}${ext}`
 }
 

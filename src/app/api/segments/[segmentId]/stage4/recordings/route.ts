@@ -19,11 +19,13 @@ import {
   recordSentenceScore,
 } from '@/lib/stage-4-completion'
 import { uploadBufferToStorage } from '@/lib/storage'
-import { createStoredFileName } from '@/lib/storage-paths'
+import { createStoredFileName, sanitizeExtension, sanitizeFileExtension } from '@/lib/storage-paths'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { acceptedAudioMimeTypes } from '@/lib/validations/project'
 
 const RECORDING_MIME_FALLBACK = 'audio/webm'
 const RECORDING_EXT_FALLBACK = '.webm'
+const MAX_RECORDING_BYTES = 10 * 1024 * 1024
 
 type RouteContext = {
   params: Promise<{
@@ -32,10 +34,10 @@ type RouteContext = {
 }
 
 function pickRecordingExtension(file: File): string {
-  const fromName = file.name?.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
-  if (fromName) return fromName.toLowerCase()
-  const fromType = file.type?.includes('/') ? `.${file.type.split('/')[1]}` : ''
-  if (fromType && fromType !== RECORDING_EXT_FALLBACK) return fromType
+  const fromName = sanitizeFileExtension(file.name)
+  if (fromName) return fromName
+  const fromType = file.type?.includes('/') ? sanitizeExtension(file.type.split('/')[1]) : ''
+  if (fromType) return fromType
   return RECORDING_EXT_FALLBACK
 }
 
@@ -73,6 +75,17 @@ export async function POST(request: Request, context: RouteContext) {
           : null
       if (!audioFile) {
         return NextResponse.json({ error: '音声ファイルが必要です。' }, { status: 400 })
+      }
+
+      if (audioFile.size > MAX_RECORDING_BYTES) {
+        return NextResponse.json({ error: '録音ファイルは10MB以下にしてください。' }, { status: 413 })
+      }
+
+      if (
+        audioFile.type &&
+        !acceptedAudioMimeTypes.includes(audioFile.type as (typeof acceptedAudioMimeTypes)[number])
+      ) {
+        return NextResponse.json({ error: '対応していない音声形式です。' }, { status: 400 })
       }
 
       const sentenceIndex = Number.parseInt(sentenceIndexRaw, 10)
