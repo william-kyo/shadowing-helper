@@ -81,9 +81,15 @@ export async function POST(request: Request, context: RouteContext) {
         return NextResponse.json({ error: '録音ファイルは10MB以下にしてください。' }, { status: 413 })
       }
 
+      // MediaRecorder reports the recorded MIME WITH a codec parameter, e.g.
+      // "audio/webm;codecs=opus" (Chrome/Firefox) or "audio/mp4;codecs=mp4a.40.2"
+      // (iOS Safari). Compare the base type against the allowlist, otherwise a
+      // perfectly valid recording is rejected with 400 — which is exactly what
+      // made stage 4 recording fail in real browsers.
+      const baseMimeType = audioFile.type.split(';')[0]?.trim().toLowerCase() ?? ''
       if (
-        audioFile.type &&
-        !acceptedAudioMimeTypes.includes(audioFile.type as (typeof acceptedAudioMimeTypes)[number])
+        baseMimeType &&
+        !acceptedAudioMimeTypes.includes(baseMimeType as (typeof acceptedAudioMimeTypes)[number])
       ) {
         return NextResponse.json({ error: '対応していない音声形式です。' }, { status: 400 })
       }

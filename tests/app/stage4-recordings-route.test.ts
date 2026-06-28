@@ -203,6 +203,29 @@ describe('POST /api/segments/[segmentId]/stage4/recordings', () => {
     expect(response.status).toBe(400)
   })
 
+  // Real MediaRecorder output carries a codec parameter on the MIME type
+  // (Chrome/Firefox: audio/webm;codecs=opus, iOS Safari: audio/mp4;codecs=...).
+  // The allowlist must match on the base type, not reject these.
+  it.each([
+    'audio/webm;codecs=opus',
+    'audio/mp4;codecs=mp4a.40.2',
+  ])('accepts a recording whose MIME carries a codec parameter (%s)', async (mime) => {
+    segmentFindFirst.mockResolvedValue(baseSegment())
+    createSupabaseServerClient.mockResolvedValue({})
+    uploadBufferToStorage.mockResolvedValue(undefined)
+    recordingCreate.mockResolvedValue({ id: 'rec-codec' })
+    transcribeAudio.mockResolvedValue('こんにちは')
+    stageProgressUpsert.mockResolvedValue({ status: 'in_progress' })
+
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm'
+    const form = new FormData()
+    form.set('sentenceIndex', '0')
+    form.set('audio', new File([Buffer.from('fake-recording')], `rec.${ext}`, { type: mime }))
+
+    const response = await POST(buildRequest(form), buildContext())
+    expect(response.status).toBe(200)
+  })
+
   it('returns 400 when sentenceIndex is out of range', async () => {
     segmentFindFirst.mockResolvedValue(baseSegment())
     const response = await POST(buildRequest(makeFormData('99')), buildContext())
