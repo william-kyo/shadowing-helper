@@ -106,6 +106,17 @@ function isWordingPreserved(modelText: string, rawText: string): boolean {
   return strip(modelText) === strip(rawText)
 }
 
+// Line-leading "A:" / "B:" speaker label (half- or full-width), the marker
+// dialogue-mode output carries.
+const DIALOGUE_LINE = /^\s*[ABＡＢ]\s*[:：]/
+
+// Detect whether a stored segment script was generated in dialogue mode (its
+// lines are prefixed with A:/B: speaker labels). Used to carry the original
+// dialogue choice through a re-split, since the flag itself isn't persisted.
+export function isDialogueText(text: string): boolean {
+  return text.split('\n').some((line) => DIALOGUE_LINE.test(line))
+}
+
 export interface AnalyzeOptions {
   // Two-speaker conversation: split each paragraph into speaker turns, one per
   // line, prefixed "A: " / "B: ".

@@ -46,7 +46,12 @@ vi.mock('@/lib/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/groq', () => ({ transcribeAudioWithSegments }))
-vi.mock('@/lib/segment-analysis', () => ({ punctuateText }))
+// Keep the real isDialogueText so the route's dialogue detection is exercised;
+// only punctuateText (which would call the LLM) is stubbed.
+vi.mock('@/lib/segment-analysis', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/segment-analysis')>()
+  return { ...actual, punctuateText }
+})
 vi.mock('@/lib/segment-audio', () => ({ extractAudioSegmentFromBuffer }))
 vi.mock('@/lib/storage', () => ({
   downloadStorageObject,
@@ -75,6 +80,7 @@ function buildContext(segmentId = 'seg-1') {
 const BASE_SEGMENT = {
   id: 'seg-1',
   audioPath: 'sb-user-1/audio/seg-1-old.mp3',
+  text: '一文目。二文目。',
   whisperSegments: [
     { text: '一文目', startMs: 100, endMs: 1500 },
     { text: '二文目', startMs: 1700, endMs: 3200 },
@@ -122,6 +128,8 @@ describe('POST /api/segments/[segmentId]/resplit', () => {
     expect(extractAudioSegmentFromBuffer).toHaveBeenCalledWith(
       expect.objectContaining({ startSeconds: 2, endSeconds: 10 }),
     )
+    // A non-dialogue original script regenerates in non-dialogue mode.
+    expect(punctuateText).toHaveBeenCalledWith('新しい一文目 新しい二文目', { dialogue: false })
     // Segment row updated with the new range + regenerated script + sub-segments.
     expect(segmentUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -146,6 +154,18 @@ describe('POST /api/segments/[segmentId]/resplit', () => {
         objectKeys: expect.arrayContaining(['sb-user-1/audio/seg-1-old.mp3']),
       }),
     )
+  })
+
+  it('regenerates the script in dialogue mode when the original used A/B labels', async () => {
+    segmentFindFirst.mockResolvedValue({
+      ...BASE_SEGMENT,
+      text: 'A: こんにちは。\nB: やあ、元気？',
+    })
+
+    const response = await POST(buildRequest({ startMs: 2000, endMs: 10000 }), buildContext())
+    expect(response.status).toBe(200)
+    // The original A/B dialogue choice is carried into the re-split regeneration.
+    expect(punctuateText).toHaveBeenCalledWith('新しい一文目 新しい二文目', { dialogue: true })
   })
 
   it('rejects a range whose end is not after the start', async () => {

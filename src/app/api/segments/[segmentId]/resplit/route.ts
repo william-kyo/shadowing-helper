@@ -9,7 +9,7 @@ import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { getStage4SentenceAudioKey } from '@/lib/recording-storage'
-import { punctuateText } from '@/lib/segment-analysis'
+import { isDialogueText, punctuateText } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { buildSentenceUnits, isPersistedWhisperSegments, whisperSegmentsToPersisted } from '@/lib/sentence-split'
 import { emptyStage4Metadata } from '@/lib/stage-4-completion'
@@ -68,6 +68,7 @@ export async function POST(request: Request, context: RouteContext) {
           select: {
             id: true,
             audioPath: true,
+            text: true,
             whisperSegments: true,
             project: {
               select: {
@@ -135,8 +136,12 @@ export async function POST(request: Request, context: RouteContext) {
       )
       addPerfAttrs({ 'whisper.segments_count': whisperResponse.segments.length })
 
+      // Carry the segment's original A/B dialogue choice into the regenerated
+      // script. The flag isn't persisted, so infer it from the existing text:
+      // dialogue-mode scripts are prefixed with A:/B: speaker labels.
+      const dialogue = isDialogueText(segment.text ?? '')
       const punctuatedText = await measureStep('llm.punctuate_resplit', () =>
-        punctuateText(whisperResponse.text),
+        punctuateText(whisperResponse.text, { dialogue }),
       )
       const persisted = whisperSegmentsToPersisted(whisperResponse.segments)
 
