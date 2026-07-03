@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { findProject, createSegment, getPaths, createStoredFileName, downloadStorageObject, uploadBufferToStorage, extractAudioSegmentFromBuffer, createSupabaseServerClient, transcribeAudio } = vi.hoisted(() => ({
   findProject: vi.fn(),
@@ -57,6 +57,12 @@ vi.mock('@/lib/groq', () => ({
 import { POST } from '@/app/api/projects/[projectId]/segments/route'
 
 describe('POST /api/projects/[projectId]/segments', () => {
+  beforeEach(() => {
+    // vi.fn() call history survives restoreAllMocks; clear it so per-test
+    // "not called" assertions don't see the previous test's calls.
+    vi.clearAllMocks()
+  })
+
   it('creates a segment, extracts audio, initializes five stages, and returns the new segment', async () => {
     findProject.mockResolvedValue({
       id: 'project-1',
@@ -123,5 +129,28 @@ describe('POST /api/projects/[projectId]/segments', () => {
       endMs: 16000,
       progressCount: 5,
     })
+  })
+
+  it('rejects an endSeconds past the known audio duration', async () => {
+    findProject.mockResolvedValue({
+      id: 'project-1',
+      title: 'lesson',
+      audioPath: 'sb-user-1/projects/project-1/audio/source.wav',
+      audioMimeType: 'audio/wav',
+      audioOriginalName: 'source.wav',
+      audioDurationMs: 30000,
+      segments: [],
+    })
+
+    const request = new Request('http://localhost/api/projects/project-1/segments', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '01', startSeconds: 0, endSeconds: 31 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ projectId: 'project-1' }) })
+    expect(response.status).toBe(400)
+    expect(downloadStorageObject).not.toHaveBeenCalled()
+    expect(createSegment).not.toHaveBeenCalled()
   })
 })

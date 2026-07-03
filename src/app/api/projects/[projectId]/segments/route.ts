@@ -64,6 +64,12 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
     }
 
+    // Reject ranges past the end of the source audio (when the duration is
+    // known) instead of letting ffmpeg silently clamp to EOF.
+    if (project.audioDurationMs && parsed.data.endSeconds * 1000 > project.audioDurationMs) {
+      return NextResponse.json({ error: '終了時間が音声の長さを超えています。' }, { status: 400 })
+    }
+
     const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
     const storagePaths = getProjectStoragePaths(user.supabaseUserId, project.id)
     const storedName = createStoredFileName(project.audioOriginalName)

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 import { isSupabaseAuthCookieName } from '@/lib/auth-cookies'
+import { isCrossSiteRequest } from '@/lib/csrf'
 
 const PUBLIC_PATHS = new Set(['/login'])
 
@@ -27,6 +28,23 @@ export async function proxy(request: NextRequest) {
 
   if (isPublicPath(pathname)) {
     return NextResponse.next()
+  }
+
+  // CSRF defense-in-depth: session auth is cookie-based, so reject mutating
+  // requests that provably originate from another site. SameSite=Lax already
+  // blocks classic form CSRF; this closes the gap explicitly.
+  if (
+    isCrossSiteRequest({
+      method: request.method,
+      origin: request.headers.get('origin'),
+      secFetchSite: request.headers.get('sec-fetch-site'),
+      requestHost: request.headers.get('x-forwarded-host') ?? request.headers.get('host'),
+    })
+  ) {
+    return NextResponse.json(
+      { error: '不正なリクエスト元です。', code: 'cross_site_blocked' },
+      { status: 403 },
+    )
   }
 
   const response = NextResponse.next({ request })

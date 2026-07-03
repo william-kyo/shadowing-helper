@@ -69,12 +69,18 @@ async function getAuthenticatedSupabaseUser() {
     const { payload } = await measureStep('auth.jwt_verify', () =>
       jwtVerify(accessToken, jwks, {
         issuer: `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`,
+        // Only Supabase USER access tokens are sessions. Pinning audience +
+        // asymmetric algs + role rejects any other same-issuer token the
+        // project might mint in the future (and alg-confusion by construction).
+        audience: 'authenticated',
+        algorithms: ['ES256', 'RS256'],
       }),
     )
 
     const sub = payload.sub
     const email = payload.email as string | undefined
 
+    if (payload.role !== 'authenticated') return null
     if (!sub || !email) return null
 
     return { id: sub, email }
