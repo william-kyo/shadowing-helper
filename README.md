@@ -68,6 +68,27 @@ Vercel build containers can't reach the direct connection (IPv6-only) and the
 transaction pooler (6543/pgbouncer) can't run DDL. No extra env var is needed;
 set `MIGRATE_DATABASE_URL` only if you want to override the migration target.
 
+### Enable RLS on every new table
+
+`prisma db push` creates tables **without** Row Level Security. Because the
+Supabase Postgres also exposes the `anon`/`authenticated` PostgREST roles, a new
+table left with RLS off is readable/writable by anyone holding the publishable
+key. The app itself never needs those roles — it reaches the database only
+through Prisma, which connects as the table owner and bypasses RLS.
+
+So the rule is: **every new table must have RLS enabled by default.** Right
+after adding a model and letting a deploy create the table (or when creating it
+by hand), run a migration that turns RLS on with no policies, which locks the
+table to Prisma only:
+
+```sql
+ALTER TABLE "YourNewTable" ENABLE ROW LEVEL SECURITY;
+```
+
+Enabling RLS with zero policies denies all PostgREST access while leaving Prisma
+(the owner) unaffected. Add explicit `CREATE POLICY` statements only if a table
+genuinely needs to be reachable through the Supabase client/PostgREST.
+
 ## Migrate local media to Supabase Storage
 
 If you already have local files saved under `STORAGE_ROOT`, set `MIGRATION_USER_EMAIL` and `MIGRATION_USER_PASSWORD` in `.env` for the target user, then run:
