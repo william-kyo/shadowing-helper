@@ -46,13 +46,31 @@ model Project {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  supabaseUserId String         @unique
-  email          String         @unique
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  projects       Project[]
-  streakMakeups  StreakMakeup[]
+  id                String             @id @default(cuid())
+  supabaseUserId    String             @unique
+  email             String             @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  projects          Project[]
+  streakMakeups     StreakMakeup[]
+  pushSubscriptions PushSubscription[]
+}
+
+// One Web Push subscription per browser/device. `endpoint` is globally unique
+// (assigned by the browser's push service); `p256dh`/`auth` are the client
+// keys web-push uses to encrypt payloads for this subscription.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // A streak "make-up" (補卡): the user repairs a missed past day by spending a

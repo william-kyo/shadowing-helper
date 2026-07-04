@@ -8,6 +8,7 @@ import { HomeRecentList, type HomeRecentItem } from '@/components/home/home-rece
 import { HomeStreakHero } from '@/components/home/home-streak-hero'
 import { HomeTodayCard, type HomeTodaySegment } from '@/components/home/home-today-card'
 import { HomeWeekHeatmap } from '@/components/home/home-week-heatmap'
+import { PushNotificationCard } from '@/components/push/push-notification-card'
 import { getCurrentAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
@@ -265,6 +266,8 @@ export default async function HomePage() {
             makeupRemaining={makeupRemaining}
             makeupSourceAvailable={makeupSourceAvailable}
           />
+
+          <PushNotificationCard />
 
           <div className="flex justify-center pt-2">
             <Link

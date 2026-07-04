@@ -13,6 +13,14 @@ const envSchema = z.object({
   OPENCODE_API_KEY: z.string().optional(),
   // Optional override for the chat model id (defaults per provider).
   LLM_MODEL: z.string().optional(),
+  // Web Push (VAPID). Optional: when unset, push features are disabled but the
+  // rest of the app keeps working (dev/test environments).
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  // VAPID contact, e.g. "mailto:you@example.com" or the site origin URL.
+  VAPID_SUBJECT: z.string().optional(),
+  // Shared secret the pg_cron job presents as a Bearer token to /api/cron/*.
+  CRON_SECRET: z.string().optional(),
 })
 
 export const env = envSchema.parse({
@@ -25,4 +33,8 @@ export const env = envSchema.parse({
   LLM_PROVIDER: process.env.LLM_PROVIDER,
   OPENCODE_API_KEY: process.env.OPENCODE_API_KEY,
   LLM_MODEL: process.env.LLM_MODEL,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+  CRON_SECRET: process.env.CRON_SECRET,
 })

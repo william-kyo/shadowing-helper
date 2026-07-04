@@ -11,7 +11,11 @@ function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true
   if (pathname.startsWith('/_next')) return true
   if (pathname.startsWith('/api/perf')) return true
+  // Cron endpoints authenticate with a Bearer secret (no session cookie).
+  if (pathname.startsWith('/api/cron/')) return true
   if (pathname === '/favicon.ico' || pathname === '/manifest.webmanifest') return true
+  // Service worker script — update fetches must never redirect to /login.
+  if (pathname === '/sw.js') return true
   return false
 }
 
