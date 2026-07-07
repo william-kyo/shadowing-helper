@@ -39,7 +39,8 @@ export function ProjectSegmentWorkspace({
   const [segments, setSegments] = useState(initialSegments)
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(initialSegments.length === 0)
   const [isAutoSegmenting, setIsAutoSegmenting] = useState(false)
-  const [dialogueMode, setDialogueMode] = useState(false)
+  // A/B dialogue labeling is the default; the checkbox is an explicit opt-out.
+  const [dialogueMode, setDialogueMode] = useState(true)
 
   function handleDeleteSegment(segmentId: string) {
     const position = segments.findIndex((s) => s.id === segmentId)

@@ -16,7 +16,7 @@ import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, get
 const autoSegmentSchema = z.object({
   minDurationSeconds: z.number().min(1).max(300).default(5),
   maxSegments: z.number().min(1).max(50).default(20),
-  dialogue: z.boolean().default(false),
+  dialogue: z.boolean().default(true),
 })
 
 type RouteContext = {

@@ -16,7 +16,7 @@ const createSegmentSchema = z.object({
   title: z.string().trim().min(1, 'セグメント名を入力してください。'),
   startSeconds: z.number().min(0, '開始秒は 0 以上にしてください。'),
   endSeconds: z.number().min(0, '終了秒は 0 以上にしてください。'),
-  dialogue: z.boolean().default(false),
+  dialogue: z.boolean().default(true),
 }).refine((value) => value.endSeconds > value.startSeconds, {
   message: '終了秒は開始秒より後にしてください。',
   path: ['endSeconds'],
