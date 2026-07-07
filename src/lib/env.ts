@@ -9,8 +9,8 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().min(1),
   // Provider for the text-analysis step (topic grouping + punctuation).
   // Whisper STT always stays on Groq; only chat completions can switch.
-  LLM_PROVIDER: z.enum(['groq', 'opencode']).default('groq'),
-  OPENCODE_API_KEY: z.string().optional(),
+  LLM_PROVIDER: z.enum(['groq', 'mimo']).default('groq'),
+  MIMO_API_KEY: z.string().optional(),
   // Optional override for the chat model id (defaults per provider).
   LLM_MODEL: z.string().optional(),
   // Web Push (VAPID). Optional: when unset, push features are disabled but the
@@ -31,7 +31,7 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   GROQ_API_KEY: process.env.GROQ_API_KEY,
   LLM_PROVIDER: process.env.LLM_PROVIDER,
-  OPENCODE_API_KEY: process.env.OPENCODE_API_KEY,
+  MIMO_API_KEY: process.env.MIMO_API_KEY,
   LLM_MODEL: process.env.LLM_MODEL,
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,

@@ -2,30 +2,29 @@ import { env } from '@/lib/env'
 
 interface ChatProvider {
   baseUrl: string
-  apiKey: string
+  headers: Record<string, string>
   model: string
 }
 
-// Both Groq and opencode Go expose an OpenAI-compatible /chat/completions
-// endpoint, so a single resolver + fetch covers both. opencode Go has no STT,
-// so this only governs the text-analysis step; Whisper stays on Groq.
+// Both Groq and Xiaomi MiMo expose an OpenAI-compatible /chat/completions
+// endpoint, so a single resolver + fetch covers both. MiMo has no STT, so this
+// only governs the text-analysis step; Whisper stays on Groq.
 function resolveChatProvider(): ChatProvider {
-  if (env.LLM_PROVIDER === 'opencode') {
-    if (!env.OPENCODE_API_KEY) {
-      throw new Error('LLM_PROVIDER=opencode requires OPENCODE_API_KEY')
+  if (env.LLM_PROVIDER === 'mimo') {
+    if (!env.MIMO_API_KEY) {
+      throw new Error('LLM_PROVIDER=mimo requires MIMO_API_KEY')
     }
     return {
-      baseUrl: 'https://opencode.ai/zen/go/v1',
-      apiKey: env.OPENCODE_API_KEY,
-      // The /zen/go endpoint is already scoped to the Go plan, so model IDs are
-      // bare (e.g. "glm-5.1", "kimi-k2.6", "qwen3.7-max"), not "opencode-go/...".
-      model: env.LLM_MODEL ?? 'glm-5.1',
+      baseUrl: 'https://api.xiaomimimo.com/v1',
+      // MiMo authenticates with a custom `api-key` header, not `Authorization: Bearer`.
+      headers: { 'api-key': env.MIMO_API_KEY },
+      model: env.LLM_MODEL ?? 'mimo-v2.5',
     }
   }
 
   return {
     baseUrl: 'https://api.groq.com/openai/v1',
-    apiKey: env.GROQ_API_KEY,
+    headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
     model: env.LLM_MODEL ?? 'llama-3.3-70b-versatile',
   }
 }
@@ -55,13 +54,13 @@ export async function chatJson(params: { prompt: string; temperature?: number })
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
+          ...provider.headers,
           'Content-Type': 'application/json',
         },
         body,
       })
 
-      // Retry transient upstream failures (the opencode Go endpoint 5xx's
+      // Retry transient upstream failures (the endpoint 5xx's
       // intermittently); surface 4xx immediately since retrying won't help.
       if (response.status >= 500) {
         throw new Error(`LLM API error ${response.status}: ${await response.text()}`)
