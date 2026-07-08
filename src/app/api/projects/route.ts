@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -16,6 +16,11 @@ import {
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import path from 'node:path'
+
+// Segmentation (Whisper + LLM + per-segment ffmpeg + uploads) runs in an
+// after() callback, so the serverless invocation must stay alive well past the
+// default timeout. Cap at the platform max.
+export const maxDuration = 300
 
 export async function POST(request: Request) {
   return withApiPerf('/api/projects', request, async () => {
@@ -91,7 +96,11 @@ export async function POST(request: Request) {
       }),
     )
 
-    void (async () => {
+    // Run segmentation after the response is sent. after() extends the
+    // serverless invocation via waitUntil so this work isn't killed when the
+    // response returns (the old fire-and-forget left status stuck at
+    // 'segmenting'); it also runs even if an error is thrown.
+    after(async () => {
       try {
         const supabase = await createSupabaseServerClient()
         const audioBuffer = Buffer.from(await downloadStorageObject({
@@ -249,7 +258,7 @@ export async function POST(request: Request) {
           data: { status: 'failed' },
         }).catch(() => {})
       }
-    })()
+    })
 
     return NextResponse.json({
       project: {

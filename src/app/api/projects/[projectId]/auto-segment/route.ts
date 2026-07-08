@@ -25,6 +25,10 @@ type RouteContext = {
   }>
 }
 
+// Runs Whisper + LLM + per-segment ffmpeg + uploads synchronously, which far
+// exceeds the default function timeout on real audio. Cap at the platform max.
+export const maxDuration = 300
+
 export async function POST(request: Request, context: RouteContext) {
   return withApiPerf('/api/projects/[projectId]/auto-segment', request, async () => {
     try {
