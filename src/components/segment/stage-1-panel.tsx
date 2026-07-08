@@ -64,6 +64,7 @@ export function Stage1Panel({
   const [text, setText] = useState(initialText)
   const [notes, setNotes] = useState(initialNotes ?? '')
   const [isScriptVisible, setIsScriptVisible] = useState(getDefaultScriptVisible(activeStage))
+  const [isNotesVisible, setIsNotesVisible] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [transcribeMsg, setTranscribeMsg] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
@@ -218,16 +219,26 @@ export function Stage1Panel({
 
         {/* notes area */}
         <div>
-          <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-            ノート（自分用メモ）
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => { setNotes(e.target.value); setSaveStatus('unsaved') }}
-            rows={3}
-            placeholder="発音メモ、意味調べ、わからなかった箇所など..."
-            className="w-full resize-y rounded-inset border border-ink-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
-          />
+          <div className="mb-1 flex items-center justify-between">
+            <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+              ノート（自分用メモ）
+            </label>
+            <button
+              onClick={() => setIsNotesVisible(!isNotesVisible)}
+              className="text-sm font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
+            >
+              {isNotesVisible ? '非表示' : '表示'}
+            </button>
+          </div>
+          {isNotesVisible && (
+            <textarea
+              value={notes}
+              onChange={(e) => { setNotes(e.target.value); setSaveStatus('unsaved') }}
+              rows={3}
+              placeholder="発音メモ、意味調べ、わからなかった箇所など..."
+              className="w-full resize-y rounded-inset border border-ink-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
+            />
+          )}
         </div>
 
         {/* autosave status */}

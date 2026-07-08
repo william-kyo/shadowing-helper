@@ -96,6 +96,11 @@ test.describe('segment page interactions', () => {
     })
 
     await page.goto(`/projects/${ids!.projectId}/segments/${ids!.segmentId}`)
+
+    // Notes are collapsed by default — expand via the toggle in the notes header.
+    const notesHeader = page.getByText('ノート（自分用メモ）').locator('..')
+    await notesHeader.getByRole('button', { name: '表示' }).click()
+
     const notes = page.getByPlaceholder('発音メモ、意味調べ、わからなかった箇所など...')
     await notes.fill('e2e autosave probe')
 
