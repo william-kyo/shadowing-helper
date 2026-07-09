@@ -183,6 +183,7 @@ export function Stage1Panel({
             <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">スクリプト</label>
             <button
               onClick={() => setIsScriptVisible(!isScriptVisible)}
+              aria-label={isScriptVisible ? 'スクリプトを非表示' : 'スクリプトを表示'}
               className="text-sm font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
             >
               {isScriptVisible ? '非表示' : '表示'}
@@ -225,6 +226,7 @@ export function Stage1Panel({
             </label>
             <button
               onClick={() => setIsNotesVisible(!isNotesVisible)}
+              aria-label={isNotesVisible ? 'ノートを非表示' : 'ノートを表示'}
               className="text-sm font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
             >
               {isNotesVisible ? '非表示' : '表示'}

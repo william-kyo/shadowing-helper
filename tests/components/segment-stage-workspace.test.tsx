@@ -86,7 +86,9 @@ describe('SegmentStageWorkspace', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+    // Script and notes both start collapsed on stage 1 — open each editor.
+    fireEvent.click(screen.getByRole('button', { name: 'スクリプトを表示' }))
+    fireEvent.click(screen.getByRole('button', { name: 'ノートを表示' }))
     fireEvent.change(screen.getByDisplayValue('old script'), { target: { value: 'edited script' } })
     fireEvent.change(screen.getByDisplayValue('old notes'), { target: { value: 'edited notes' } })
 
