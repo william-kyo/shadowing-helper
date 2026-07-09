@@ -1,219 +1,258 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-const pushMock = vi.fn()
+const pushMock = vi.fn();
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, refresh: vi.fn(), replace: vi.fn() }),
-}))
+}));
 
-import { SegmentStageWorkspace } from '@/components/segment/segment-stage-workspace'
+import { SegmentStageWorkspace } from "@/components/segment/segment-stage-workspace";
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-  pushMock.mockReset()
-})
+  cleanup();
+  vi.restoreAllMocks();
+  pushMock.mockReset();
+});
 
-describe('SegmentStageWorkspace', () => {
-  it('switches the panel when a stage is selected', () => {
+describe("SegmentStageWorkspace", () => {
+  it("switches the panel when a stage is selected", () => {
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
         initialProgress={[
-          { stage: 1, status: 'completed' },
-          { stage: 2, status: 'in_progress' },
+          { stage: 1, status: "completed" },
+          { stage: 2, status: "in_progress" },
         ]}
         initialText="sample text"
         initialNotes="sample notes"
         initialStage={2}
         nextIncompleteHref={null}
       />,
-    )
+    );
 
     expect(
-      screen.getByRole('heading', { name: /ステージ2 — サイレント・シャドーイング/ }),
-    ).toBeInTheDocument()
+      screen.getByRole("heading", { name: /ステージ2 — サイレント/ }),
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle('ステージ4 スクリプト付きシャドーイング'))
+    fireEvent.click(
+      screen.getByTitle("ステージ4 スクリプト付きシャドーイング"),
+    );
 
     expect(
-      screen.getByRole('heading', { name: /ステージ4 — スクリプト付きシャドーイング/ }),
-    ).toBeInTheDocument()
-  })
+      screen.getByRole("heading", {
+        name: /ステージ4 — スクリプト付きシャドーイング/,
+      }),
+    ).toBeInTheDocument();
+  });
 
-  it('updates the selected stage status from the panel header', async () => {
-    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
+  it("updates the selected stage status from the panel header", async () => {
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue({ ok: true } as Response);
 
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
-        initialProgress={[{ stage: 3, status: 'not_started' }]}
+        initialProgress={[{ stage: 3, status: "not_started" }]}
         initialText="sample text"
         initialNotes={null}
         initialStage={3}
         nextIncompleteHref={null}
       />,
-    )
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: '○ 未着手' }))
+    fireEvent.click(screen.getByRole("button", { name: "○ 未着手" }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/segments/seg-1/progress', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ stage: 3, status: 'in_progress' }),
-      })
-    })
+      expect(fetchMock).toHaveBeenCalledWith("/api/segments/seg-1/progress", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ stage: 3, status: "in_progress" }),
+      });
+    });
 
-    expect(screen.getByRole('button', { name: '◐ 進行中' })).toBeInTheDocument()
-  })
+    expect(
+      screen.getByRole("button", { name: "◐ 進行中" }),
+    ).toBeInTheDocument();
+  });
 
-  it('autosaves edits and keeps script and notes when switching stages without a page refresh', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({
+  it("autosaves edits and keeps script and notes when switching stages without a page refresh", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
-      json: async () => ({ text: 'edited script', notes: 'edited notes' }),
-    } as Response)
+      json: async () => ({ text: "edited script", notes: "edited notes" }),
+    } as Response);
 
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
-        initialProgress={[{ stage: 1, status: 'in_progress' }]}
+        initialProgress={[{ stage: 1, status: "in_progress" }]}
         initialText="old script"
         initialNotes="old notes"
         initialStage={1}
         nextIncompleteHref={null}
       />,
-    )
+    );
 
     // Script and notes both start collapsed on stage 1 — open each editor.
-    fireEvent.click(screen.getByRole('button', { name: 'スクリプトを表示' }))
-    fireEvent.click(screen.getByRole('button', { name: 'ノートを表示' }))
-    fireEvent.change(screen.getByDisplayValue('old script'), { target: { value: 'edited script' } })
-    fireEvent.change(screen.getByDisplayValue('old notes'), { target: { value: 'edited notes' } })
+    fireEvent.click(screen.getByRole("button", { name: "スクリプトを表示" }));
+    fireEvent.click(screen.getByRole("button", { name: "ノートを表示" }));
+    fireEvent.change(screen.getByDisplayValue("old script"), {
+      target: { value: "edited script" },
+    });
+    fireEvent.change(screen.getByDisplayValue("old notes"), {
+      target: { value: "edited notes" },
+    });
 
     // Edits persist via debounced autosave — no manual save button.
-    expect(await screen.findByText('✓ 自動保存しました', {}, { timeout: 2500 })).toBeInTheDocument()
+    expect(
+      await screen.findByText("✓ 自動保存しました", {}, { timeout: 2500 }),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/segments/seg-1',
-        expect.objectContaining({ method: 'PATCH' }),
-      )
-    })
+        "/api/segments/seg-1",
+        expect.objectContaining({ method: "PATCH" }),
+      );
+    });
 
-    fireEvent.click(screen.getByTitle('ステージ2 サイレント・シャドーイング'))
+    fireEvent.click(screen.getByTitle("ステージ2 サイレント"));
 
-    expect(screen.getByDisplayValue('edited script')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('edited notes')).toBeInTheDocument()
-  })
+    expect(screen.getByDisplayValue("edited script")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("edited notes")).toBeInTheDocument();
+  });
 
-  it('jumps to the next incomplete segment once the final stage is completed', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
+  it("jumps to the next incomplete segment once the final stage is completed", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({ ok: true } as Response);
 
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
         initialProgress={[
-          { stage: 1, status: 'completed' },
-          { stage: 2, status: 'completed' },
-          { stage: 3, status: 'completed' },
-          { stage: 4, status: 'completed' },
-          { stage: 5, status: 'in_progress' },
+          { stage: 1, status: "completed" },
+          { stage: 2, status: "completed" },
+          { stage: 3, status: "completed" },
+          { stage: 4, status: "completed" },
+          { stage: 5, status: "in_progress" },
         ]}
         initialText="sample text"
         initialNotes={null}
         initialStage={5}
         nextIncompleteHref="/projects/proj-2/segments/seg-9"
       />,
-    )
+    );
 
     // Completing the last in-progress stage marks the segment fully done.
-    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
+    fireEvent.click(screen.getByRole("button", { name: "◐ 進行中" }));
 
-    expect(await screen.findByText('セグメント完了')).toBeInTheDocument()
+    expect(await screen.findByText("セグメント完了")).toBeInTheDocument();
     await waitFor(
-      () => expect(pushMock).toHaveBeenCalledWith('/projects/proj-2/segments/seg-9'),
+      () =>
+        expect(pushMock).toHaveBeenCalledWith(
+          "/projects/proj-2/segments/seg-9",
+        ),
       { timeout: 2000 },
-    )
-  })
+    );
+  });
 
-  it('keeps in-session stage completions when stage 4 is skipped', async () => {
+  it("keeps in-session stage completions when stage 4 is skipped", async () => {
     // Regression: the stage-4 panel's onComplete used to fire a stale closure
     // that reverted progress to the initial snapshot, wiping stages completed
     // earlier in the same session.
-    vi.spyOn(global, 'fetch').mockResolvedValue({
+    vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({}),
-    } as Response)
+    } as Response);
 
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
-        initialProgress={[{ stage: 1, status: 'in_progress' }]}
+        initialProgress={[{ stage: 1, status: "in_progress" }]}
         initialText="sample text"
         initialNotes={null}
         initialStage={1}
         nextIncompleteHref={null}
         stage4Sentences={[
-          { index: 0, text: 'はい', startMs: 0, endMs: 500, refAudioUrl: 'blob:ref-0', userRecordingUrl: null },
+          {
+            index: 0,
+            text: "はい",
+            startMs: 0,
+            endMs: 500,
+            refAudioUrl: "blob:ref-0",
+            userRecordingUrl: null,
+          },
         ]}
       />,
-    )
+    );
 
     const isCompleted = (stage: number) =>
-      screen.getByTitle(new RegExp(`^ステージ${stage} `)).querySelector('polyline') !== null
+      screen
+        .getByTitle(new RegExp(`^ステージ${stage} `))
+        .querySelector("polyline") !== null;
 
     // Complete stage 1 (in_progress → completed), which auto-advances to stage 2.
-    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
-    await waitFor(() => expect(isCompleted(1)).toBe(true))
+    fireEvent.click(screen.getByRole("button", { name: "◐ 進行中" }));
+    await waitFor(() => expect(isCompleted(1)).toBe(true));
 
     // Complete stage 2 (not_started → in_progress → completed), advances to 3.
-    fireEvent.click(await screen.findByRole('button', { name: '○ 未着手' }))
-    fireEvent.click(await screen.findByRole('button', { name: '◐ 進行中' }))
-    await waitFor(() => expect(isCompleted(2)).toBe(true))
+    fireEvent.click(await screen.findByRole("button", { name: "○ 未着手" }));
+    fireEvent.click(await screen.findByRole("button", { name: "◐ 進行中" }));
+    await waitFor(() => expect(isCompleted(2)).toBe(true));
 
     // Complete stage 3, advances to stage 4 and renders the stage-4 panel.
-    fireEvent.click(await screen.findByRole('button', { name: '○ 未着手' }))
-    fireEvent.click(await screen.findByRole('button', { name: '◐ 進行中' }))
-    await waitFor(() => expect(isCompleted(3)).toBe(true))
+    fireEvent.click(await screen.findByRole("button", { name: "○ 未着手" }));
+    fireEvent.click(await screen.findByRole("button", { name: "◐ 進行中" }));
+    await waitFor(() => expect(isCompleted(3)).toBe(true));
 
     // Skip stage 4 — must not clobber stages 1–3.
-    fireEvent.click(await screen.findByRole('button', { name: 'このステージをスキップ' }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "このステージをスキップ" }),
+    );
 
     await waitFor(() =>
-      expect(global.fetch).toHaveBeenCalledWith('/api/segments/seg-1/stage4/complete', {
-        method: 'POST',
-      }),
-    )
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/segments/seg-1/stage4/complete",
+        {
+          method: "POST",
+        },
+      ),
+    );
 
-    await waitFor(() => expect(isCompleted(4)).toBe(true))
-    expect(isCompleted(1)).toBe(true)
-    expect(isCompleted(2)).toBe(true)
-    expect(isCompleted(3)).toBe(true)
-  })
+    await waitFor(() => expect(isCompleted(4)).toBe(true));
+    expect(isCompleted(1)).toBe(true);
+    expect(isCompleted(2)).toBe(true);
+    expect(isCompleted(3)).toBe(true);
+  });
 
-  it('falls back to home when nothing is left to complete', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response)
+  it("falls back to home when nothing is left to complete", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({ ok: true } as Response);
 
     render(
       <SegmentStageWorkspace
         segmentId="seg-1"
         initialProgress={[
-          { stage: 1, status: 'completed' },
-          { stage: 2, status: 'completed' },
-          { stage: 3, status: 'completed' },
-          { stage: 4, status: 'completed' },
-          { stage: 5, status: 'in_progress' },
+          { stage: 1, status: "completed" },
+          { stage: 2, status: "completed" },
+          { stage: 3, status: "completed" },
+          { stage: 4, status: "completed" },
+          { stage: 5, status: "in_progress" },
         ]}
         initialText="sample text"
         initialNotes={null}
         initialStage={5}
         nextIncompleteHref={null}
       />,
-    )
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: '◐ 進行中' }))
+    fireEvent.click(screen.getByRole("button", { name: "◐ 進行中" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/'), { timeout: 2000 })
-  })
-})
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/"), {
+      timeout: 2000,
+    });
+  });
+});
