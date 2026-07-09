@@ -33,7 +33,7 @@ npm run dev
 Then open:
 - http://localhost:3000
 
-## Required environment variables
+## Environment variables
 
 | Variable | Description |
 |---|---|
@@ -42,7 +42,25 @@ Then open:
 | `STORAGE_BUCKET` | Supabase Storage bucket name |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
-| `GROQ_API_KEY` | **Required.** Get free key at https://console.groq.com/keys |
+| `GROQ_API_KEY` | **Required.** Whisper transcription and the default chat provider. Get free key at https://console.groq.com/keys |
+
+Optional — LLM provider for the text-analysis step (topic grouping + punctuation;
+Whisper transcription always stays on Groq):
+
+| Variable | Description |
+|---|---|
+| `LLM_PROVIDER` | `groq` (default, reuses `GROQ_API_KEY`) or `mimo` (Xiaomi MiMo) |
+| `MIMO_API_KEY` | MiMo API key, required when `LLM_PROVIDER=mimo` |
+| `LLM_MODEL` | Chat model override (defaults: `llama-3.3-70b-versatile` on groq, `mimo-v2.5` on mimo) |
+
+Optional — Web Push daily practice reminder (feature stays disabled while unset):
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | VAPID public key — generate the pair with `npx web-push generate-vapid-keys` |
+| `VAPID_PRIVATE_KEY` | VAPID private key from the same pair |
+| `VAPID_SUBJECT` | VAPID contact, e.g. `mailto:you@example.com` or the site origin URL |
+| `CRON_SECRET` | Bearer token the Supabase pg_cron job must send to `/api/cron/notify` |
 
 ## Notes
 
