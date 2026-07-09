@@ -130,8 +130,6 @@ describe('Stage4Panel', () => {
     )
     expect(screen.getByRole('button', { name: '🔊 お手本' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
-    // The combined listen-then-record CTA only appears once a take exists.
-    expect(screen.queryByRole('button', { name: '🎤 開始する' })).not.toBeInTheDocument()
   })
 
   it('plays the reference on お手本 without chaining into recording', () => {
@@ -175,7 +173,6 @@ describe('Stage4Panel', () => {
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
     expect(getUserMedia).toHaveBeenCalled()
     expect(playSpy).not.toHaveBeenCalled()
-    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
   })
 
   it('uploads a recording and shows the score on a perfect transcript', async () => {
@@ -278,8 +275,8 @@ describe('Stage4Panel', () => {
     fireEvent.click(screen.getByRole('button', { name: /次の文へ →/ }))
     expect(await screen.findByText('さようなら')).toBeInTheDocument()
     expect(playSpy).toHaveBeenCalled()
-    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^⏹ 停止/ })).not.toBeInTheDocument()
   })
 
   it('marks stage 4 complete via onComplete when the last sentence passes', async () => {
@@ -438,7 +435,7 @@ describe('Stage4Panel', () => {
     expect(playSpy).not.toHaveBeenCalled()
   })
 
-  it('hides the compare bar while listening/recording', async () => {
+  it('hides the compare bar while recording', async () => {
     render(
       <Stage4Panel
         segmentId="seg-1"
@@ -451,14 +448,13 @@ describe('Stage4Panel', () => {
         onComplete={vi.fn()}
       />,
     )
-    // Visible at rest (idle) because a recording already exists.
+    // Visible at rest because a recording already exists; listening via the
+    // bar's お手本 button doesn't change phase, so it stays visible.
+    expect(screen.getByText('聴き比べ')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '🔊 お手本' }))
     expect(screen.getByText('聴き比べ')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
-    await screen.findByText('お手本を再生中…') // playingRef
-    expect(screen.queryByText('聴き比べ')).not.toBeInTheDocument()
-
-    fireRefAudioEnded() // -> recording
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
     expect(screen.queryByText('聴き比べ')).not.toBeInTheDocument()
   })

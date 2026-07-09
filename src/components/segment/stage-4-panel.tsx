@@ -1,29 +1,24 @@
 'use client'
 
-// Stage 4 panel: script-following shadowing with per-sentence listen-then-
-// read flow. State machine walks `idle → ready → playingRef → recording →
-// uploading → result → (next | completed)`. Advancing between sentences is
-// MANUAL: a scored sentence stays on its `result` so the learner can review
-// the take (score + waveform compare) and only moves on when they tap
-// "次の文へ" — there is no per-sentence auto-advance timer. When the last
-// sentence passes the server returns stageComplete, the panel flips to
-// 'completed' and calls onComplete, which is the parent workspace's
-// handleStage4Complete; the parent then handles segment/stage-level
-// navigation (segment-stage-workspace.tsx), not this panel.
+// Stage 4 panel: script-following shadowing with per-sentence practice.
+// State machine walks `ready → recording → uploading → result → (next |
+// completed)`. Advancing between sentences is MANUAL: a scored sentence stays
+// on its `result` so the learner can review the take (score + waveform
+// compare) and only moves on when they tap "次の文へ" — there is no
+// per-sentence auto-advance timer. When the last sentence passes the server
+// returns stageComplete, the panel flips to 'completed' and calls onComplete,
+// which is the parent workspace's handleStage4Complete; the parent then
+// handles segment/stage-level navigation (segment-stage-workspace.tsx), not
+// this panel.
 //
-// Two interaction models, keyed on whether the sentence already has a take:
-// - No take yet: two independent buttons. 「お手本」 plays the reference clip
-//   (repeatable, never chains into recording); 「録音開始」 starts recording
-//   immediately, granting mic access on first use (single user gesture
-//   requirement on iOS).
-// - Has a take (this session or a prior one): the listen-then-speak chain —
-//   「もう一度聴く」 plays the reference and auto-starts the recorder when the
-//   clip ends; 「復唱する」 records straight away.
-// The user taps "停止" to finalize a take (or the 30s cap fires). Tapping
-// "次の文へ" (handleNext → advanceToNext) sets autoStartNextRef so the next
-// sentence auto-plays its reference once — recording is always started
-// manually; manual navigation (chevrons / swipe / arrow keys) advances
-// silently without that auto-play.
+// Listening and recording are fully decoupled: the reference clip plays via
+// 「お手本」 (button, compare bar, or card tap) and never chains into
+// recording; each take is started explicitly with 「録音開始」, which grants
+// mic access on first use (single user gesture requirement on iOS). The user
+// taps "停止" to finalize a take (or the 30s cap fires). Tapping "次の文へ"
+// (handleNext → advanceToNext) sets autoStartNextRef so the next sentence
+// auto-plays its reference once; manual navigation (chevrons / swipe / arrow
+// keys) advances silently without that auto-play.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
@@ -45,9 +40,7 @@ type Sentence = {
 }
 
 type Phase =
-  | 'idle'
   | 'ready'
-  | 'playingRef'
   | 'recording'
   | 'uploading'
   | 'result'
@@ -122,10 +115,10 @@ export function Stage4Panel({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   // Set when advanceToNext moves the learner forward in the practice loop, so
   // the next sentence auto-plays its reference clip once. Recording is never
-  // auto-started; the learner taps 録音開始 / 復唱する when ready.
+  // auto-started; the learner taps 録音開始 when ready.
   const autoStartNextRef = useRef(false)
 
-  const [phase, setPhase] = useState<Phase>('idle')
+  const [phase, setPhase] = useState<Phase>('ready')
   const [sentenceIndex, setSentenceIndex] = useState(() => {
     if (!initialMetadata) return 0
     // Resume on the first sentence that hasn't passed yet.
@@ -164,67 +157,8 @@ export function Stage4Panel({
     return map
   }, [metadata])
 
-  const handleStartPractice = useCallback(async () => {
-    if (!currentSentence) return
-    setError(null)
-    setResult(null)
-
-    const audio = refAudioRef.current
-    if (!audio) {
-      setError('お手本を読み込めませんでした。')
-      setPhase('ready')
-      return
-    }
-
-    // iOS Safari only honours getUserMedia and HTMLMediaElement.play() while
-    // the tap's transient user-activation is live — and that activation is
-    // gone the instant we `await` anything. So both native calls must be
-    // *initiated* synchronously here, before yielding: start playback first,
-    // then the mic permission, and only await afterwards. Awaiting permission
-    // before play() (the previous order) is exactly what made iOS reject the
-    // reference clip, so onEnded never fired and recording never auto-started.
-    // The clip runs for a few seconds, covering the permission round-trip; the
-    // recorder itself is started later from the audio's onEnded handler.
-    setPhase('playingRef')
-    audio.currentTime = 0
-    const playPromise = audio.play()
-    const permissionPromise =
-      recorder.phase === 'ready' ? Promise.resolve() : recorder.requestPermission()
-
-    try {
-      await playPromise
-    } catch {
-      // Autoplay refused even inside the gesture (rare) — surface it instead of
-      // silently stalling, and drop back to ready so the learner can retry or
-      // record manually.
-      setError('お手本を再生できませんでした。「もう一度聴く」を押してください。')
-      setPhase('ready')
-    }
-
-    // Ensure the mic stream is live before onEnded fires the recorder.
-    await permissionPromise
-  }, [currentSentence, recorder])
-
-  const handleStartRecording = useCallback(() => {
-    // Allowed from `ready` (manual "復唱する" click) and `playingRef`
-    // (auto-fired from the ref audio's `ended` event). Anything else is a
-    // stray click and we ignore it.
-    if (phase !== 'ready' && phase !== 'playingRef') return
-    setPhase('recording')
-    const stopPromise = recorder.startRecording()
-    stopRecordingPromiseRef.current = stopPromise ?? null
-  }, [phase, recorder])
-
-  const handleRefAudioEnded = useCallback(() => {
-    // Only auto-start recording when the clip was initiated by handleStartPractice
-    // (which sets phase to 'playingRef'). Plain card-tap replays leave phase as
-    // 'ready' or 'result', so we do nothing there.
-    if (phase !== 'playingRef') return
-    handleStartRecording()
-  }, [phase, handleStartRecording])
-
-  // Start the recorder without playing the reference first. Pauses anything
-  // still playing so the take isn't polluted by the speakers.
+  // Start the recorder. Pauses anything still playing so the take isn't
+  // polluted by the speakers.
   const beginRecording = useCallback(() => {
     const audio = refAudioRef.current
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
@@ -235,13 +169,13 @@ export function Stage4Panel({
     stopRecordingPromiseRef.current = stopPromise ?? null
   }, [recorder])
 
-  // 録音開始 on a sentence with no take yet: record immediately, without the
-  // reference clip. getUserMedia must be initiated inside the tap's user
-  // activation (iOS), so permission is requested right here; startRecording
-  // guards on the hook's stream ref rather than its state, so chaining after
-  // the await is safe even though this closure predates the state update.
+  // 録音開始: start a take. getUserMedia must be initiated inside the tap's
+  // user activation (iOS), so permission is requested right here on first
+  // use; startRecording guards on the hook's stream ref rather than its
+  // state, so chaining after the await is safe even though this closure
+  // predates the state update.
   const handleRecordDirect = useCallback(async () => {
-    if (phase !== 'idle' && phase !== 'ready') return
+    if (phase !== 'ready') return
     setError(null)
     setResult(null)
     if (recorder.phase !== 'ready') {
@@ -366,9 +300,9 @@ export function Stage4Panel({
     }
   }, [segmentId, onComplete])
 
-  // Navigate to the previous sentence (idle / ready / result phases only).
+  // Navigate to the previous sentence (ready / result phases only).
   const handlePrev = useCallback(() => {
-    if (phase !== 'idle' && phase !== 'ready' && phase !== 'result') return
+    if (phase !== 'ready' && phase !== 'result') return
     if (sentenceIndex <= 0) return
     const audio = refAudioRef.current
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
@@ -377,12 +311,12 @@ export function Stage4Panel({
     setSentenceIndex((i) => i - 1)
     setResult(null)
     setError(null)
-    setPhase(phase === 'idle' ? 'idle' : 'ready')
+    setPhase('ready')
   }, [phase, sentenceIndex])
 
   // Navigate to the next sentence without completing the stage (arrows / swipe).
   const handleNavNext = useCallback(() => {
-    if (phase !== 'idle' && phase !== 'ready' && phase !== 'result') return
+    if (phase !== 'ready' && phase !== 'result') return
     if (sentenceIndex + 1 >= totalSentences) return
     const audio = refAudioRef.current
     if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0 }
@@ -391,11 +325,10 @@ export function Stage4Panel({
     setSentenceIndex((i) => i + 1)
     setResult(null)
     setError(null)
-    setPhase(phase === 'idle' ? 'idle' : 'ready')
+    setPhase('ready')
   }, [phase, sentenceIndex, totalSentences])
 
   // Replay the reference clip without changing phase or triggering recording.
-  // handleRefAudioEnded guards against auto-recording unless phase is 'playingRef'.
   const handlePlayRefOnly = useCallback(() => {
     const self = selfAudioRef.current
     if (self && !self.paused) self.pause()
@@ -447,7 +380,7 @@ export function Stage4Panel({
   // reference clip so the learner hears the model right away. Runs after the
   // reload effect above so play() acts on the freshly-loaded source; the
   // element was unlocked by the learner's earlier tap, so no further gesture
-  // is needed. Recording stays manual (録音開始 / 復唱する). Manual navigation
+  // is needed. Recording stays manual (録音開始). Manual navigation
   // (arrows / swipe) never sets the flag, so it stays silent.
   useEffect(() => {
     if (!autoStartNextRef.current) return
@@ -507,28 +440,22 @@ export function Stage4Panel({
       )
         return
 
-      const canNav = phase === 'idle' || phase === 'ready' || phase === 'result'
-      const hasTake = Boolean(currentRecordingUrl)
+      const canNav = phase === 'ready' || phase === 'result'
       // Mirrors `showCompareBar`: the 1/2 shortcuts are live exactly when the
       // compare bar (and its KeyHint badges) is on screen.
       const canCompare =
-        hasTake &&
-        phase !== 'playingRef' &&
+        Boolean(currentRecordingUrl) &&
         phase !== 'recording' &&
         phase !== 'uploading'
       let action: (() => void) | null = null
 
       if (isPrimary) {
-        // No take yet → Space records directly; otherwise it drives the
-        // original listen-then-speak chain.
-        if (phase === 'idle') action = hasTake ? handleStartPractice : handleRecordDirect
-        else if (phase === 'ready') action = hasTake ? handleStartRecording : handleRecordDirect
+        if (phase === 'ready') action = handleRecordDirect
         else if (phase === 'recording') action = handleStop
         else if (phase === 'result') action = handleNext
       } else if (isSecondary) {
-        // R: re-listen to the reference (idle/ready) or retry the take (result).
-        if (phase === 'ready') action = hasTake ? handleStartPractice : handlePlayRefOnly
-        else if (phase === 'idle' && !hasTake) action = handlePlayRefOnly
+        // R: re-listen to the reference (ready) or retry the take (result).
+        if (phase === 'ready') action = handlePlayRefOnly
         else if (phase === 'result') action = handleRetry
       } else if (isArrowPrev && canNav) {
         action = handlePrev
@@ -549,8 +476,6 @@ export function Stage4Panel({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     phase,
-    handleStartPractice,
-    handleStartRecording,
     handleRecordDirect,
     handleStop,
     handleNext,
@@ -580,26 +505,24 @@ export function Stage4Panel({
   }
 
   // Derived rendering helpers — not memoised, computed fresh each render.
-  const canNavigate = phase === 'idle' || phase === 'ready' || phase === 'result'
-  // Card is tappable in idle/ready/result to replay the reference clip without
-  // triggering the full practice flow (no recording auto-start).
-  const isCardInteractive = phase === 'idle' || phase === 'ready' || phase === 'result'
+  const canNavigate = phase === 'ready' || phase === 'result'
+  // Card is tappable in ready/result to replay the reference clip; recording
+  // never starts from a card tap.
+  const isCardInteractive = phase === 'ready' || phase === 'result'
   // The compare bar is offered whenever a recording exists and we're not mid
-  // listen/record/score (which own the audio + state machine).
+  // record/score (which own the audio + state machine).
   const showCompareBar =
     Boolean(currentRecordingUrl) &&
-    phase !== 'playingRef' &&
     phase !== 'recording' &&
     phase !== 'uploading'
 
   return (
     <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
-      {/* hidden ref audio element — driven by handleStartPractice */}
+      {/* hidden ref audio element — driven by handlePlayRefOnly */}
       <audio
         ref={refAudioRef}
         src={currentSentence.refAudioUrl}
         preload="auto"
-        onEnded={handleRefAudioEnded}
       />
       {/* hidden self-recording element — driven by handlePlaySelf */}
       <audio
@@ -744,18 +667,21 @@ export function Stage4Panel({
 
       {/* controls */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-        {/* No take yet: listening and recording are decoupled — お手本 replays
-            the reference as often as needed, 録音開始 records right away. */}
-        {(phase === 'idle' || phase === 'ready') && !currentRecordingUrl && (
+        {/* Listening and recording are decoupled: お手本 replays the reference
+            as often as needed (via the compare bar when a take exists),
+            録音開始 records only when tapped. */}
+        {phase === 'ready' && (
           <>
-            <button
-              type="button"
-              onClick={handlePlayRefOnly}
-              className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
-            >
-              🔊 お手本
-              <KeyHint label="R" tone="dark" />
-            </button>
+            {!currentRecordingUrl && (
+              <button
+                type="button"
+                onClick={handlePlayRefOnly}
+                className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
+              >
+                🔊 お手本
+                <KeyHint label="R" tone="dark" />
+              </button>
+            )}
             <button
               type="button"
               onClick={handleRecordDirect}
@@ -766,46 +692,6 @@ export function Stage4Panel({
               <KeyHint label="Space" />
             </button>
           </>
-        )}
-
-        {phase === 'idle' && currentRecordingUrl && (
-          <button
-            type="button"
-            onClick={handleStartPractice}
-            disabled={isStatusUpdating}
-            className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"
-          >
-            🎤 開始する
-            <KeyHint label="Space" />
-          </button>
-        )}
-
-        {phase === 'ready' && currentRecordingUrl && (
-          <>
-            <button
-              type="button"
-              onClick={handleStartPractice}
-              className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
-            >
-              🔊 もう一度聴く
-              <KeyHint label="R" tone="dark" />
-            </button>
-            <button
-              type="button"
-              onClick={handleStartRecording}
-              className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
-            >
-              🎤 復唱する
-              <KeyHint label="Space" />
-            </button>
-          </>
-        )}
-
-        {phase === 'playingRef' && (
-          <div className="flex items-center gap-2 text-sm text-ink-muted">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
-            お手本を再生中…
-          </div>
         )}
 
         {phase === 'recording' && (
