@@ -112,6 +112,7 @@ export async function getCurrentAppUser() {
         id: true,
         supabaseUserId: true,
         email: true,
+        habitAchievedAt: true,
       },
     }),
   )

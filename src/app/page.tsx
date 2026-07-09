@@ -13,7 +13,7 @@ import { getCurrentAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
 import { TOTAL_STAGES, computeCurrentStage } from '@/lib/stage-progress'
-import { summarizeStreak, toDateKey } from '@/lib/streak'
+import { isHabitFormed, summarizeStreak, toDateKey } from '@/lib/streak'
 import { findUnspentTodayFullSegment } from '@/lib/streak-server'
 
 export default async function HomePage() {
@@ -45,6 +45,20 @@ export default async function HomePage() {
       makeupRows.map((m) => m.dateKey),
       today,
     )
+
+    // 21-day-challenge success is a one-time achievement: persist it the first
+    // time the streak reaches the goal, so the hero keeps showing the streak
+    // counter even after the activity evidence behind longestStreak decays.
+    let habitAchieved = Boolean(currentUser.habitAchievedAt)
+    if (!habitAchieved && isHabitFormed(currentStreak, longestStreak)) {
+      habitAchieved = true
+      await measureStep('db.user.mark_habit_achieved', () =>
+        db.user.update({
+          where: { id: currentUser.id },
+          data: { habitAchievedAt: today },
+        }),
+      )
+    }
 
     // Only probe for a funding segment when a repair is actually offerable —
     // it drives the make-up hint shown on eligible days.
@@ -255,6 +269,7 @@ export default async function HomePage() {
             currentStreak={currentStreak}
             longestStreak={longestStreak}
             hasPracticedToday={hasPracticedToday}
+            habitAchieved={habitAchieved}
           />
 
           <HomeTodayCard segment={todaySegment} hasPracticedToday={hasPracticedToday} />

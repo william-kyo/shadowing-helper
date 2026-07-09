@@ -8,6 +8,10 @@ type HomeStreakHeroProps = {
   currentStreak: number
   longestStreak: number
   hasPracticedToday: boolean
+  // True once the 21-day challenge has ever been completed (persisted
+  // server-side), flipping the hero from challenge progress to the streak
+  // counter — permanently.
+  habitAchieved: boolean
 }
 
 function AnimatedNumber({ value }: { value: number }) {
@@ -53,11 +57,11 @@ export function HomeStreakHero({
   currentStreak,
   longestStreak,
   hasPracticedToday,
+  habitAchieved,
 }: HomeStreakHeroProps) {
-  const isHabitPhase = currentStreak >= HABIT_GOAL_DAYS || longestStreak >= HABIT_GOAL_DAYS
   const { emoji, label } = growthStage(currentStreak)
 
-  if (isHabitPhase) {
+  if (habitAchieved) {
     return (
       <section
         aria-label="現在の継続日数"

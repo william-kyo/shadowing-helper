@@ -19,12 +19,14 @@ const stageProgressFindMany = vi.fn()
 const segmentFindMany = vi.fn()
 const projectFindFirst = vi.fn()
 const streakMakeupFindMany = vi.fn()
+const userUpdate = vi.fn()
 vi.mock('@/lib/db', () => ({
   db: {
     stageProgress: { findMany: (...args: unknown[]) => stageProgressFindMany(...args) },
     segment: { findMany: (...args: unknown[]) => segmentFindMany(...args) },
     project: { findFirst: (...args: unknown[]) => projectFindFirst(...args) },
     streakMakeup: { findMany: (...args: unknown[]) => streakMakeupFindMany(...args) },
+    user: { update: (...args: unknown[]) => userUpdate(...args) },
   },
 }))
 
@@ -52,6 +54,7 @@ describe('HomePage – authenticated', () => {
     getCurrentAppUserMock.mockResolvedValue({
       id: 'user-1',
       email: 'tester@example.com',
+      habitAchievedAt: null,
     })
     // No make-ups by default; individual tests can override.
     streakMakeupFindMany.mockResolvedValue([])
@@ -105,6 +108,48 @@ describe('HomePage – authenticated', () => {
     expect(recentLinks[1]).toHaveAttribute('href', '/projects/proj-1/segments/seg-1')
 
     expect(screen.getByText(/今週の記録/)).toBeInTheDocument()
+  })
+
+  it('persists the achievement and shows the streak counter when the streak reaches 21 days', async () => {
+    const today = new Date()
+    stageProgressFindMany.mockResolvedValue(
+      Array.from({ length: 21 }, (_, i) => ({
+        updatedAt: new Date(today.getTime() - i * 24 * 60 * 60 * 1000),
+        segmentId: `seg-${i}`,
+      })),
+    )
+    segmentFindMany.mockResolvedValue([])
+    projectFindFirst.mockResolvedValue(null)
+    userUpdate.mockResolvedValue({})
+
+    render(await HomePage())
+
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { habitAchievedAt: expect.any(Date) },
+    })
+    expect(screen.getByText('日連続')).toBeInTheDocument()
+    expect(screen.queryByText('21日チャレンジ')).not.toBeInTheDocument()
+  })
+
+  it('keeps the streak counter for an achieved user even after the streak breaks', async () => {
+    getCurrentAppUserMock.mockResolvedValue({
+      id: 'user-1',
+      email: 'tester@example.com',
+      habitAchievedAt: new Date('2026-06-01T00:00:00.000Z'),
+    })
+    // Only a short, broken recent history — nowhere near 21 days.
+    stageProgressFindMany.mockResolvedValue([
+      { updatedAt: new Date(), segmentId: 'seg-1' },
+    ])
+    segmentFindMany.mockResolvedValue([])
+    projectFindFirst.mockResolvedValue(null)
+
+    render(await HomePage())
+
+    expect(userUpdate).not.toHaveBeenCalled()
+    expect(screen.getByText('日連続')).toBeInTheDocument()
+    expect(screen.queryByText('21日チャレンジ')).not.toBeInTheDocument()
   })
 
   it('falls back to a project segment when no in-progress activity exists', async () => {
