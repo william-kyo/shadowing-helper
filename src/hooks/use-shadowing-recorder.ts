@@ -109,12 +109,12 @@ export function useShadowingRecorder() {
     }
   }, [clearTimers])
 
-  // Request mic permission and prepare the recorder. Resolves once a stream
-  // is live so the caller can immediately chain into recording. Safe to call
-  // once per "session" — repeated calls return the existing stream.
-  const requestPermission = useCallback(async () => {
+  // Request mic permission and prepare the recorder. Resolves true once a
+  // stream is live so the caller can immediately chain into recording. Safe to
+  // call once per "session" — repeated calls return the existing stream.
+  const requestPermission = useCallback(async (): Promise<boolean> => {
     if (state.phase !== 'idle' || streamRef.current) {
-      return
+      return streamRef.current !== null
     }
     if (
       typeof navigator === 'undefined' ||
@@ -126,23 +126,28 @@ export function useShadowingRecorder() {
         error: { code: 'unsupported', message: 'このブラウザは録音に対応していません。' },
         elapsedMs: 0,
       })
-      return
+      return false
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
       setState({ phase: 'ready', error: null, elapsedMs: 0 })
+      return true
     } catch (err) {
       setState({ phase: 'idle', error: describeMediaError(err), elapsedMs: 0 })
+      return false
     }
   }, [state.phase])
 
   // Start recording. Resolves when stopRecording finishes, returning the blob
   // + duration. Caller is expected to await start() before triggering any UI
-  // that depends on `phase === 'recording'`.
+  // that depends on `phase === 'recording'`. Guards on refs (stream live, not
+  // already recording) rather than state, so it can be chained right after
+  // `await requestPermission()` from a closure created before that state
+  // update landed.
   const startRecording = useCallback(async () => {
-    if (state.phase !== 'ready' || !streamRef.current) {
+    if (!streamRef.current || recorderRef.current) {
       setState((current) => ({
         ...current,
         error: {
@@ -212,7 +217,7 @@ export function useShadowingRecorder() {
     }, MAX_RECORDING_MS)
 
     return stopPromise
-  }, [state.phase, clearTimers, finalize])
+  }, [clearTimers, finalize])
 
   const stopRecording = useCallback(() => {
     finalize()

@@ -118,7 +118,24 @@ describe('Stage4Panel', () => {
     expect(screen.getByText(/このセグメントには文が見つかりませんでした/)).toBeInTheDocument()
   })
 
-  it('plays the reference audio when the user taps "開始する" and transitions to recording on ended', async () => {
+  it('shows decoupled お手本 / 録音開始 buttons for a sentence with no take', () => {
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '🔊 お手本' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
+    // The combined listen-then-record CTA only appears once a take exists.
+    expect(screen.queryByRole('button', { name: '🎤 開始する' })).not.toBeInTheDocument()
+  })
+
+  it('plays the reference on お手本 without chaining into recording', () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
     render(
       <Stage4Panel
         segmentId="seg-1"
@@ -129,12 +146,36 @@ describe('Stage4Panel', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
+    fireEvent.click(screen.getByRole('button', { name: '🔊 お手本' }))
+    expect(playSpy).toHaveBeenCalledTimes(1)
 
-    // After permission grant, the reference audio starts playing. In jsdom we
-    // don't get a real `ended` event, so the panel stays in `playingRef` and
-    // the ready-state buttons aren't shown until the user re-listens.
-    expect(await screen.findByText('お手本を再生中…')).toBeInTheDocument()
+    // Even when the clip finishes, listening never auto-starts the recorder.
+    fireRefAudioEnded()
+    expect(screen.queryByRole('button', { name: /^⏹ 停止/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
+  })
+
+  it('starts recording immediately on 録音開始, without playing the reference', async () => {
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+    const getUserMedia = installMediaRecorderStub()
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
+
+    // Mic permission is requested inside the tap, then recording starts as
+    // soon as the stream is live — no reference playback in between.
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    expect(getUserMedia).toHaveBeenCalled()
+    expect(playSpy).not.toHaveBeenCalled()
+    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
   })
 
   it('uploads a recording and shows the score on a perfect transcript', async () => {
@@ -168,13 +209,9 @@ describe('Stage4Panel', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
-    // Wait for the async permission round-trip to land us in `playingRef`
-    // before driving the audio lifecycle: in jsdom the play() promise resolves
-    // immediately, but the `ended` event never fires on its own.
-    await screen.findByText('お手本を再生中…')
-    fireRefAudioEnded()
-
+    // No take yet, so recording starts directly from 録音開始 (permission is
+    // granted inside the tap; the recorder starts once the stream is live).
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
 
     fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
@@ -221,10 +258,8 @@ describe('Stage4Panel', () => {
       />,
     )
 
-    // Sentence 1: tap to grant mic + play, end the clip, record, stop, score.
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
-    await screen.findByText('お手本を再生中…')
-    fireRefAudioEnded()
+    // Sentence 1: tap 録音開始 (grants mic), record, stop, score.
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
     fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
     await screen.findByText(/✓ 合格 100%/)
@@ -234,15 +269,17 @@ describe('Stage4Panel', () => {
     // proves we're still on sentence 1, and sentence 2's text is absent.
     expect(screen.getByText('文 1 / 2')).toBeInTheDocument()
     expect(screen.queryByText('さようなら')).not.toBeInTheDocument()
-    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
 
-    // Tapping 次の文へ advances and resumes the hands-free listen → speak loop,
-    // auto-playing sentence 2's reference clip.
+    // Tapping 次の文へ advances and auto-plays sentence 2's reference clip,
+    // but recording stays manual: the panel rests on お手本 / 録音開始.
     // The arrow distinguishes the result CTA ("次の文へ →") from the header
     // navigation chevron (aria-label "次の文へ").
+    const playSpy = vi.spyOn(window.HTMLMediaElement.prototype, 'play')
     fireEvent.click(screen.getByRole('button', { name: /次の文へ →/ }))
     expect(await screen.findByText('さようなら')).toBeInTheDocument()
-    expect(await screen.findByText('お手本を再生中…')).toBeInTheDocument()
+    expect(playSpy).toHaveBeenCalled()
+    expect(screen.queryByText('お手本を再生中…')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
   })
 
   it('marks stage 4 complete via onComplete when the last sentence passes', async () => {
@@ -281,9 +318,7 @@ describe('Stage4Panel', () => {
 
     expect(screen.getByText('さようなら')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
-    await screen.findByText('お手本を再生中…')
-    fireRefAudioEnded()
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
     fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
 
@@ -457,9 +492,7 @@ describe('Stage4Panel', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '🎤 開始する' }))
-    await screen.findByText('お手本を再生中…')
-    fireRefAudioEnded()
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
     await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
     fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
 
