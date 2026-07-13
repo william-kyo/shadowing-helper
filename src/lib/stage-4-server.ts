@@ -12,6 +12,7 @@ import {
   buildFallbackSentenceUnits,
   buildSentenceUnits,
   isPersistedWhisperSegments,
+  SENTENCE_SPLIT_VERSION,
   type SentenceUnit,
   whisperSegmentsToPersisted,
 } from '@/lib/sentence-split'
@@ -174,8 +175,10 @@ export async function loadStage4Setup(params: {
       return {
         ...unit,
         // `?v=` busts the client <audio> cache after a re-split swaps the
-        // underlying sentence clips while the URL path stays the same.
-        refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio?v=${segment.updatedAt.getTime()}`,
+        // underlying sentence clips while the URL path stays the same. The
+        // split-version suffix does the same when the splitting algorithm
+        // itself moves sentence boundaries.
+        refAudioUrl: `/api/segments/${segment.id}/stage4/sentences/${unit.index}/audio?v=${segment.updatedAt.getTime()}-s${SENTENCE_SPLIT_VERSION}`,
         userRecordingUrl: latestRecordingId
           ? `/api/segments/${segment.id}/stage4/recordings/${unit.index}/audio?v=${latestRecordingId}`
           : null,

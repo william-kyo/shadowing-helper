@@ -86,6 +86,78 @@ describe('buildSentenceUnits', () => {
     ])
     expect(units[0]?.startMs).toBe(0)
   })
+
+  it('keeps short punctuation-free chunks intact', () => {
+    const units = buildSentenceUnits([
+      { text: '本日入社いたしました鈴木愛と申します', startMs: 0, endMs: 4500 },
+      { text: '誠にありがとうございます', startMs: 4500, endMs: 5900 },
+    ])
+    expect(units).toHaveLength(2)
+    expect(units[0]).toMatchObject({ index: 0, startMs: 0, endMs: 4500 })
+    expect(units[1]).toMatchObject({ index: 1, startMs: 4500, endMs: 5900 })
+  })
+
+  it('splits an over-long merged chunk on whitespace with proportional timing', () => {
+    // Modeled on a real Whisper tail chunk: two sentences merged into one
+    // 15.4s chunk, separated only by a space.
+    const first = '1日でも早く会社に役立つ人材となれるよう一生懸命頑張ります'
+    const second = 'ご迷惑をおかけすることもあるかと思いますがどうぞご指導ご鞭撻のほどよろしくお願い致します'
+    const units = buildSentenceUnits([
+      { text: '身の引き締まる思いでいます', startMs: 24840, endMs: 26800 },
+      { text: `${first} ${second}`, startMs: 26800, endMs: 42200 },
+    ])
+    expect(units).toHaveLength(3)
+    expect(units[1]?.text).toBe(first)
+    expect(units[2]?.text).toBe(second)
+    // Boundaries stay contiguous and the tail lands exactly on the chunk end.
+    expect(units[1]?.startMs).toBe(26800)
+    expect(units[2]?.startMs).toBe(units[1]?.endMs)
+    expect(units[2]?.endMs).toBe(42200)
+    // Neither piece keeps the original 15.4s duration.
+    expect(units[1]!.endMs - units[1]!.startMs).toBeLessThan(11000)
+    expect(units[2]!.endMs - units[2]!.startMs).toBeLessThan(11000)
+  })
+
+  it('splits chunks on sentence-final punctuation even below the duration cap', () => {
+    const units = buildSentenceUnits([
+      { text: '今日は晴れです。明日は雨かもしれません。', startMs: 0, endMs: 6000 },
+    ])
+    expect(units.map((u) => u.text)).toEqual(['今日は晴れです。', '明日は雨かもしれません。'])
+    expect(units[0]?.endMs).toBe(units[1]?.startMs)
+    expect(units[1]?.endMs).toBe(6000)
+  })
+
+  it('falls back to comma boundaries when an over-long chunk has no spaces', () => {
+    const clauseA = 'この会社に入ることができて本当に嬉しく思っており、'
+    const clauseB = 'これから精一杯努力して参りますので、'
+    const clauseC = 'どうぞよろしくお願いいたします'
+    const units = buildSentenceUnits([
+      { text: `${clauseA}${clauseB}${clauseC}`, startMs: 0, endMs: 18000 },
+    ])
+    expect(units.length).toBeGreaterThan(1)
+    expect(units.map((u) => u.text).join('')).toBe(`${clauseA}${clauseB}${clauseC}`)
+    for (const unit of units) {
+      expect(unit.endMs - unit.startMs).toBeLessThanOrEqual(11000)
+    }
+    expect(units[units.length - 1]?.endMs).toBe(18000)
+  })
+
+  it('does not create fragments shorter than the practice minimum', () => {
+    // The tiny trailing sentence merges into its neighbor instead of becoming
+    // a sub-second unit.
+    const units = buildSentenceUnits([
+      { text: 'それでは早速始めていきたいと思います。はい。', startMs: 0, endMs: 5000 },
+    ])
+    expect(units).toHaveLength(1)
+    expect(units[0]?.text).toBe('それでは早速始めていきたいと思います。はい。')
+  })
+
+  it('leaves an over-long chunk intact when it has no split boundary at all', () => {
+    const text = 'ながいながいながいながいながいながいながいながいながいながい'
+    const units = buildSentenceUnits([{ text, startMs: 0, endMs: 20000 }])
+    expect(units).toHaveLength(1)
+    expect(units[0]?.text).toBe(text)
+  })
 })
 
 describe('buildFallbackSentenceUnits', () => {
