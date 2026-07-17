@@ -16,7 +16,11 @@ const jwks = createRemoteJWKSet(
 )
 
 function isSupabaseAuthCookie(name: string) {
-  return name.includes('-auth-token')
+  // Match the session token cookie (and its chunked ".0", ".1"… variants) but
+  // exclude the transient PKCE "…-auth-token-code-verifier" cookie set during
+  // OAuth sign-in. It sorts before the token chunks and would otherwise corrupt
+  // reassembly in extractAccessToken(), reading a valid session as logged-out.
+  return name.includes('-auth-token') && !name.includes('-code-verifier')
 }
 
 async function clearSupabaseAuthCookies() {

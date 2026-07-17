@@ -2,15 +2,23 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { LoginForm } from '@/components/auth/login-form'
 import { getCurrentAppUser } from '@/lib/auth'
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   const currentUser = await getCurrentAppUser()
 
   if (currentUser) {
     redirect('/')
   }
+
+  const { error } = await searchParams
+  const showOAuthError = error === 'oauth'
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col bg-surface px-4 py-8 text-ink sm:px-6 sm:py-10 lg:overflow-hidden">
@@ -35,13 +43,31 @@ export default async function LoginPage() {
               <span className="text-accent">ヘルパー.</span>
             </h1>
             <p className="max-w-xl text-sm leading-7 text-ink-muted sm:text-base sm:leading-8">
-              社内で発行したアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに入れます。登録は公開せず、Supabase管理画面から内部ユーザーだけを追加します。
+              社内で発行したメールアドレス、またはGoogleアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに入れます。Googleで初めてログインすると、アカウントが自動的に作成されます。
             </p>
           </div>
         </section>
 
         <section className="self-center pb-4 lg:pb-0">
-          <LoginForm />
+          <div className="grid gap-4">
+            {showOAuthError ? (
+              <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
+                Googleログインに失敗しました。もう一度お試しください。
+              </p>
+            ) : null}
+
+            <LoginForm />
+
+            <div className="flex items-center gap-3" aria-hidden>
+              <span className="h-px flex-1 bg-ink-line" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                または
+              </span>
+              <span className="h-px flex-1 bg-ink-line" />
+            </div>
+
+            <GoogleSignInButton />
+          </div>
         </section>
       </div>
     </main>

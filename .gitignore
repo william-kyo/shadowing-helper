@@ -56,6 +56,7 @@ DEPLOY.md
 SECURITY_AUDIT.md
 AGENTS.local.md
 CLAUDE.local.md
+docs/google-oauth-setup.md
 
 # claude code local scratch (worktrees, helper scripts, etc.)
 /.claude/
