@@ -32,6 +32,15 @@ describe('proxy', () => {
     expect(mockGetUser).not.toHaveBeenCalled()
   })
 
+  it('passes through public /auth/callback without calling getUser', async () => {
+    // The OAuth callback runs before a session exists; gating it would redirect
+    // the PKCE code to /login and the session would never form.
+    const res = await proxy(makeRequest('/auth/callback?code=abc'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('location')).toBeNull()
+    expect(mockGetUser).not.toHaveBeenCalled()
+  })
+
   it('redirects unauthenticated page requests to /login with next', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
     const res = await proxy(makeRequest('/projects/abc'))

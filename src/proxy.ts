@@ -5,7 +5,10 @@ import type { NextRequest } from 'next/server'
 import { isSupabaseAuthCookieName } from '@/lib/auth-cookies'
 import { isCrossSiteRequest } from '@/lib/csrf'
 
-const PUBLIC_PATHS = new Set(['/login'])
+// /auth/callback must stay public: it runs during the OAuth round-trip before a
+// session cookie exists, and it is where the PKCE code is exchanged for one.
+// Gating it would redirect the code to /login and the session would never form.
+const PUBLIC_PATHS = new Set(['/login', '/auth/callback'])
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true
