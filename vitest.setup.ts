@@ -7,4 +7,5 @@ process.env.NEXT_PUBLIC_SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://example.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_test'
-process.env.GROQ_API_KEY = process.env.GROQ_API_KEY ?? 'test-groq-key'
+// Dummy value for tests; not a real credential. secret-scan:allow
+process.env.GROQ_API_KEY = process.env.GROQ_API_KEY ?? 'test-groq-key' // secret-scan:allow
