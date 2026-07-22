@@ -2,6 +2,8 @@
 // "you haven't practiced today" reminder fan-out, triggered by a Supabase
 // pg_cron job hitting /api/cron/notify.
 
+import 'server-only'
+
 import webpush from 'web-push'
 
 import { db } from '@/lib/db'
