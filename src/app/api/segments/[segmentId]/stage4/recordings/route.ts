@@ -5,6 +5,7 @@ import { cerScore, isPassingScore } from '@/lib/cer'
 import { db } from '@/lib/db'
 import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudio } from '@/lib/groq'
+import { GroqTranscriptionError } from '@/lib/groq-errors'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { STAGE4_STAGE_NUMBER, getStage4RecordingKey } from '@/lib/recording-storage'
 import {
@@ -26,6 +27,11 @@ import { acceptedAudioMimeTypes } from '@/lib/validations/project'
 const RECORDING_MIME_FALLBACK = 'audio/webm'
 const RECORDING_EXT_FALLBACK = '.webm'
 const MAX_RECORDING_BYTES = 10 * 1024 * 1024
+// A take stopped almost immediately after start yields a container-header-only
+// blob (a few hundred bytes; any real take is several KB) that Whisper rejects
+// with "could not process file". Reject those up front, before the recording
+// is uploaded or a Recording row is created.
+const MIN_RECORDING_BYTES = 1024
 
 type RouteContext = {
   params: Promise<{
@@ -79,6 +85,13 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (audioFile.size > MAX_RECORDING_BYTES) {
         return NextResponse.json({ error: '録音ファイルは10MB以下にしてください。' }, { status: 413 })
+      }
+
+      if (audioFile.size < MIN_RECORDING_BYTES) {
+        return NextResponse.json(
+          { error: '録音が短すぎるため採点できません。もう一度録音してください。' },
+          { status: 400 },
+        )
       }
 
       // MediaRecorder reports the recorded MIME WITH a codec parameter, e.g.
@@ -256,6 +269,16 @@ export async function POST(request: Request, context: RouteContext) {
         totalSentences: completion.totalSentences,
       })
     } catch (error) {
+      // Groq 400 means the uploaded take itself was unusable (typically a
+      // header-only blob from an instant stop) — recoverable by re-recording,
+      // so answer 422 with an actionable message instead of a blind 500.
+      if (error instanceof GroqTranscriptionError && error.status === 400) {
+        console.warn('[stage4/recordings] transcription rejected:', error.message)
+        return NextResponse.json(
+          { error: '録音を解析できませんでした。録音が短すぎる可能性があります。もう一度録音してください。' },
+          { status: 422 },
+        )
+      }
       console.error('[stage4/recordings] failed:', error)
       return NextResponse.json({ error: '録音の採点に失敗しました。' }, { status: 500 })
     }

@@ -66,6 +66,12 @@ type Stage4PanelProps = {
   isStatusUpdating: boolean
 }
 
+// A take stopped almost immediately after start produces a header-only blob
+// that Whisper rejects ("could not process file"). Refuse to submit anything
+// shorter than this and ask for a re-take instead of round-tripping a doomed
+// upload.
+const MIN_TAKE_DURATION_MS = 500
+
 function formatMs(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
   const minutes = Math.floor(totalSeconds / 60)
@@ -250,6 +256,11 @@ export function Stage4Panel({
       const result = await stopPromise
       if (!result) {
         setError('録音を保存できませんでした。')
+        setPhase('ready')
+        return
+      }
+      if (result.durationMs < MIN_TAKE_DURATION_MS || result.blob.size === 0) {
+        setError('録音が短すぎます。文を読み終えてから停止してください。')
         setPhase('ready')
         return
       }

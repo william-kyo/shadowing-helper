@@ -58,9 +58,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { GET } from '@/app/api/segments/[segmentId]/stage4/sentences/route'
 
+import { SENTENCE_SPLIT_VERSION } from '@/lib/sentence-split'
+
 // Fixed so the cache-busting `?v=` suffix on refAudioUrl is deterministic.
+// The URL also carries the splitter version so cached audio is busted when
+// the sentence-splitting algorithm changes.
 const SEG_UPDATED_AT = new Date('2024-01-02T00:00:00.000Z')
-const V = SEG_UPDATED_AT.getTime()
+const V = `${SEG_UPDATED_AT.getTime()}-s${SENTENCE_SPLIT_VERSION}`
 
 function buildRequest() {
   return new Request('http://localhost/api/segments/seg-1/stage4/sentences', {

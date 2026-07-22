@@ -73,6 +73,15 @@ beforeEach(() => {
   window.HTMLMediaElement.prototype.play = function play() {
     return Promise.resolve()
   } as typeof HTMLMediaElement.prototype.play
+  // Take duration is wall-clock (Date.now at start vs stop) and jsdom clicks
+  // start→stop within ~1ms, which would trip the too-short-take guard. Advance
+  // a fake clock 600ms per Date.now() call so normal flows clear the minimum;
+  // the too-short test freezes the clock instead.
+  let fakeNow = 0
+  vi.spyOn(Date, 'now').mockImplementation(() => {
+    fakeNow += 600
+    return fakeNow
+  })
 })
 
 // Fire the `ended` event on the panel's <audio> element. In real browsers
@@ -224,6 +233,35 @@ describe('Stage4Panel', () => {
     // summary ("✓ 合格済み"); match the full badge text to stay unambiguous.
     expect(await screen.findByText(/✓ 合格 100%/)).toBeInTheDocument()
     expect(await screen.findByText(/次の文へ/)).toBeInTheDocument()
+  })
+
+  it('refuses to submit a take stopped almost immediately and asks for a re-take', async () => {
+    // Freeze the clock so start and stop land on the same timestamp, which
+    // makes durationMs 0 — the shape of a real instant-stop take.
+    vi.spyOn(Date, 'now').mockImplementation(() => 1_000)
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response)
+
+    render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    expect(await screen.findByText(/録音が短すぎます/)).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+    // Back on 'ready' so the learner can immediately re-record.
+    expect(screen.getByRole('button', { name: '🎤 録音開始' })).toBeInTheDocument()
   })
 
   it('stays on the result after a pass and only advances when the learner taps 次の文へ', async () => {

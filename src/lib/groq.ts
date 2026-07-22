@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { env } from '@/lib/env'
+import { GroqTranscriptionError } from '@/lib/groq-errors'
 
 export interface WhisperSegment {
   id: number
@@ -66,7 +67,7 @@ export async function transcribeAudio(params: {
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`Groq API error ${response.status}: ${errorText}`)
+    throw new GroqTranscriptionError(response.status, errorText)
   }
 
   const text = await response.text()
@@ -102,7 +103,7 @@ export async function transcribeAudioWithSegments(params: {
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`Groq API error ${response.status}: ${errorText}`)
+    throw new GroqTranscriptionError(response.status, errorText)
   }
 
   const json = await response.json() as WhisperResponse

@@ -49,6 +49,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 import { POST } from '@/app/api/segments/[segmentId]/stage4/recordings/route'
+import { GroqTranscriptionError } from '@/lib/groq-errors'
 
 function buildRequest(form: FormData) {
   return new Request('http://localhost/api/segments/seg-1/stage4/recordings', {
@@ -61,11 +62,17 @@ function buildContext(segmentId = 'seg-1') {
   return { params: Promise.resolve({ segmentId }) }
 }
 
+// Real takes are several KB; the route rejects anything below its minimum
+// byte size, so fixtures must be comfortably above it.
+function fakeRecordingBytes(size = 4096) {
+  return Buffer.alloc(size, 1)
+}
+
 function makeFormData(sentenceIndex: string, withAudio = true): FormData {
   const form = new FormData()
   form.set('sentenceIndex', sentenceIndex)
   if (withAudio) {
-    form.set('audio', new File([Buffer.from('fake-recording')], 'rec.webm', { type: 'audio/webm' }))
+    form.set('audio', new File([fakeRecordingBytes()], 'rec.webm', { type: 'audio/webm' }))
   }
   return form
 }
@@ -192,6 +199,53 @@ describe('POST /api/segments/[segmentId]/stage4/recordings', () => {
     expect(response.status).toBe(413)
   })
 
+  // A take stopped instantly after start is a container-header-only blob that
+  // Whisper cannot process. The route must refuse it before uploading anything
+  // or creating a Recording row.
+  it('returns 400 for a header-only take without uploading or transcribing', async () => {
+    const form = new FormData()
+    form.set('sentenceIndex', '0')
+    form.set('audio', new File([fakeRecordingBytes(200)], 'rec.webm', { type: 'audio/webm' }))
+
+    const response = await POST(buildRequest(form), buildContext())
+    expect(response.status).toBe(400)
+    const json = await response.json()
+    expect(json.error).toContain('録音が短すぎる')
+    expect(uploadBufferToStorage).not.toHaveBeenCalled()
+    expect(recordingCreate).not.toHaveBeenCalled()
+    expect(transcribeAudio).not.toHaveBeenCalled()
+  })
+
+  it('returns 422 with a re-record hint when Groq rejects the take as unprocessable', async () => {
+    segmentFindFirst.mockResolvedValue(baseSegment())
+    createSupabaseServerClient.mockResolvedValue({})
+    uploadBufferToStorage.mockResolvedValue(undefined)
+    recordingCreate.mockResolvedValue({ id: 'rec-groq-400' })
+    transcribeAudio.mockRejectedValue(
+      new GroqTranscriptionError(
+        400,
+        '{"error":{"message":"could not process file - is it a valid media file?","type":"invalid_request_error"}}',
+      ),
+    )
+
+    const response = await POST(buildRequest(makeFormData('0')), buildContext())
+    expect(response.status).toBe(422)
+    const json = await response.json()
+    expect(json.error).toContain('もう一度録音')
+    expect(stageProgressUpsert).not.toHaveBeenCalled()
+  })
+
+  it('keeps returning 500 for non-user transcription failures', async () => {
+    segmentFindFirst.mockResolvedValue(baseSegment())
+    createSupabaseServerClient.mockResolvedValue({})
+    uploadBufferToStorage.mockResolvedValue(undefined)
+    recordingCreate.mockResolvedValue({ id: 'rec-groq-500' })
+    transcribeAudio.mockRejectedValue(new GroqTranscriptionError(500, 'upstream unavailable'))
+
+    const response = await POST(buildRequest(makeFormData('0')), buildContext())
+    expect(response.status).toBe(500)
+  })
+
   it('returns 400 when the content-type is not an accepted audio type', async () => {
     const form = new FormData()
     form.set('sentenceIndex', '0')
@@ -220,7 +274,7 @@ describe('POST /api/segments/[segmentId]/stage4/recordings', () => {
     const ext = mime.includes('mp4') ? 'mp4' : 'webm'
     const form = new FormData()
     form.set('sentenceIndex', '0')
-    form.set('audio', new File([Buffer.from('fake-recording')], `rec.${ext}`, { type: mime }))
+    form.set('audio', new File([fakeRecordingBytes()], `rec.${ext}`, { type: mime }))
 
     const response = await POST(buildRequest(form), buildContext())
     expect(response.status).toBe(200)
