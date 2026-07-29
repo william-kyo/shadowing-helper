@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import type { Prisma } from '@prisma/client'
 
+import { guessSpeakers } from '@/lib/segment-analysis'
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { applySpeakerLabels, isPersistedWhisperSegments } from '@/lib/sentence-split'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { removeStorageObjects } from '@/lib/storage'
 
@@ -33,19 +36,38 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const segment = await db.segment.findFirst({
     where: { id: segmentId, project: { userId: user.id } },
-    select: { audioPath: true },
+    select: { id: true, audioPath: true, text: true, whisperSegments: true },
   })
 
   if (!segment) {
     return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
   }
 
+  // When the script changes and the segment has transcription chunks, re-guess
+  // speaker labels so the learner's corrections in stage 1 stay in sync.
+  const baseUpdateData = {
+    ...(parsed.data.text !== undefined && { text: parsed.data.text }),
+    ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
+  }
+
+  let updateData: Prisma.SegmentUpdateInput = baseUpdateData
+  if (
+    parsed.data.text !== undefined &&
+    parsed.data.text !== segment.text &&
+    isPersistedWhisperSegments(segment.whisperSegments)
+  ) {
+    try {
+      const speakers = await guessSpeakers(segment.whisperSegments)
+      updateData = { ...baseUpdateData, whisperSegments: applySpeakerLabels(segment.whisperSegments, speakers) }
+    } catch {
+      // If re-guessing fails, proceed with the script update alone — this is
+      // best-effort (like the learner correcting by hand), never a blocker.
+    }
+  }
+
   const updated = await db.segment.update({
     where: { id: segmentId },
-    data: {
-      ...(parsed.data.text !== undefined && { text: parsed.data.text }),
-      ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
-    },
+    data: updateData,
   })
 
   return NextResponse.json({ text: updated.text, notes: updated.notes })

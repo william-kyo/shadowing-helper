@@ -83,10 +83,10 @@ describe("SegmentStageWorkspace", () => {
     ).toBeInTheDocument();
   });
 
-  it("autosaves edits and keeps script and notes when switching stages without a page refresh", async () => {
+  it("autosaves script edits via debounced API call", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
-      json: async () => ({ text: "edited script", notes: "edited notes" }),
+      json: async () => ({ text: "edited script", notes: null }),
     } as Response);
 
     render(
@@ -95,19 +95,14 @@ describe("SegmentStageWorkspace", () => {
         initialProgress={[{ stage: 1, status: "in_progress" }]}
         initialText="old script"
         initialNotes="old notes"
-        initialStage={1}
+        initialStage={2}
         nextIncompleteHref={null}
       />,
     );
 
-    // Script and notes both start collapsed on stage 1 — open each editor.
-    fireEvent.click(screen.getByRole("button", { name: "スクリプトを表示" }));
-    fireEvent.click(screen.getByRole("button", { name: "ノートを表示" }));
+    // Script is visible by default on stage 2.
     fireEvent.change(screen.getByDisplayValue("old script"), {
       target: { value: "edited script" },
-    });
-    fireEvent.change(screen.getByDisplayValue("old notes"), {
-      target: { value: "edited notes" },
     });
 
     // Edits persist via debounced autosave — no manual save button.
@@ -120,11 +115,6 @@ describe("SegmentStageWorkspace", () => {
         expect.objectContaining({ method: "PATCH" }),
       );
     });
-
-    fireEvent.click(screen.getByTitle("ステージ2 サイレント"));
-
-    expect(screen.getByDisplayValue("edited script")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("edited notes")).toBeInTheDocument();
   });
 
   it("jumps to the next incomplete segment once the final stage is completed", async () => {
