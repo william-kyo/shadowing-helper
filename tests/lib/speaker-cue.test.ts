@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildSpeakerWindows,
   findSpeakerAt,
+  isLearnerTurn,
 } from '@/components/segment/speaker-cue-context'
 
 const CHUNKS = [
@@ -55,5 +56,28 @@ describe('findSpeakerAt', () => {
 
   it('treats a window end as belonging to the next turn, not this one', () => {
     expect(findSpeakerAt(windows, 3000)).toBe('B')
+  })
+})
+
+describe('isLearnerTurn', () => {
+  const windows = buildSpeakerWindows(CHUNKS, ['A', 'A', 'B', 'B'])
+
+  it('is true only while the practiced role is speaking', () => {
+    expect(isLearnerTurn({ windows, activeSpeaker: 'A' }, 500)).toBe(true)
+    expect(isLearnerTurn({ windows, activeSpeaker: 'A' }, 2500)).toBe(false)
+    expect(isLearnerTurn({ windows, activeSpeaker: 'B' }, 2500)).toBe(true)
+    expect(isLearnerTurn({ windows, activeSpeaker: 'B' }, 500)).toBe(false)
+  })
+
+  it('keeps gaps and unlabeled stretches audible', () => {
+    // 2000–2200 is the silence between the two turns.
+    expect(isLearnerTurn({ windows, activeSpeaker: 'A' }, 2100)).toBe(false)
+    expect(isLearnerTurn({ windows, activeSpeaker: 'B' }, 2100)).toBe(false)
+    expect(isLearnerTurn({ windows, activeSpeaker: 'A' }, 9999)).toBe(false)
+  })
+
+  it('never mutes when the learner is shadowing both parts', () => {
+    expect(isLearnerTurn({ windows, activeSpeaker: null }, 500)).toBe(false)
+    expect(isLearnerTurn({ windows, activeSpeaker: null }, 2500)).toBe(false)
   })
 })

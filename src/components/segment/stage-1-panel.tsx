@@ -223,7 +223,7 @@ export function Stage1Panel({
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
               {practiceSpeaker
-                ? `音声は通しで流れます。波形が色づいている間が${practiceSpeaker}の番です。`
+                ? `${practiceSpeaker}のセリフは音声が消えます。相手のセリフだけを聞きながら、${practiceSpeaker}の番は自分で話してください。`
                 : '会話全体をシャドーイングします。難しいときは片方の役だけを選んでください。'}
             </p>
           </div>

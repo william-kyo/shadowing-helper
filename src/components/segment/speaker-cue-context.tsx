@@ -46,6 +46,15 @@ export function findSpeakerAt(windows: SpeakerWindow[], timeMs: number): Speaker
   return match?.speaker ?? null
 }
 
+// Whether the practiced role's own line is playing right now. Stage 5 silences
+// exactly these stretches: the learner supplies that voice, so only the other
+// role is heard. Gaps and unlabeled stretches stay audible — they carry the
+// rhythm the learner is shadowing against.
+export function isLearnerTurn(cue: SpeakerCue, timeMs: number): boolean {
+  if (cue.activeSpeaker === null) return false
+  return findSpeakerAt(cue.windows, timeMs) === cue.activeSpeaker
+}
+
 // Collapse labeled chunks into windows, merging neighbours that share a speaker
 // so the player draws one continuous run per turn instead of one per chunk.
 export function buildSpeakerWindows(

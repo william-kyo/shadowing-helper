@@ -1,10 +1,10 @@
 'use client'
 
 import type { ChangeEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-import { findSpeakerAt, useSpeakerCue } from '@/components/segment/speaker-cue-context'
+import { findSpeakerAt, isLearnerTurn, useSpeakerCue } from '@/components/segment/speaker-cue-context'
 
 type SegmentAudioPlayerProps = {
   src: string
@@ -71,6 +71,44 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
     generateWaveformHeights(BAR_COUNT),
   )
 
+  // Stage 5 role practice. `windows` is empty on every other stage, so all of
+  // this collapses back to the plain two-tone waveform and untouched audio.
+  const cue = useSpeakerCue()
+  const { windows, activeSpeaker } = cue
+
+  // Silence the practiced role's own lines so the learner speaks them, leaving
+  // only the other role audible. The clip keeps running through the muted
+  // stretch, so the gap they get matches the real delivery.
+  const applyTurnMute = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.muted = isLearnerTurn(cue, audio.currentTime * 1000)
+  }, [cue])
+
+  // `timeupdate` alone fires only ~4x/second, which would leak up to a quarter
+  // second of the learner's own line at every handover. Poll on animation
+  // frames while playing to land the mute on the boundary instead.
+  useEffect(() => {
+    if (!playing || activeSpeaker === null) return
+    let frame = requestAnimationFrame(function tick() {
+      applyTurnMute()
+      frame = requestAnimationFrame(tick)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [playing, activeSpeaker, applyTurnMute])
+
+  // Leave the audio untouched whenever role practice isn't active, including
+  // when the learner switches back to shadowing both parts.
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (activeSpeaker === null) {
+      audio.muted = false
+      return
+    }
+    applyTurnMute()
+  }, [activeSpeaker, applyTurnMute])
+
   // Decode the real audio once to render a true waveform; fall back silently to
   // the synthetic shape on any failure (unsupported codec, fetch error, etc).
   useEffect(() => {
@@ -126,6 +164,9 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
     const audio = audioRef.current
     if (!audio) return
     setCurrentTime(audio.currentTime * 1000)
+    // Backstop for the animation-frame loop, which browsers throttle or stop
+    // entirely while the tab is hidden — `timeupdate` keeps firing there.
+    applyTurnMute()
   }
 
   const handleLoadedMetadata = () => {
@@ -205,11 +246,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
-  // Stage 5 role practice. `windows` is empty on every other stage, so all of
-  // this collapses back to the plain two-tone waveform.
-  const { windows, activeSpeaker } = useSpeakerCue()
-  const isMyTurn =
-    activeSpeaker !== null && findSpeakerAt(windows, currentTime) === activeSpeaker
+  const isMyTurn = isLearnerTurn(cue, currentTime)
 
   // Colour one bar by whose turn it covers: the practiced role keeps the full
   // accent, the other role is dimmed, and unlabeled gaps stay neutral.
@@ -234,6 +271,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
     const nextTimeMs = Number(event.target.value)
     audio.currentTime = nextTimeMs / 1000
     setCurrentTime(nextTimeMs)
+    applyTurnMute()
   }
 
   const handleBarClick = (barIndex: number) => {
@@ -242,6 +280,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
     const nextTimeMs = (barIndex / BAR_COUNT) * duration
     audio.currentTime = nextTimeMs / 1000
     setCurrentTime(nextTimeMs)
+    applyTurnMute()
   }
 
   return (
@@ -258,7 +297,8 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
 
       {/* Whose turn it is, for stage 5 role practice. Only rendered while a
           role is selected; `aria-live` announces the handover for learners who
-          can't watch the waveform colour. */}
+          can't watch the waveform colour. The learner's own turn is muted, so
+          the label says so rather than leaving the silence unexplained. */}
       {activeSpeaker !== null && (
         <div
           role="status"
@@ -271,7 +311,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
             }`}
           />
           <span className={isMyTurn ? 'text-accent' : 'text-ink-faint'}>
-            {isMyTurn ? `${activeSpeaker}の番` : '相手の番'}
+            {isMyTurn ? `${activeSpeaker}の番 · 音声オフ` : '相手の番'}
           </span>
         </div>
       )}
