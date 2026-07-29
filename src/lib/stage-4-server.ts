@@ -8,9 +8,8 @@ import path from 'node:path'
 import { db } from '@/lib/db'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { ensureStage4SentenceAudios } from '@/lib/recording-storage'
-import { guessSpeakers } from '@/lib/segment-analysis'
+import { resolveSpeakerChunks } from '@/lib/segment-analysis'
 import {
-  applySpeakerLabels,
   buildFallbackSentenceUnits,
   buildSentenceUnits,
   isPersistedWhisperSegments,
@@ -105,9 +104,10 @@ async function backfillWhisperSegments(params: {
   })
 
   const transcribed = whisperSegmentsToPersisted(whisperResponse.segments)
-  // Seed the A/B labels the learner refines in stage 1. Best-effort: an LLM
-  // failure yields unlabeled chunks, never a failed backfill.
-  const persisted = applySpeakerLabels(transcribed, await guessSpeakers(transcribed))
+  // Seed the A/B labels the learner refines in stage 1, preferring the script's
+  // own turn structure. Best-effort: a failure yields unlabeled chunks, never a
+  // failed backfill.
+  const persisted = await resolveSpeakerChunks(transcribed, params.segment.text)
   await db.segment.update({
     where: { id: params.segment.id },
     data: { whisperSegments: persisted },

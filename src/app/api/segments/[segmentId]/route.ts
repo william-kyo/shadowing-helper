@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 
-import { guessSpeakers } from '@/lib/segment-analysis'
+import { resolveSpeakerChunks } from '@/lib/segment-analysis'
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { applySpeakerLabels, isPersistedWhisperSegments } from '@/lib/sentence-split'
+import { isPersistedWhisperSegments } from '@/lib/sentence-split'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { removeStorageObjects } from '@/lib/storage'
 
@@ -43,8 +43,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
   }
 
-  // When the script changes and the segment has transcription chunks, re-guess
-  // speaker labels so the learner's corrections in stage 1 stay in sync.
+  // When the script changes and the segment has transcription chunks, re-derive
+  // the speaker labels from it. Editing the A:/B: lines is how the learner fixes
+  // a mis-attributed turn, so the labels must follow the script rather than keep
+  // the stale guess — including re-cutting chunks that span a turn change.
   const baseUpdateData = {
     ...(parsed.data.text !== undefined && { text: parsed.data.text }),
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
@@ -57,10 +59,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     isPersistedWhisperSegments(segment.whisperSegments)
   ) {
     try {
-      const speakers = await guessSpeakers(segment.whisperSegments)
-      updateData = { ...baseUpdateData, whisperSegments: applySpeakerLabels(segment.whisperSegments, speakers) }
+      updateData = {
+        ...baseUpdateData,
+        whisperSegments: await resolveSpeakerChunks(segment.whisperSegments, parsed.data.text),
+      }
     } catch {
-      // If re-guessing fails, proceed with the script update alone — this is
+      // If re-deriving fails, proceed with the script update alone — this is
       // best-effort (like the learner correcting by hand), never a blocker.
     }
   }

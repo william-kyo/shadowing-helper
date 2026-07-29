@@ -1,6 +1,12 @@
 import type { WhisperSegment } from '@/lib/groq'
 import { chatJson } from '@/lib/llm'
-import { isSpeaker, type Speaker } from '@/lib/sentence-split'
+import {
+  applySpeakerLabels,
+  isSpeaker,
+  type PersistedWhisperSegment,
+  type Speaker,
+} from '@/lib/sentence-split'
+import { alignSpeakersToScript } from '@/lib/speaker-align'
 
 export interface TopicSegment {
   title: string
@@ -231,6 +237,23 @@ ${lines}`
     console.error('[guessSpeakers] failed, leaving chunks unlabeled:', err)
     return unlabeled
   }
+}
+
+// Resolve the A/B labels stored on a segment's timed chunks.
+//
+// The script wins whenever it can: it already carries the turn structure the
+// learner reads and edits, and aligning against it also re-cuts chunks that
+// straddle a turn change — something a per-chunk guess can never do, since
+// Whisper splits on silence rather than on speaker. Only when the script has no
+// A:/B: structure (or has drifted too far from the transcript to align) do we
+// fall back to asking the model.
+export async function resolveSpeakerChunks(
+  chunks: readonly PersistedWhisperSegment[],
+  script: string | null | undefined,
+): Promise<PersistedWhisperSegment[]> {
+  const aligned = alignSpeakersToScript(chunks, script ?? '')
+  if (aligned) return aligned
+  return applySpeakerLabels(chunks, await guessSpeakers(chunks))
 }
 
 // Punctuate a single transcribed segment text (e.g. manually added segments,

@@ -233,7 +233,7 @@ export function buildFallbackSentenceUnits(params: {
 // stage 1 corrections back onto Segment.whisperSegments without touching the
 // text or timings. A null/missing label clears the chunk's speaker.
 export function applySpeakerLabels(
-  persisted: PersistedWhisperSegment[],
+  persisted: readonly PersistedWhisperSegment[],
   labels: readonly (Speaker | null)[],
 ): PersistedWhisperSegment[] {
   return persisted.map((entry, index) => {
