@@ -7,6 +7,7 @@ const {
   transaction,
   transcribeAudioWithSegments,
   punctuateText,
+  guessSpeakers,
   extractAudioSegmentFromBuffer,
   downloadStorageObject,
   uploadBufferToStorage,
@@ -19,6 +20,7 @@ const {
   transaction: vi.fn(),
   transcribeAudioWithSegments: vi.fn(),
   punctuateText: vi.fn(),
+  guessSpeakers: vi.fn(),
   extractAudioSegmentFromBuffer: vi.fn(),
   downloadStorageObject: vi.fn(),
   uploadBufferToStorage: vi.fn(),
@@ -47,10 +49,10 @@ vi.mock('@/lib/rate-limit', () => ({
 
 vi.mock('@/lib/groq', () => ({ transcribeAudioWithSegments }))
 // Keep the real isDialogueText so the route's dialogue detection is exercised;
-// only punctuateText (which would call the LLM) is stubbed.
+// the two LLM-backed calls are stubbed.
 vi.mock('@/lib/segment-analysis', async (importActual) => {
   const actual = await importActual<typeof import('@/lib/segment-analysis')>()
-  return { ...actual, punctuateText }
+  return { ...actual, punctuateText, guessSpeakers }
 })
 vi.mock('@/lib/segment-audio', () => ({ extractAudioSegmentFromBuffer }))
 vi.mock('@/lib/storage', () => ({
@@ -112,6 +114,7 @@ describe('POST /api/segments/[segmentId]/resplit', () => {
       ],
     })
     punctuateText.mockResolvedValue('新しい一文目。新しい二文目。')
+    guessSpeakers.mockResolvedValue(['A'])
     segmentUpdate.mockResolvedValue({ startMs: 2000, endMs: 10000, text: '新しい一文目。新しい二文目。', updatedAt: new Date() })
     stageProgressUpdateMany.mockResolvedValue({ count: 1 })
     transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops))
@@ -130,6 +133,17 @@ describe('POST /api/segments/[segmentId]/resplit', () => {
     )
     // A non-dialogue original script regenerates in non-dialogue mode.
     expect(punctuateText).toHaveBeenCalledWith('新しい一文目 新しい二文目', { dialogue: false })
+    // Speakers are re-guessed for the new chunk boundaries and persisted with them.
+    expect(guessSpeakers).toHaveBeenCalledWith([
+      { text: '新しい一文目', startMs: 0, endMs: 2000 },
+    ])
+    expect(segmentUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          whisperSegments: [{ text: '新しい一文目', startMs: 0, endMs: 2000, speaker: 'A' }],
+        }),
+      }),
+    )
     // Segment row updated with the new range + regenerated script + sub-segments.
     expect(segmentUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

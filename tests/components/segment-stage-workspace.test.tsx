@@ -183,6 +183,7 @@ describe("SegmentStageWorkspace", () => {
             text: "はい",
             startMs: 0,
             endMs: 500,
+            speaker: null,
             refAudioUrl: "blob:ref-0",
             userRecordingUrl: null,
           },

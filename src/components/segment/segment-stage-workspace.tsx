@@ -1,11 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { type SpeakerChunk } from '@/components/segment/speaker-annotator'
+import { buildSpeakerWindows, SpeakerCueProvider } from '@/components/segment/speaker-cue-context'
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { Stage4Panel } from '@/components/segment/stage-4-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
+import type { Speaker } from '@/lib/sentence-split'
 import { computeCurrentStage } from '@/lib/stage-progress'
 import type { Stage4Metadata } from '@/lib/stage-4-completion'
 import type { Stage4Sentence } from '@/lib/stage-4-server'
@@ -49,6 +52,9 @@ type SegmentStageWorkspaceProps = {
   // and there's no persisted fallback to show.
   stage4Sentences?: Stage4Sentence[]
   stage4InitialMetadata?: Stage4Metadata | null
+  // Timed chunks the learner labels with A/B in stage 1, so stage 5 can cue one
+  // role at a time. Empty when the segment has no persisted transcription.
+  speakerChunks?: SpeakerChunk[]
   // Fixed bottom audio player, rendered here so it can be unmounted while Stage
   // 4 is active (Stage 4 owns the Space shortcut; the player's would collide).
   bottomDock?: ReactNode
@@ -67,6 +73,7 @@ export function SegmentStageWorkspace({
   nextIncompleteHref,
   stage4Sentences = [],
   stage4InitialMetadata = null,
+  speakerChunks = [],
   bottomDock,
   bottomNav,
 }: SegmentStageWorkspaceProps) {
@@ -82,10 +89,40 @@ export function SegmentStageWorkspace({
   const [selectedStage, setSelectedStage] = useState(initialStage)
   const [segmentText, setSegmentText] = useState(initialText)
   const [segmentNotes, setSegmentNotes] = useState(initialNotes ?? '')
+  // Held here rather than inside the stage 1 panel so stage 5 picks up label
+  // edits without a page reload.
+  const [speakerLabels, setSpeakerLabels] = useState<(Speaker | null)[]>(() =>
+    speakerChunks.map((chunk) => chunk.speaker ?? null),
+  )
+  // Which role stage 5 is shadowing. Null = both parts at once (the original,
+  // harder mode), which is what stage 5 falls back to when nothing is labeled.
+  const [practiceSpeaker, setPracticeSpeaker] = useState<Speaker | null>(null)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
   const completeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [, startTransition] = useTransition()
+
+  const speakerWindows = useMemo(
+    () => buildSpeakerWindows(speakerChunks, speakerLabels),
+    [speakerChunks, speakerLabels],
+  )
+
+  // Only offer roles the segment actually has — a monologue labeled entirely
+  // "A" shouldn't advertise a B part.
+  const labeledSpeakers = useMemo(
+    () => (['A', 'B'] as const).filter((s) => speakerLabels.includes(s)),
+    [speakerLabels],
+  )
+
+  // The cue only drives the player on stage 5; elsewhere it stays inert so the
+  // waveform keeps its plain appearance.
+  const speakerCue = useMemo(
+    () => ({
+      windows: selectedStage === 5 ? speakerWindows : [],
+      activeSpeaker: selectedStage === 5 ? practiceSpeaker : null,
+    }),
+    [selectedStage, speakerWindows, practiceSpeaker],
+  )
 
   const getStatus = (stage: number): StageStatus => {
     const found = progress.find((item) => item.stage === stage)
@@ -190,7 +227,7 @@ export function SegmentStageWorkspace({
   }, [])
 
   return (
-    <>
+    <SpeakerCueProvider value={speakerCue}>
     <div className="grid gap-6">
       {isCompleting ? (
         <div
@@ -246,6 +283,11 @@ export function SegmentStageWorkspace({
             setSegmentText(text)
             setSegmentNotes(notes ?? '')
           }}
+          speakerChunks={speakerChunks}
+          onSpeakerLabelsChange={setSpeakerLabels}
+          labeledSpeakers={labeledSpeakers}
+          practiceSpeaker={practiceSpeaker}
+          onPracticeSpeakerChange={setPracticeSpeaker}
         />
       )}
     </div>
@@ -267,6 +309,6 @@ export function SegmentStageWorkspace({
           </div>
         </div>
       ) : null}
-    </>
+    </SpeakerCueProvider>
   )
 }

@@ -4,6 +4,8 @@ import type { ChangeEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
+import { findSpeakerAt, useSpeakerCue } from '@/components/segment/speaker-cue-context'
+
 type SegmentAudioPlayerProps = {
   src: string
   title: string
@@ -203,6 +205,28 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
+  // Stage 5 role practice. `windows` is empty on every other stage, so all of
+  // this collapses back to the plain two-tone waveform.
+  const { windows, activeSpeaker } = useSpeakerCue()
+  const isMyTurn =
+    activeSpeaker !== null && findSpeakerAt(windows, currentTime) === activeSpeaker
+
+  // Colour one bar by whose turn it covers: the practiced role keeps the full
+  // accent, the other role is dimmed, and unlabeled gaps stay neutral.
+  const getBarColor = (barIndex: number, isPlayed: boolean): string => {
+    const fallback = isPlayed ? 'var(--accent)' : 'var(--ink-line)'
+    if (activeSpeaker === null || windows.length === 0 || duration <= 0) {
+      return fallback
+    }
+    // Sample the middle of the bar's time slice rather than its edge, so a bar
+    // straddling a turn change takes the colour of whoever dominates it.
+    const barMidMs = ((barIndex + 0.5) / BAR_COUNT) * duration
+    const speaker = findSpeakerAt(windows, barMidMs)
+    if (speaker === null) return fallback
+    if (speaker === activeSpeaker) return 'var(--accent)'
+    return isPlayed ? 'var(--ink-faint)' : 'var(--ink-line)'
+  }
+
   const handleProgressChange = (event: ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current
     if (!audio) return
@@ -232,6 +256,26 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
         onPause={() => setPlaying(false)}
       />
 
+      {/* Whose turn it is, for stage 5 role practice. Only rendered while a
+          role is selected; `aria-live` announces the handover for learners who
+          can't watch the waveform colour. */}
+      {activeSpeaker !== null && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em]"
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full transition ${
+              isMyTurn ? 'animate-pulse bg-accent' : 'bg-ink-line'
+            }`}
+          />
+          <span className={isMyTurn ? 'text-accent' : 'text-ink-faint'}>
+            {isMyTurn ? `${activeSpeaker}の番` : '相手の番'}
+          </span>
+        </div>
+      )}
+
       {/* waveform progress */}
       <div className="relative">
         <div className="waveform-track" role="presentation">
@@ -248,9 +292,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
                 className="waveform-bar cursor-pointer"
                 style={{
                   height: `${h * 100}%`,
-                  backgroundColor: isPlayed
-                    ? 'var(--accent)'
-                    : 'var(--ink-line)',
+                  backgroundColor: getBarColor(i, isPlayed),
                 }}
               />
             )

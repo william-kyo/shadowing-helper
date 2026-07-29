@@ -9,9 +9,14 @@ import { rateLimitResponseOrNull } from '@/lib/rate-limit'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
 import { getStage4SentenceAudioKey } from '@/lib/recording-storage'
-import { isDialogueText, punctuateText } from '@/lib/segment-analysis'
+import { guessSpeakers, isDialogueText, punctuateText } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
-import { buildSentenceUnits, isPersistedWhisperSegments, whisperSegmentsToPersisted } from '@/lib/sentence-split'
+import {
+  applySpeakerLabels,
+  buildSentenceUnits,
+  isPersistedWhisperSegments,
+  whisperSegmentsToPersisted,
+} from '@/lib/sentence-split'
 import { emptyStage4Metadata } from '@/lib/stage-4-completion'
 import {
   buildStorageObjectKey,
@@ -140,10 +145,19 @@ export async function POST(request: Request, context: RouteContext) {
       // script. The flag isn't persisted, so infer it from the existing text:
       // dialogue-mode scripts are prefixed with A:/B: speaker labels.
       const dialogue = isDialogueText(segment.text ?? '')
-      const punctuatedText = await measureStep('llm.punctuate_resplit', () =>
-        punctuateText(whisperResponse.text, { dialogue }),
-      )
-      const persisted = whisperSegmentsToPersisted(whisperResponse.segments)
+      const transcribed = whisperSegmentsToPersisted(whisperResponse.segments)
+
+      // Two independent LLM passes over the same transcription — run them
+      // together so re-splitting doesn't pay for both serially. Re-guessing A/B
+      // is required because the learner's stage 1 corrections were keyed to the
+      // old chunk boundaries and can't carry over to the new ones.
+      const [punctuatedText, speakers] = await Promise.all([
+        measureStep('llm.punctuate_resplit', () =>
+          punctuateText(whisperResponse.text, { dialogue }),
+        ),
+        measureStep('llm.guess_speakers_resplit', () => guessSpeakers(transcribed)),
+      ])
+      const persisted = applySpeakerLabels(transcribed, speakers)
 
       // Update segment + reset stage 4 in one transaction: the new script and
       // sentence set invalidate stage 4's per-sentence scores, so wipe its

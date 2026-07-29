@@ -6,19 +6,32 @@
 
 import type { WhisperSegment } from '@/lib/groq'
 
+// Which voice speaks a unit, in a two-person dialogue recording. `null` means
+// unlabeled — either nobody has annotated it yet, or it belongs to neither
+// speaker (narration, overlapping speech).
+export type Speaker = 'A' | 'B'
+
+export function isSpeaker(value: unknown): value is Speaker {
+  return value === 'A' || value === 'B'
+}
+
 export type SentenceUnit = {
   index: number
   text: string
   startMs: number
   endMs: number
+  speaker: Speaker | null
 }
 
 // Persisted JSON shape on Segment.whisperSegments. Kept narrow + versionable
-// so future migrations (e.g. adding speaker labels) are easy to detect.
+// so future migrations are easy to detect. `speaker` is optional: rows written
+// before speaker labeling existed simply omit it, and unlabeled chunks omit it
+// too rather than storing an explicit null.
 export type PersistedWhisperSegment = {
   text: string
   startMs: number
   endMs: number
+  speaker?: Speaker
 }
 
 export function isPersistedWhisperSegments(value: unknown): value is PersistedWhisperSegment[] {
@@ -29,7 +42,8 @@ export function isPersistedWhisperSegments(value: unknown): value is PersistedWh
     return (
       typeof e.text === 'string' &&
       typeof e.startMs === 'number' &&
-      typeof e.endMs === 'number'
+      typeof e.endMs === 'number' &&
+      (e.speaker === undefined || isSpeaker(e.speaker))
     )
   })
 }
@@ -148,6 +162,7 @@ function subdivideChunk(params: {
   text: string
   startMs: number
   endMs: number
+  speaker: Speaker | null
 }): Omit<SentenceUnit, 'index'>[] {
   const text = params.text.trim()
   const durationMs = params.endMs - params.startMs
@@ -170,7 +185,10 @@ function subdivideChunk(params: {
     const share = pieceChars === 0 ? 0 : timedCharCount(piece) / pieceChars
     const endMs =
       index === pieces.length - 1 ? params.endMs : cursor + Math.round(durationMs * share)
-    units.push({ text: piece, startMs: cursor, endMs })
+    // Sub-sentences inherit the chunk's speaker: a single Whisper chunk very
+    // rarely spans a turn change, and the learner can fix the exceptions by
+    // hand in stage 1.
+    units.push({ text: piece, startMs: cursor, endMs, speaker: params.speaker })
     cursor = endMs
   })
   return units
@@ -186,6 +204,7 @@ export function buildSentenceUnits(persisted: PersistedWhisperSegment[] | null |
       text: entry.text.trim(),
       startMs: Math.max(0, Math.trunc(entry.startMs)),
       endMs: Math.max(0, Math.trunc(entry.endMs)),
+      speaker: isSpeaker(entry.speaker) ? entry.speaker : null,
     }))
     // Drop empty / zero-length chunks that Whisper occasionally emits.
     .filter((entry) => entry.text.length > 0 && entry.endMs > entry.startMs)
@@ -205,5 +224,23 @@ export function buildFallbackSentenceUnits(params: {
     text: params.text,
     startMs: params.totalStartMs,
     endMs: params.totalEndMs,
+    speaker: null,
   }).map((entry, index) => ({ ...entry, index }))
+}
+
+// Overlay speaker labels onto persisted chunks, keyed by chunk position. Used
+// to write both the LLM's initial guess (at transcribe time) and the learner's
+// stage 1 corrections back onto Segment.whisperSegments without touching the
+// text or timings. A null/missing label clears the chunk's speaker.
+export function applySpeakerLabels(
+  persisted: PersistedWhisperSegment[],
+  labels: readonly (Speaker | null)[],
+): PersistedWhisperSegment[] {
+  return persisted.map((entry, index) => {
+    const label = labels[index]
+    // Rebuild the entry rather than spreading it, so an unlabeled chunk drops
+    // the key entirely instead of persisting an explicit null.
+    const rest = { text: entry.text, startMs: entry.startMs, endMs: entry.endMs }
+    return isSpeaker(label) ? { ...rest, speaker: label } : rest
+  })
 }

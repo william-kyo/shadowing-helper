@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { WhisperSegment } from '@/lib/groq'
 import {
+  applySpeakerLabels,
   buildFallbackSentenceUnits,
   buildSentenceUnits,
   isPersistedWhisperSegments,
@@ -50,6 +51,42 @@ describe('isPersistedWhisperSegments', () => {
     expect(isPersistedWhisperSegments([{ text: 'a' }])).toBe(false)
     expect(isPersistedWhisperSegments([{ text: 'a', startMs: '0', endMs: 1 }])).toBe(false)
   })
+
+  it('accepts a speaker label but rejects an unknown one', () => {
+    expect(
+      isPersistedWhisperSegments([{ text: 'a', startMs: 0, endMs: 100, speaker: 'A' }]),
+    ).toBe(true)
+    expect(
+      isPersistedWhisperSegments([{ text: 'a', startMs: 0, endMs: 100, speaker: 'C' }]),
+    ).toBe(false)
+    expect(
+      isPersistedWhisperSegments([{ text: 'a', startMs: 0, endMs: 100, speaker: null }]),
+    ).toBe(false)
+  })
+})
+
+describe('applySpeakerLabels', () => {
+  const persisted = [
+    { text: '一', startMs: 0, endMs: 500 },
+    { text: '二', startMs: 600, endMs: 1200 },
+  ]
+
+  it('writes labels by position without touching text or timings', () => {
+    expect(applySpeakerLabels(persisted, ['A', 'B'])).toEqual([
+      { text: '一', startMs: 0, endMs: 500, speaker: 'A' },
+      { text: '二', startMs: 600, endMs: 1200, speaker: 'B' },
+    ])
+  })
+
+  it('omits the speaker key for null and missing labels', () => {
+    const out = applySpeakerLabels(
+      [{ text: '一', startMs: 0, endMs: 500, speaker: 'A' as const }, persisted[1]!],
+      [null],
+    )
+    expect(out[0]).not.toHaveProperty('speaker')
+    expect(out[1]).not.toHaveProperty('speaker')
+    expect(out).toEqual(persisted)
+  })
 })
 
 describe('buildSentenceUnits', () => {
@@ -68,6 +105,18 @@ describe('buildSentenceUnits', () => {
     expect(units.map((u) => u.index)).toEqual([0, 1, 2])
     expect(units.map((u) => u.text)).toEqual(['一', '二', '三'])
     expect(units[1]?.startMs).toBe(600)
+  })
+
+  it('defaults speaker to null and carries a chunk label onto its sub-sentences', () => {
+    const unlabeled = buildSentenceUnits([{ text: '一', startMs: 0, endMs: 500 }])
+    expect(unlabeled[0]?.speaker).toBeNull()
+
+    // One chunk long enough to be subdivided — every piece keeps the label.
+    const labeled = buildSentenceUnits([
+      { text: '今日は晴れです。明日は雨かもしれません。', startMs: 0, endMs: 6000, speaker: 'B' },
+    ])
+    expect(labeled.length).toBeGreaterThan(1)
+    expect(labeled.every((u) => u.speaker === 'B')).toBe(true)
   })
 
   it('drops empty and zero-length chunks', () => {
@@ -189,6 +238,7 @@ describe('buildFallbackSentenceUnits', () => {
       text: '改行なしのテキスト',
       startMs: 1000,
       endMs: 4000,
+      speaker: null,
     })
   })
 

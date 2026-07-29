@@ -107,8 +107,8 @@ describe('GET /api/segments/[segmentId]/stage4/sentences', () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.sentences).toEqual([
-      { index: 0, text: '一文目', startMs: 100, endMs: 1500, refAudioUrl: `/api/segments/seg-1/stage4/sentences/0/audio?v=${V}`, userRecordingUrl: null },
-      { index: 1, text: '二文目', startMs: 1700, endMs: 3200, refAudioUrl: `/api/segments/seg-1/stage4/sentences/1/audio?v=${V}`, userRecordingUrl: null },
+      { index: 0, text: '一文目', startMs: 100, endMs: 1500, speaker: null, refAudioUrl: `/api/segments/seg-1/stage4/sentences/0/audio?v=${V}`, userRecordingUrl: null },
+      { index: 1, text: '二文目', startMs: 1700, endMs: 3200, speaker: null, refAudioUrl: `/api/segments/seg-1/stage4/sentences/1/audio?v=${V}`, userRecordingUrl: null },
     ])
     expect(json.initialMetadata).toBeNull()
     expect(transcribeAudioWithSegments).not.toHaveBeenCalled()

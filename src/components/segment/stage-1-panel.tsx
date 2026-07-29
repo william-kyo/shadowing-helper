@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { SpeakerAnnotator, type SpeakerChunk } from '@/components/segment/speaker-annotator'
+import type { Speaker } from '@/lib/sentence-split'
 import { STAGE_META } from '@/lib/stage-meta'
 
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
@@ -19,6 +21,15 @@ type Stage1Props = {
   isStatusUpdating: boolean
   onStageStatusChange: (status: StageStatus) => void
   onContentSaved: (content: { text: string; notes: string | null }) => void
+  // Timed chunks to annotate with A/B speaker labels. Only surfaced on stage 1
+  // — the other stages that render this panel are pure practice.
+  speakerChunks?: SpeakerChunk[]
+  onSpeakerLabelsChange?: (labels: (Speaker | null)[]) => void
+  // Stage 5 role practice: which roles this segment has, and which one the
+  // learner is shadowing (null = both parts at once).
+  labeledSpeakers?: Speaker[]
+  practiceSpeaker?: Speaker | null
+  onPracticeSpeakerChange?: (speaker: Speaker | null) => void
 }
 
 // Stages 2 and 4 start with the script visible; other stages start hidden.
@@ -60,6 +71,11 @@ export function Stage1Panel({
   isStatusUpdating,
   onStageStatusChange,
   onContentSaved,
+  speakerChunks = [],
+  onSpeakerLabelsChange,
+  labeledSpeakers = [],
+  practiceSpeaker = null,
+  onPracticeSpeakerChange,
 }: Stage1Props) {
   const [text, setText] = useState(initialText)
   const [notes, setNotes] = useState(initialNotes ?? '')
@@ -177,6 +193,44 @@ export function Stage1Panel({
       </div>
 
       <div className="grid gap-3">
+        {/* stage 5 role picker. Two-person dialogues are hard to shadow whole,
+            so the learner can take one role per pass; the audio still plays in
+            full and the waveform marks whose turn it is. */}
+        {activeStage === 5 && labeledSpeakers.length > 1 && (
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                練習する役
+              </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[null, ...labeledSpeakers].map((choice) => {
+                const isActive = practiceSpeaker === choice
+                return (
+                  <button
+                    key={choice ?? 'both'}
+                    type="button"
+                    onClick={() => onPracticeSpeakerChange?.(choice)}
+                    aria-pressed={isActive}
+                    className={`rounded-chip border px-3 py-1 text-xs font-medium transition ${
+                      isActive
+                        ? 'border-accent bg-accent text-paper'
+                        : 'border-ink-line bg-paper text-ink-muted hover:border-accent hover:text-accent'
+                    }`}
+                  >
+                    {choice ? `${choice}の役だけ` : '両方'}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
+              {practiceSpeaker
+                ? `音声は通しで流れます。波形が色づいている間が${practiceSpeaker}の番です。`
+                : '会話全体をシャドーイングします。難しいときは片方の役だけを選んでください。'}
+            </p>
+          </div>
+        )}
+
         {/* script area */}
         <div>
           <div className="mb-1 flex items-center justify-between">
@@ -217,6 +271,16 @@ export function Stage1Panel({
             </>
           )}
         </div>
+
+        {/* speaker labels — stage 1 is where the learner prepares the segment,
+            and stage 5 is the consumer. */}
+        {activeStage === 1 && speakerChunks.length > 0 && (
+          <SpeakerAnnotator
+            segmentId={segmentId}
+            chunks={speakerChunks}
+            onLabelsChange={onSpeakerLabelsChange}
+          />
+        )}
 
         {/* notes area */}
         <div>

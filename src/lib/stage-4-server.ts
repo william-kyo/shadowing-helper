@@ -8,10 +8,13 @@ import path from 'node:path'
 import { db } from '@/lib/db'
 import { transcribeAudioWithSegments } from '@/lib/groq'
 import { ensureStage4SentenceAudios } from '@/lib/recording-storage'
+import { guessSpeakers } from '@/lib/segment-analysis'
 import {
+  applySpeakerLabels,
   buildFallbackSentenceUnits,
   buildSentenceUnits,
   isPersistedWhisperSegments,
+  type PersistedWhisperSegment,
   SENTENCE_SPLIT_VERSION,
   type SentenceUnit,
   whisperSegmentsToPersisted,
@@ -34,6 +37,11 @@ export type Stage4Setup = {
   // True when this call had to run Groq to backfill whisperSegments (vs.
   // everything being pre-persisted on the segment row).
   didBackfill: boolean
+  // The persisted Whisper chunks behind `sentences`, in storage order — the
+  // granularity at which speaker labels are stored and edited (stage 1).
+  // Empty when the segment has no transcription and sentences came from the
+  // text-only fallback, which has no persisted counterpart to annotate.
+  speakerChunks: PersistedWhisperSegment[]
 }
 
 export type Stage4SetupUser = {
@@ -84,7 +92,7 @@ function buildMetadata(segment: Stage4SetupSegmentRow): Stage4Metadata | null {
 async function backfillWhisperSegments(params: {
   segment: Stage4SetupSegmentRow
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-}): Promise<SentenceUnit[]> {
+}): Promise<{ units: SentenceUnit[]; chunks: PersistedWhisperSegment[] }> {
   const audioBuffer = await downloadStorageObject({
     client: params.supabase,
     objectKey: params.segment.audioPath,
@@ -96,12 +104,15 @@ async function backfillWhisperSegments(params: {
     mimeType: params.segment.project.audioMimeType,
   })
 
-  const persisted = whisperSegmentsToPersisted(whisperResponse.segments)
+  const transcribed = whisperSegmentsToPersisted(whisperResponse.segments)
+  // Seed the A/B labels the learner refines in stage 1. Best-effort: an LLM
+  // failure yields unlabeled chunks, never a failed backfill.
+  const persisted = applySpeakerLabels(transcribed, await guessSpeakers(transcribed))
   await db.segment.update({
     where: { id: params.segment.id },
     data: { whisperSegments: persisted },
   })
-  return buildSentenceUnits(persisted)
+  return { units: buildSentenceUnits(persisted), chunks: persisted }
 }
 
 // Idempotently cut every sentence's reference audio and stream it back as
@@ -144,16 +155,24 @@ export async function loadStage4Setup(params: {
 
   let didBackfill = false
   let units: SentenceUnit[]
+  // Chunks stay empty on the text-only fallback path: those units are derived
+  // from character counts rather than real timestamps and are never persisted,
+  // so there is nothing stable for speaker labels to attach to.
+  let speakerChunks: PersistedWhisperSegment[] = []
   if (persisted && persisted.length > 0) {
     units = buildSentenceUnits(persisted)
+    speakerChunks = persisted
   } else {
-    units = await backfillWhisperSegments({ segment, supabase })
+    const backfilled = await backfillWhisperSegments({ segment, supabase })
+    units = backfilled.units
+    speakerChunks = backfilled.chunks
     if (units.length === 0) {
       units = buildFallbackSentenceUnits({
         text: segment.text,
         totalStartMs: 0,
         totalEndMs: Math.max(0, (segment.endMs ?? 0) - (segment.startMs ?? 0)),
       })
+      speakerChunks = []
     }
     didBackfill = true
   }
@@ -187,6 +206,7 @@ export async function loadStage4Setup(params: {
     initialMetadata: buildMetadata(segment),
     audioMimeType: segment.project.audioMimeType,
     didBackfill,
+    speakerChunks,
   }
 }
 

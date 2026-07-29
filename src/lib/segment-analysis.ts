@@ -1,5 +1,6 @@
 import type { WhisperSegment } from '@/lib/groq'
 import { chatJson } from '@/lib/llm'
+import { isSpeaker, type Speaker } from '@/lib/sentence-split'
 
 export interface TopicSegment {
   title: string
@@ -167,6 +168,69 @@ ${transcript}`
 
   const parsed = await chatJson({ prompt, temperature: 0.3 })
   return normalize(extractParagraphs(parsed), segments)
+}
+
+// Guess which of two voices speaks each timed chunk of a segment.
+//
+// This deliberately does NOT reuse `analyzeSegments`' speaker labels: that pass
+// runs over the whole project's Whisper output to find paragraph boundaries,
+// while `Segment.whisperSegments` comes from a later, separate transcription of
+// the individual segment's audio. The two runs chunk differently and use
+// different time bases, so their indices don't correspond.
+//
+// The result is only a starting point — the learner corrects it by hand in
+// stage 1 — so every failure mode degrades to "unlabeled" rather than throwing.
+export async function guessSpeakers(
+  chunks: readonly { text: string; startMs: number; endMs: number }[],
+): Promise<(Speaker | null)[]> {
+  const unlabeled = chunks.map(() => null)
+  if (chunks.length === 0) return []
+
+  const lines = chunks
+    .map((chunk, i) => {
+      const prev = chunks[i - 1]
+      const gapMs = prev ? Math.max(0, chunk.startMs - prev.endMs) : 0
+      return `[${i}] (gap ${(gapMs / 1000).toFixed(1)}s) "${chunk.text.trim()}"`
+    })
+    .join('\n')
+
+  const prompt = `You are given one Japanese dialogue, transcribed and split into short timed chunks in chronological order. Each line has:
+- [index]: zero-based chunk index
+- (gap Ns): silence before this chunk in seconds. A large gap (>= ${BOUNDARY_GAP_HINT}s) is a strong signal that the speaker changed.
+- the transcribed text in quotes
+
+Assign every chunk to one of exactly two speakers, "A" or "B". Use the silence gaps and the content (question/answer pairs, politeness level, speech style, who is being addressed) to decide where turns change. Consecutive chunks usually belong to the same speaker — only switch when there is evidence. The first speaker to talk is "A".
+
+Return ONLY a JSON object:
+{ "speakers": [ { "index": number, "speaker": "A" | "B" } ] }
+
+Rules:
+1. Use EXACT input indices, one entry per chunk, from 0 to ${chunks.length - 1}.
+2. "speaker" must be exactly "A" or "B".
+3. If a chunk is narration or you genuinely cannot tell, omit that index entirely.
+4. No markdown, no commentary — just the JSON object.
+
+Chunks:
+${lines}`
+
+  try {
+    const parsed = await chatJson({ prompt, temperature: 0.1 })
+    const raw = (parsed as { speakers?: unknown })?.speakers
+    if (!Array.isArray(raw)) return unlabeled
+
+    const labels: (Speaker | null)[] = chunks.map(() => null)
+    for (const entry of raw) {
+      if (!entry || typeof entry !== 'object') continue
+      const e = entry as Record<string, unknown>
+      const index = Number(e.index)
+      if (!Number.isInteger(index) || index < 0 || index >= chunks.length) continue
+      if (isSpeaker(e.speaker)) labels[index] = e.speaker
+    }
+    return labels
+  } catch (err) {
+    console.error('[guessSpeakers] failed, leaving chunks unlabeled:', err)
+    return unlabeled
+  }
 }
 
 // Punctuate a single transcribed segment text (e.g. manually added segments,

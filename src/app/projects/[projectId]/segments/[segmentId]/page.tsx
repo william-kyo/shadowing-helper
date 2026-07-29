@@ -201,6 +201,12 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           nextIncompleteHref={nextIncompleteHref}
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
+          speakerChunks={(stage4Setup?.speakerChunks ?? []).map((chunk) => ({
+            text: chunk.text,
+            startMs: chunk.startMs,
+            endMs: chunk.endMs,
+            speaker: chunk.speaker ?? null,
+          }))}
           bottomDock={bottomDock}
           bottomNav={bottomNav}
         />
