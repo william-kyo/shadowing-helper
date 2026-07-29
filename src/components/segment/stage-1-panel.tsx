@@ -32,9 +32,11 @@ type Stage1Props = {
   onPracticeSpeakerChange?: (speaker: Speaker | null) => void
 }
 
-// Stages 2 and 4 start with the script visible; other stages start hidden.
+// Stage 1 is where the script is read and corrected, and stages 2 and 4 are
+// practiced against it, so all three start with it visible. Stages 3 and 5 hide
+// it — recalling the text unaided is the point.
 function getDefaultScriptVisible(activeStage: number): boolean {
-  return activeStage === 2 || activeStage === 4
+  return activeStage === 1 || activeStage === 2 || activeStage === 4
 }
 
 const nextStatus: Record<StageStatus, StageStatus> = {
