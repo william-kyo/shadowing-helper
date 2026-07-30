@@ -1,5 +1,9 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { loadStage4Setup } = vi.hoisted(() => ({ loadStage4Setup: vi.fn() }))
+
+vi.mock('@/lib/stage-4-server', () => ({ loadStage4Setup }))
 
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => { throw new Error('NEXT_NOT_FOUND') }),
@@ -64,6 +68,25 @@ function setupDefaultMocks() {
   projectFindMany.mockResolvedValue([])
 }
 
+// Stage 4 data is orthogonal to most of these assertions; a segment with no
+// prefetched setup is the quiet default. Individual tests override it.
+function stubStage4Setup(overrides: Record<string, unknown> = {}) {
+  loadStage4Setup.mockResolvedValue({
+    sentences: [],
+    initialMetadata: null,
+    audioMimeType: 'audio/mpeg',
+    didBackfill: false,
+    speakerChunks: [],
+    audioAvailable: true,
+    ...overrides,
+  })
+}
+
+beforeEach(() => {
+  loadStage4Setup.mockReset()
+  loadStage4Setup.mockResolvedValue(null)
+})
+
 afterEach(() => {
   cleanup()
 })
@@ -109,5 +132,43 @@ describe('SegmentDetailPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Intro greeting' })).toBeInTheDocument()
     expect(screen.getByText(/NHK lesson 1/)).toBeInTheDocument()
+  })
+
+  // A segment row can point at an audio object that isn't in storage (an upload
+  // that never ran, or the shared onboarding sample deployed before
+  // `npm run example:upload`). The page must degrade, not 500.
+  it('explains the missing audio and withholds the player when the object is gone', async () => {
+    setupDefaultMocks()
+    stubStage4Setup({ audioAvailable: false })
+
+    render(
+      await SegmentDetailPage({
+        params: Promise.resolve({ projectId: 'proj-1', segmentId: 'seg-1' }),
+      }),
+    )
+
+    expect(screen.getByText('音声ファイルが見つかりません。')).toBeInTheDocument()
+    // The player's scrubber is its only labelled control — absent means the
+    // whole dock was withheld rather than offering audio that can't load.
+    expect(
+      screen.queryByRole('slider', { name: /の再生位置$/ }),
+    ).not.toBeInTheDocument()
+    // The script and the stage list still render.
+    expect(screen.getByRole('heading', { name: 'Intro greeting' })).toBeInTheDocument()
+    expect(screen.getByText('ステージ 1–5')).toBeInTheDocument()
+  })
+
+  it('renders the player and no warning when the audio is present', async () => {
+    setupDefaultMocks()
+    stubStage4Setup({ audioAvailable: true })
+
+    render(
+      await SegmentDetailPage({
+        params: Promise.resolve({ projectId: 'proj-1', segmentId: 'seg-1' }),
+      }),
+    )
+
+    expect(screen.queryByText('音声ファイルが見つかりません。')).not.toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: /の再生位置$/ })).toBeInTheDocument()
   })
 })

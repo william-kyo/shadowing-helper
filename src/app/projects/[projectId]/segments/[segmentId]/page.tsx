@@ -118,11 +118,30 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     ? `/projects/${nextIncomplete.projectId}/segments/${nextIncomplete.segmentId}`
     : null
 
+  // Prefetch stage 4 sentence list so the panel renders immediately when the
+  // learner navigates to it. The lib is shared with the sentences API, so
+  // server-side and client-side reads can't drift. Fetched before the bottom
+  // dock because it also reports whether the segment's audio object is actually
+  // in storage, which decides whether a player is worth rendering at all.
+  const stage4Setup = await measureStep('stage4.prefetch', () =>
+    loadStage4Setup({
+      segmentId: segment.id,
+      user: { id: currentUser.id, supabaseUserId: currentUser.supabaseUserId },
+    }),
+  )
+
+  // The audio object can be absent while the row that points at it is fine — a
+  // segment whose upload never ran, or the shared onboarding sample deployed
+  // before `npm run example:upload`. Everything that doesn't need the bytes
+  // (script, stage list, progress) still renders.
+  const audioAvailable = stage4Setup?.audioAvailable ?? true
+
   // The fixed bottom audio player. Handed to the workspace so it can unmount
   // the player while Stage 4 is active — Stage 4 reclaims the Space shortcut for
   // its own controls, and the player's global Space listener would otherwise
-  // fight it.
-  const bottomDock = (
+  // fight it. Omitted entirely when the audio is missing: its controls would
+  // only ever produce a failed load.
+  const bottomDock = audioAvailable ? (
     <SegmentAudioPlayer
       src={`/api/segments/${segment.id}/audio?v=${segment.updatedAt.getTime()}`}
       title={segment.title ?? ''}
@@ -130,7 +149,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
       segmentId={segment.id}
       segments={allSegments}
     />
-  )
+  ) : null
 
   // Home / back navigation. Kept in the fixed bottom bar on every stage,
   // including Stage 4 where the player above is hidden, so the learner always
@@ -154,16 +173,6 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
     </div>
   )
 
-  // Prefetch stage 4 sentence list so the panel renders immediately when the
-  // learner navigates to it. The lib is shared with the sentences API, so
-  // server-side and client-side reads can't drift.
-  const stage4Setup = await measureStep('stage4.prefetch', () =>
-    loadStage4Setup({
-      segmentId: segment.id,
-      user: { id: currentUser.id, supabaseUserId: currentUser.supabaseUserId },
-    }),
-  )
-
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface text-ink">
       <div className="mx-auto grid max-w-2xl gap-8 px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+17rem)] sm:px-6 sm:pb-[calc(env(safe-area-inset-bottom)+15rem)]">
@@ -185,6 +194,18 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           </div>
         </div>
 
+        {!audioAvailable ? (
+          <div
+            role="status"
+            className="rounded-card border border-ink-line bg-paper px-4 py-3 text-sm text-ink-muted"
+          >
+            <p className="font-medium text-ink">音声ファイルが見つかりません。</p>
+            <p className="mt-1">
+              再生とステージ4のお手本は利用できません。スクリプトの確認と進捗の記録はそのまま続けられます。
+            </p>
+          </div>
+        ) : null}
+
         <SegmentStageWorkspace
           segmentId={segment.id}
           initialProgress={segment.progress.map((p) => ({
@@ -201,6 +222,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
           nextIncompleteHref={nextIncompleteHref}
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
+          audioAvailable={audioAvailable}
           speakerChunks={(stage4Setup?.speakerChunks ?? []).map((chunk) => ({
             text: chunk.text,
             startMs: chunk.startMs,

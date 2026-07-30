@@ -64,6 +64,10 @@ type Stage4PanelProps = {
   initialMetadata: Stage4Metadata | null
   onComplete: () => void
   isStatusUpdating: boolean
+  // False when the segment's audio object is missing from storage, so no
+  // reference clip can be cut or played. Defaults to true: callers that never
+  // learned otherwise shouldn't have to opt in.
+  audioAvailable?: boolean
 }
 
 // A take stopped almost immediately after start produces a header-only blob
@@ -110,6 +114,7 @@ export function Stage4Panel({
   initialMetadata,
   onComplete,
   isStatusUpdating,
+  audioAvailable = true,
 }: Stage4PanelProps) {
   const recorder = useShadowingRecorder()
   const refAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -497,6 +502,23 @@ export function Stage4Panel({
     handlePlaySelf,
     currentRecordingUrl,
   ])
+
+  // Without the segment's source audio there is no reference clip to shadow, so
+  // the practice flow can't start. Checked before the empty-sentence case: a
+  // missing object also empties the sentence list, and "run the transcription"
+  // would be the wrong thing to ask for.
+  if (!audioAvailable) {
+    return (
+      <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
+        <h3 className="font-display text-base font-semibold tracking-tight text-ink">
+          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
+        </h3>
+        <p className="mt-3 text-sm text-ink-muted">
+          音声ファイルが見つからないため、お手本を再生できません。音声をアップロードし直してから再度お試しください。
+        </p>
+      </div>
+    )
+  }
 
   if (totalSentences === 0) {
     return (

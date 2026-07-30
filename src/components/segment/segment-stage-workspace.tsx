@@ -52,6 +52,10 @@ type SegmentStageWorkspaceProps = {
   // and there's no persisted fallback to show.
   stage4Sentences?: Stage4Sentence[]
   stage4InitialMetadata?: Stage4Metadata | null
+  // False when the segment's audio object is missing from storage: stage 4 has
+  // no reference clip to play, and the caller is expected to withhold
+  // `bottomDock` so the player doesn't offer audio that can't load.
+  audioAvailable?: boolean
   // Timed chunks the learner labels with A/B in stage 1, so stage 5 can cue one
   // role at a time. Empty when the segment has no persisted transcription.
   speakerChunks?: SpeakerChunk[]
@@ -73,6 +77,7 @@ export function SegmentStageWorkspace({
   nextIncompleteHref,
   stage4Sentences = [],
   stage4InitialMetadata = null,
+  audioAvailable = true,
   speakerChunks = [],
   bottomDock,
   bottomNav,
@@ -269,6 +274,7 @@ export function SegmentStageWorkspace({
           initialMetadata={stage4InitialMetadata}
           isStatusUpdating={isUpdatingStatus}
           onComplete={handleStage4Complete}
+          audioAvailable={audioAvailable}
         />
       ) : (
         <Stage1Panel

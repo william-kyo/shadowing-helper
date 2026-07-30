@@ -41,6 +41,10 @@ export type Stage4Setup = {
   // Empty when the segment has no transcription and sentences came from the
   // text-only fallback, which has no persisted counterpart to annotate.
   speakerChunks: PersistedWhisperSegment[]
+  // False when the segment's audio object is absent from storage. Everything
+  // that doesn't need the bytes (script, stage list, progress) still loads;
+  // callers are expected to disable playback and the stage 4 reference clips.
+  audioAvailable: boolean
 }
 
 export type Stage4SetupUser = {
@@ -85,17 +89,39 @@ function buildMetadata(segment: Stage4SetupSegmentRow): Stage4Metadata | null {
   return isStage4Metadata(raw) ? raw : null
 }
 
+// Fetch the segment's source audio, tolerating an object that isn't in storage.
+// A segment row can outlive — or precede — its audio object: a seed row whose
+// upload never ran, or the shared onboarding sample deployed before
+// `npm run example:upload`. Neither should turn the segment page into a 500, so
+// a missing object degrades to null and every caller decides how to cope.
+async function downloadSegmentAudio(params: {
+  segment: Stage4SetupSegmentRow
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+}): Promise<ArrayBuffer | null> {
+  try {
+    return await downloadStorageObject({
+      client: params.supabase,
+      objectKey: params.segment.audioPath,
+    })
+  } catch (error) {
+    console.error(
+      `[stage4] segment audio unavailable (segment=${params.segment.id}, key=${params.segment.audioPath}):`,
+      error,
+    )
+    return null
+  }
+}
+
 // Backfill whisperSegments by running Groq on the segment audio. Idempotent
 // at the DB level (whisperSegments is overwritten with the same shape) and
-// returns the units we just discovered.
+// returns the units we just discovered, or null when the audio object is
+// missing and there is therefore nothing to transcribe.
 async function backfillWhisperSegments(params: {
   segment: Stage4SetupSegmentRow
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-}): Promise<{ units: SentenceUnit[]; chunks: PersistedWhisperSegment[] }> {
-  const audioBuffer = await downloadStorageObject({
-    client: params.supabase,
-    objectKey: params.segment.audioPath,
-  })
+}): Promise<{ units: SentenceUnit[]; chunks: PersistedWhisperSegment[] } | null> {
+  const audioBuffer = await downloadSegmentAudio(params)
+  if (!audioBuffer) return null
 
   const whisperResponse = await transcribeAudioWithSegments({
     audioBuffer: Buffer.from(audioBuffer),
@@ -118,17 +144,20 @@ async function backfillWhisperSegments(params: {
 // Idempotently cut every sentence's reference audio and stream it back as
 // URLs the client can hand to <audio src=...>. The first caller pays the
 // ffmpeg + upload cost; subsequent callers just regenerate URLs.
+//
+// Runs on every load, so a missing source object must not propagate: this is a
+// best-effort pre-cut (the per-sentence audio route re-cuts on demand and 404s
+// on its own), and the rest of the page doesn't depend on it. Returns false
+// only when the source audio is gone, so the caller can disable playback.
 async function ensureReferenceAudios(params: {
   segment: Stage4SetupSegmentRow
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
   ownerSupabaseUserId: string
   units: SentenceUnit[]
-}): Promise<void> {
-  if (params.units.length === 0) return
-  const audioBuffer = await downloadStorageObject({
-    client: params.supabase,
-    objectKey: params.segment.audioPath,
-  })
+}): Promise<boolean> {
+  if (params.units.length === 0) return true
+  const audioBuffer = await downloadSegmentAudio(params)
+  if (!audioBuffer) return false
   await ensureStage4SentenceAudios({
     client: params.supabase,
     ownerSupabaseUserId: params.ownerSupabaseUserId,
@@ -138,6 +167,7 @@ async function ensureReferenceAudios(params: {
     contentType: params.segment.project.audioMimeType,
     sentenceUnits: params.units,
   })
+  return true
 }
 
 export async function loadStage4Setup(params: {
@@ -154,6 +184,7 @@ export async function loadStage4Setup(params: {
     : null
 
   let didBackfill = false
+  let audioAvailable = true
   let units: SentenceUnit[]
   // Chunks stay empty on the text-only fallback path: those units are derived
   // from character counts rather than real timestamps and are never persisted,
@@ -164,8 +195,16 @@ export async function loadStage4Setup(params: {
     speakerChunks = persisted
   } else {
     const backfilled = await backfillWhisperSegments({ segment, supabase })
-    units = backfilled.units
-    speakerChunks = backfilled.chunks
+    if (backfilled) {
+      units = backfilled.units
+      speakerChunks = backfilled.chunks
+      didBackfill = true
+    } else {
+      // No audio to transcribe. Fall through to the text-only fallback below so
+      // the script still renders instead of the page failing outright.
+      units = []
+      audioAvailable = false
+    }
     if (units.length === 0) {
       units = buildFallbackSentenceUnits({
         text: segment.text,
@@ -174,15 +213,18 @@ export async function loadStage4Setup(params: {
       })
       speakerChunks = []
     }
-    didBackfill = true
   }
 
-  await ensureReferenceAudios({
-    segment,
-    supabase,
-    ownerSupabaseUserId: params.user.supabaseUserId,
-    units,
-  })
+  // Skipped once the backfill already proved the object is gone — re-downloading
+  // would only log the same failure twice.
+  if (audioAvailable) {
+    audioAvailable = await ensureReferenceAudios({
+      segment,
+      supabase,
+      ownerSupabaseUserId: params.user.supabaseUserId,
+      units,
+    })
+  }
 
   // Map each sentence to its latest persisted recording (if any) so the panel
   // can offer self-playback on resume, not just for takes made this session.
@@ -207,6 +249,7 @@ export async function loadStage4Setup(params: {
     audioMimeType: segment.project.audioMimeType,
     didBackfill,
     speakerChunks,
+    audioAvailable,
   }
 }
 
