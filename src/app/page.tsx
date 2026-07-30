@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { DeleteAccountCard } from '@/components/account/delete-account-card'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { LanguagePicker } from '@/components/i18n/language-picker'
 import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
@@ -300,6 +301,8 @@ export default async function HomePage() {
           {/* Points at the sample card so a brand-new account has an obvious
               first move. Renders nothing once acknowledged. */}
           <OnboardingTour surface="home" />
+
+          <DeleteAccountCard email={currentUser.email} />
 
           <div className="flex justify-center pt-2">
             <Link

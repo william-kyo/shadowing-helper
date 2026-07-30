@@ -434,6 +434,27 @@ const ja = {
       '自分の教材で練習するには、新しいプロジェクトとして音声をアップロードします。プロジェクト一覧から追加できます。',
   },
 
+  account: {
+    dangerZone: 'アカウントの削除',
+    dangerBody:
+      'アカウントと、プロジェクト・音声・録音・練習の記録をすべて削除します。この操作は取り消せません。',
+    deleteButton: 'アカウントを削除',
+    deleting: '削除中…',
+    confirmTitle: '本当に削除しますか？',
+    confirmBody:
+      'プロジェクト、音声ファイル、録音、練習の記録がすべて消えます。復元はできません。',
+    confirmPrompt: '確認のため、メールアドレスを入力してください。',
+    confirmPlaceholder: 'name@company.com',
+    confirmMismatch: 'メールアドレスが一致しません。',
+    confirmDelete: '完全に削除する',
+    cancel: 'キャンセル',
+    deleteFailed: 'アカウントの削除に失敗しました。時間をおいて再度お試しください。',
+    deletedNotice: 'このアカウントは削除されています。',
+    deletedBody:
+      'このアカウントは削除済みです。もう一度使いたい場合は、GitHub のプロジェクトページから作者に連絡してください。',
+    contactAuthor: '作者に連絡する（GitHub）',
+  },
+
   errors: {
     authRequired: 'ログインしてください。',
     crossSiteBlocked: '不正なリクエスト元です。',

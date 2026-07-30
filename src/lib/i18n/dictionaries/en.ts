@@ -434,6 +434,27 @@ const en: Dictionary = {
       'To practise your own material, upload it as a new project. You can add one from the projects list.',
   },
 
+  account: {
+    dangerZone: 'Delete account',
+    dangerBody:
+      'Deletes your account along with every project, audio file, recording and practice record. This cannot be undone.',
+    deleteButton: 'Delete my account',
+    deleting: 'Deleting…',
+    confirmTitle: 'Delete your account?',
+    confirmBody:
+      'Your projects, audio files, recordings and practice history will all be gone. There is no way to restore them.',
+    confirmPrompt: 'Type your email address to confirm.',
+    confirmPlaceholder: 'name@company.com',
+    confirmMismatch: 'That does not match your email address.',
+    confirmDelete: 'Delete permanently',
+    cancel: 'Cancel',
+    deleteFailed: "Couldn't delete the account. Please wait a moment and try again.",
+    deletedNotice: 'This account has been deleted.',
+    deletedBody:
+      'This account has been deleted. If you would like to use it again, please contact the author through the GitHub project page.',
+    contactAuthor: 'Contact the author on GitHub',
+  },
+
   errors: {
     authRequired: 'Please sign in.',
     crossSiteBlocked: 'That request came from an unexpected origin.',

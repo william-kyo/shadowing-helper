@@ -32,7 +32,7 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('@/lib/example-project', () => ({ provisionExampleProject }))
 
-import { getCurrentAppUser } from '@/lib/auth'
+import { getAccountState, getCurrentAppUser } from '@/lib/auth'
 
 // A Supabase SSR auth cookie carrying a plain-JSON session with access_token.
 function cookieStoreWith(accessToken: string | null) {
@@ -45,7 +45,13 @@ function cookieStoreWith(accessToken: string | null) {
   }
 }
 
-const EXISTING_USER = { id: 'app-1', supabaseUserId: 'sb-1', email: 'a@example.com' }
+const EXISTING_USER = {
+  id: 'app-1',
+  supabaseUserId: 'sb-1',
+  email: 'a@example.com',
+  habitAchievedAt: null,
+  deletedAt: null,
+}
 
 function authenticateAs(email = 'a@example.com') {
   jwtVerify.mockResolvedValue({
@@ -138,7 +144,7 @@ describe('getCurrentAppUser example project seeding', () => {
   it('never re-seeds an account that already exists', async () => {
     const user = await getCurrentAppUser()
 
-    expect(user).toBe(EXISTING_USER)
+    expect(user).toMatchObject({ id: 'app-1', email: 'a@example.com' })
     expect(userCreate).not.toHaveBeenCalled()
     expect(provisionExampleProject).not.toHaveBeenCalled()
   })
@@ -159,7 +165,7 @@ describe('getCurrentAppUser example project seeding', () => {
 
     const user = await getCurrentAppUser()
 
-    expect(user).toBe(EXISTING_USER)
+    expect(user).toMatchObject({ id: 'app-1' })
     // The loser must not seed a second sample for the same account.
     expect(provisionExampleProject).not.toHaveBeenCalled()
   })
@@ -173,5 +179,70 @@ describe('getCurrentAppUser example project seeding', () => {
       expect.objectContaining({ data: { email: 'new@example.com' } }),
     )
     expect(provisionExampleProject).not.toHaveBeenCalled()
+  })
+})
+
+describe('deleted accounts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    cookiesFn.mockResolvedValue(cookieStoreWith('token-1'))
+    provisionExampleProject.mockResolvedValue(undefined)
+    authenticateAs()
+  })
+
+  it('reports a tombstone as deleted rather than as a live account', async () => {
+    userFindUnique.mockResolvedValue({ ...EXISTING_USER, deletedAt: new Date() })
+
+    await expect(getAccountState()).resolves.toEqual({ status: 'deleted', user: null })
+  })
+
+  it('resolves a deleted account to no user, so existing callers cannot leak it', async () => {
+    userFindUnique.mockResolvedValue({ ...EXISTING_USER, deletedAt: new Date() })
+
+    await expect(getCurrentAppUser()).resolves.toBeNull()
+  })
+
+  it('never revives the account by signing in again', async () => {
+    // The Supabase identity still authenticates after deletion, so this is the
+    // path a returning learner actually takes — it must not hand them an account.
+    userFindUnique.mockResolvedValue({ ...EXISTING_USER, deletedAt: new Date() })
+
+    await getAccountState()
+
+    expect(userCreate).not.toHaveBeenCalled()
+    expect(userUpdate).not.toHaveBeenCalled()
+    expect(provisionExampleProject).not.toHaveBeenCalled()
+  })
+
+  it('does not refresh a changed email on a deleted account', async () => {
+    userFindUnique.mockResolvedValue({ ...EXISTING_USER, deletedAt: new Date() })
+    authenticateAs('renamed@example.com')
+
+    await expect(getAccountState()).resolves.toEqual({ status: 'deleted', user: null })
+    expect(userUpdate).not.toHaveBeenCalled()
+  })
+
+  it('still treats a live account as active', async () => {
+    userFindUnique.mockResolvedValue({ ...EXISTING_USER, deletedAt: null })
+
+    const state = await getAccountState()
+
+    expect(state.status).toBe('active')
+    expect(state.user).toMatchObject({ id: 'app-1' })
+  })
+
+  it('distinguishes anonymous from deleted', async () => {
+    cookiesFn.mockResolvedValue(cookieStoreWith(null))
+
+    await expect(getAccountState()).resolves.toEqual({ status: 'anonymous', user: null })
+  })
+
+  it('reports deleted when a race read comes back as a tombstone', async () => {
+    userFindUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...EXISTING_USER, deletedAt: new Date() })
+    userCreate.mockRejectedValue(new Error('unique constraint failed'))
+
+    await expect(getAccountState()).resolves.toEqual({ status: 'deleted', user: null })
   })
 })

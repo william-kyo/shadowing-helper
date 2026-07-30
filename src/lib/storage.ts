@@ -71,6 +71,44 @@ export async function downloadStorageObject(params: {
   return arrayBuffer
 }
 
+// Every object under a prefix, walking sub-folders and paging through each one.
+//
+// Used by account deletion, where enumerating is the only safe approach: stage 4
+// cuts its reference clips to keys derived at runtime rather than stored in the
+// database, so a delete driven off table rows alone would leave them behind.
+export async function listStorageObjectKeys(params: {
+  client: StorageClient
+  prefix: string
+}): Promise<string[]> {
+  const PAGE_SIZE = 100
+  const keys: string[] = []
+  const queue = [params.prefix]
+
+  while (queue.length > 0) {
+    const prefix = queue.pop() as string
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await params.client.storage
+        .from(env.STORAGE_BUCKET)
+        .list(prefix, { limit: PAGE_SIZE, offset })
+
+      if (error) throw new Error(`Failed to list ${prefix}: ${error.message}`)
+      if (!data || data.length === 0) break
+
+      for (const entry of data) {
+        const path = prefix ? `${prefix}/${entry.name}` : entry.name
+        // Supabase reports folders as entries with no id; only real objects can
+        // be removed, so recurse into the rest.
+        if (entry.id === null) queue.push(path)
+        else keys.push(path)
+      }
+
+      if (data.length < PAGE_SIZE) break
+    }
+  }
+
+  return keys
+}
+
 export async function removeStorageObjects(params: {
   client: StorageClient
   objectKeys: string[]

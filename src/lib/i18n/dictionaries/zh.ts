@@ -415,6 +415,26 @@ const zh: Dictionary = {
       '想练自己的材料，请把音频作为新项目上传。可以在项目列表页添加。',
   },
 
+  account: {
+    dangerZone: '删除账户',
+    dangerBody:
+      '删除账户，同时清除所有项目、音频、录音和练习记录。此操作无法撤销。',
+    deleteButton: '删除我的账户',
+    deleting: '删除中…',
+    confirmTitle: '确定要删除账户吗？',
+    confirmBody: '你的项目、音频文件、录音和练习记录都会消失，无法恢复。',
+    confirmPrompt: '请输入你的邮箱地址以确认。',
+    confirmPlaceholder: 'name@company.com',
+    confirmMismatch: '与你的邮箱地址不一致。',
+    confirmDelete: '永久删除',
+    cancel: '取消',
+    deleteFailed: '删除账户失败。请稍后再试。',
+    deletedNotice: '该账户已被删除。',
+    deletedBody:
+      '该账户已被删除。如果想重新使用，请通过 GitHub 项目主页联系作者。',
+    contactAuthor: '通过 GitHub 联系作者',
+  },
+
   errors: {
     authRequired: '请先登录。',
     crossSiteBlocked: '请求来源不合法。',

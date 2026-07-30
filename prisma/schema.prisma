@@ -55,6 +55,10 @@ model User {
   // 21-day-challenge success permanent even after the activity evidence
   // (StageProgress.updatedAt rows) decays or falls out of the query window.
   habitAchievedAt   DateTime?
+  // Set when the learner deletes their account. Their content is removed
+  // outright; this row survives as a tombstone so the same identity cannot
+  // silently re-register — coming back needs the author's help.
+  deletedAt         DateTime?
   projects          Project[]
   streakMakeups     StreakMakeup[]
   pushSubscriptions PushSubscription[]

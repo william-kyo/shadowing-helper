@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 
+import { ACCOUNT_DELETED_ERROR } from '@/lib/account'
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
 import { provisionExampleProject } from '@/lib/example-project'
@@ -105,11 +106,43 @@ const APP_USER_SELECT = {
   supabaseUserId: true,
   email: true,
   habitAchievedAt: true,
+  deletedAt: true,
 } as const
 
-export async function getCurrentAppUser() {
+export type AccountState =
+  | { status: 'anonymous'; user: null }
+  | { status: 'active'; user: AppUser }
+  | { status: 'deleted'; user: null }
+
+type AppUser = {
+  id: string
+  supabaseUserId: string
+  email: string
+  habitAchievedAt: Date | null
+}
+
+function toAppUser(row: {
+  id: string
+  supabaseUserId: string
+  email: string
+  habitAchievedAt: Date | null
+}): AppUser {
+  return {
+    id: row.id,
+    supabaseUserId: row.supabaseUserId,
+    email: row.email,
+    habitAchievedAt: row.habitAchievedAt,
+  }
+}
+
+// Resolve the caller into one of three states. Deletion has to be distinguishable
+// from "never signed in": the Supabase identity still exists and still
+// authenticates — we cannot remove it without a service-role key — so a deleted
+// learner arrives holding a perfectly valid session, and the app has to recognise
+// them and say why they are being turned away.
+export async function getAccountState(): Promise<AccountState> {
   const supabaseUser = await getAuthenticatedSupabaseUser()
-  if (!supabaseUser) return null
+  if (!supabaseUser) return { status: 'anonymous', user: null }
 
   addPerfAttrs({ 'auth.user_found': true })
 
@@ -124,14 +157,26 @@ export async function getCurrentAppUser() {
   )
 
   if (existing) {
-    if (existing.email === supabaseUser.email) return existing
-    return measureStep('db.user.update_email', () =>
+    // A tombstone, not an account. Recognised before anything else so no code
+    // path can mistake a deleted learner for an active one — and deliberately
+    // never revived here, because re-registering is meant to go through the
+    // author rather than happen by signing in again.
+    if (existing.deletedAt) {
+      addPerfAttrs({ 'auth.account_deleted': true })
+      return { status: 'deleted', user: null }
+    }
+
+    if (existing.email === supabaseUser.email) {
+      return { status: 'active', user: toAppUser(existing) }
+    }
+    const refreshed = await measureStep('db.user.update_email', () =>
       db.user.update({
         where: { supabaseUserId: supabaseUser.id },
         data: { email: supabaseUser.email },
         select: APP_USER_SELECT,
       }),
     )
+    return { status: 'active', user: toAppUser(refreshed) }
   }
 
   try {
@@ -158,30 +203,58 @@ export async function getCurrentAppUser() {
       console.error('[example-project] failed to seed for user', created.id, err)
     }
 
-    return created
+    return { status: 'active', user: toAppUser(created) }
   } catch {
     // Two concurrent first requests race to insert the row; the loser reads back
     // the winner's.
-    return measureStep('db.user.find_after_race', () =>
+    const raced = await measureStep('db.user.find_after_race', () =>
       db.user.findUnique({
         where: { supabaseUserId: supabaseUser.id },
         select: APP_USER_SELECT,
       }),
     )
+    if (!raced) return { status: 'anonymous', user: null }
+    if (raced.deletedAt) return { status: 'deleted', user: null }
+    return { status: 'active', user: toAppUser(raced) }
   }
+}
+
+// Kept as the shape almost every caller wants: the signed-in learner, or null.
+// Deleted accounts resolve to null here, so an existing caller can never leak a
+// tombstone by forgetting to check.
+export async function getCurrentAppUser() {
+  const state = await getAccountState()
+  return state.user
 }
 
 export async function requireAppUser() {
-  const user = await getCurrentAppUser()
-  if (!user) {
+  const state = await getAccountState()
+  // Deleted accounts get their own reason on the login screen; without it they
+  // would land on a sign-in form while already holding a valid session, with no
+  // hint as to why nothing works.
+  if (state.status === 'deleted') {
+    redirect(`/login?error=${ACCOUNT_DELETED_ERROR}`)
+  }
+  if (!state.user) {
     redirect('/login')
   }
 
-  return user
+  return state.user
 }
 
 export async function requireAppUserForApi() {
-  const user = await getCurrentAppUser()
+  const state = await getAccountState()
+  if (state.status === 'deleted') {
+    return {
+      user: null,
+      response: NextResponse.json(
+        { error: (await getT()).account.deletedNotice, code: ACCOUNT_DELETED_ERROR },
+        { status: 403 },
+      ),
+    }
+  }
+
+  const user = state.user
   if (!user) {
     return {
       user: null,

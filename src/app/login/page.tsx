@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { LoginForm } from '@/components/auth/login-form'
 import { LanguagePicker } from '@/components/i18n/language-picker'
-import { getCurrentAppUser } from '@/lib/auth'
+import { ACCOUNT_DELETED_ERROR, PROJECT_HOME_URL } from '@/lib/account'
+import { getAccountState } from '@/lib/auth'
 import { getT } from '@/lib/i18n/server'
 
 export default async function LoginPage({
@@ -13,15 +14,19 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
-  const currentUser = await getCurrentAppUser()
+  const accountState = await getAccountState()
 
-  if (currentUser) {
+  if (accountState.user) {
     redirect('/')
   }
 
   const t = await getT()
   const { error } = await searchParams
   const showOAuthError = error === 'oauth'
+  // Either the redirect said so, or the visitor still holds a session for an
+  // account that no longer exists — both need the same explanation.
+  const showDeletedNotice =
+    error === ACCOUNT_DELETED_ERROR || accountState.status === 'deleted'
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col bg-surface px-4 py-8 text-ink sm:px-6 sm:py-10 lg:overflow-hidden">
@@ -59,6 +64,27 @@ export default async function LoginPage({
 
         <section className="self-center pb-4 lg:pb-0">
           <div className="grid gap-4">
+            {showDeletedNotice ? (
+              <div className="grid gap-3 rounded-inset border border-accent-soft bg-accent-faint px-4 py-4">
+                <div>
+                  <p className="font-display text-base font-semibold tracking-tight text-accent-deep">
+                    {t.account.deletedNotice}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+                    {t.account.deletedBody}
+                  </p>
+                </div>
+                <a
+                  href={PROJECT_HOME_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-fit rounded-chip bg-accent px-4 py-2 text-sm font-semibold text-paper transition hover:bg-accent-deep"
+                >
+                  {t.account.contactAuthor}
+                </a>
+              </div>
+            ) : null}
+
             {showOAuthError ? (
               <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
                 {t.auth.googleCallbackFailed}
