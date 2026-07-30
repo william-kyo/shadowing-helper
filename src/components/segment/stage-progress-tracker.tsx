@@ -1,6 +1,8 @@
 'use client'
 
-import { STAGE_META } from '@/lib/stage-meta'
+import { format } from '@/lib/i18n/format'
+import { useT } from '@/lib/i18n/client'
+import { getStageMeta } from '@/lib/stage-meta'
 
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 
@@ -33,6 +35,9 @@ export function StageProgressTracker({
   selectedStage,
   onStageSelect,
 }: StageProgressTrackerProps) {
+  const t = useT()
+  const stageMeta = getStageMeta(t)
+
   const getStatus = (stage: number): StageStatus => {
     const found = progress.find((p) => p.stage === stage)
     return found?.status ?? 'not_started'
@@ -50,7 +55,7 @@ export function StageProgressTracker({
             onClick={() => onStageSelect(stage)}
             aria-pressed={isSelected}
             className={`relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all cursor-pointer sm:h-9 sm:w-9 ${getStatusClasses(status)} ${isSelected ? 'ring-2 ring-accent/30 ring-offset-2 ring-offset-paper' : ''}`}
-            title={`ステージ${stage} ${STAGE_META[stage]?.label ?? ''}`}
+            title={`${format(t.stages.stageN, { n: stage })} ${stageMeta[stage]?.label ?? ''}`}
           >
             {status === 'completed' ? (
               <svg

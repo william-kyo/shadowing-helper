@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
+
 // Decode a base64url VAPID public key into the byte array PushManager expects.
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -52,6 +54,7 @@ async function detectPushState(): Promise<PushState> {
 }
 
 export function PushNotificationCard() {
+  const t = useT()
   const [state, setState] = useState<PushState>('loading')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,19 +87,19 @@ export function PushNotificationCard() {
       })
       if (!res.ok) {
         await sub.unsubscribe().catch(() => {})
-        throw new Error('登録に失敗しました。')
+        throw new Error(t.push.subscribeFailed)
       }
       setState('subscribed')
     } catch (err) {
       if (Notification.permission === 'denied') {
         setState('denied')
       } else {
-        setError(err instanceof Error ? err.message : '登録に失敗しました。')
+        setError(err instanceof Error ? err.message : t.push.subscribeFailed)
       }
     } finally {
       setPending(false)
     }
-  }, [pending])
+  }, [pending, t])
 
   const unsubscribe = useCallback(async () => {
     if (pending) return
@@ -116,23 +119,23 @@ export function PushNotificationCard() {
       }
       setState('unsubscribed')
     } catch {
-      setError('解除に失敗しました。')
+      setError(t.push.unsubscribeFailed)
     } finally {
       setPending(false)
     }
-  }, [pending])
+  }, [pending, t])
 
   // Hide entirely where push can never work (old browsers, missing config).
   if (state === 'loading' || state === 'unsupported') return null
 
   return (
     <section
-      aria-label="リマインダー通知"
+      aria-label={t.push.ariaLabel}
       className="grid gap-3 rounded-card border border-ink-line bg-paper p-5"
     >
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          リマインダー通知
+          {t.push.title}
         </h2>
         {state === 'subscribed' ? (
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">ON</span>
@@ -141,18 +144,18 @@ export function PushNotificationCard() {
 
       {state === 'ios-needs-install' ? (
         <p className="text-sm leading-relaxed text-ink-muted">
-          iPhone / iPad では、共有メニューから「ホーム画面に追加」した後に通知を利用できます。
+          {t.push.iosHint}
         </p>
       ) : state === 'denied' ? (
         <p className="text-sm leading-relaxed text-ink-muted">
-          通知がブラウザ設定でブロックされています。サイト設定から通知を許可してください。
+          {t.push.blocked}
         </p>
       ) : (
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm leading-relaxed text-ink-muted">
             {state === 'subscribed'
-              ? '練習が未完了の日は、22時にお知らせします。'
-              : '練習を忘れた日の22時に通知でお知らせします。'}
+              ? t.push.subscribedBody
+              : t.push.unsubscribedBody}
           </p>
           <button
             type="button"
@@ -160,7 +163,11 @@ export function PushNotificationCard() {
             disabled={pending}
             className="shrink-0 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper disabled:opacity-50"
           >
-            {pending ? '処理中…' : state === 'subscribed' ? '通知を解除' : '通知を受け取る'}
+            {pending
+              ? t.common.processing
+              : state === 'subscribed'
+                ? t.push.unsubscribe
+                : t.push.subscribe}
           </button>
         </div>
       )}

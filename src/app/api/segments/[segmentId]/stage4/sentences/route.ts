@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { requireAppUserForApi } from '@/lib/auth'
 import { loadStage4Setup } from '@/lib/stage-4-server'
 import { addPerfAttrs, measureStep, withApiPerf } from '@/lib/perf'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -11,6 +12,8 @@ type RouteContext = {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/stage4/sentences', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -25,7 +28,7 @@ export async function GET(request: Request, context: RouteContext) {
       )
 
       if (!setup) {
-        return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
       }
 
       addPerfAttrs({
@@ -39,7 +42,7 @@ export async function GET(request: Request, context: RouteContext) {
       })
     } catch (error) {
       console.error('[stage4/sentences] failed:', error)
-      return NextResponse.json({ error: 'ステージ4の読み込みに失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.stage4LoadFailed }, { status: 500 })
     }
   })
 }

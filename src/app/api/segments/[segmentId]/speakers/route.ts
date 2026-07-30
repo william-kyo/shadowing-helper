@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { getRequestT } from '@/lib/i18n/server'
 import {
   applySpeakerLabels,
   isPersistedWhisperSegments,
@@ -29,6 +30,8 @@ type RouteContext = {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -39,7 +42,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const json = await request.json().catch(() => null)
   const parsed = speakersSchema.safeParse(json)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'リクエスト形式が正しくありません' }, { status: 400 })
+    return NextResponse.json({ error: t.errors.badRequestShape }, { status: 400 })
   }
 
   const segment = await db.segment.findFirst({
@@ -48,12 +51,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   })
 
   if (!segment) {
-    return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.segmentNotFoundNoPeriod }, { status: 404 })
   }
 
   if (!isPersistedWhisperSegments(segment.whisperSegments)) {
     return NextResponse.json(
-      { error: '文字起こしがまだありません。ステージ4を開いて生成してください。' },
+      { error: t.errors.transcriptMissing },
       { status: 409 },
     )
   }
@@ -66,7 +69,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   for (const label of parsed.data.labels) {
     if (label.index >= chunks.length) {
       return NextResponse.json(
-        { error: '話者ラベルの位置が正しくありません' },
+        { error: t.errors.speakerLabelIndexInvalid },
         { status: 400 },
       )
     }

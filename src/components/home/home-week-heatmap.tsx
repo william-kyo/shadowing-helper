@@ -3,7 +3,20 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import type { WeekHeatmapDay } from '@/lib/streak'
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+import type { WeekdayKey, WeekHeatmapDay } from '@/lib/streak'
+
+const WEEKDAY_LABEL_KEYS: Record<WeekdayKey, keyof Dictionary['home']> = {
+  mon: 'weekdayMon',
+  tue: 'weekdayTue',
+  wed: 'weekdayWed',
+  thu: 'weekdayThu',
+  fri: 'weekdayFri',
+  sat: 'weekdaySat',
+  sun: 'weekdaySun',
+}
 
 type HomeWeekHeatmapProps = {
   days: WeekHeatmapDay[]
@@ -19,6 +32,7 @@ export function HomeWeekHeatmap({
   makeupSourceAvailable,
 }: HomeWeekHeatmapProps) {
   const router = useRouter()
+  const t = useT()
   const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,11 +52,11 @@ export function HomeWeekHeatmap({
       })
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? '補完に失敗しました。')
+        throw new Error(data.error ?? t.home.makeupFailed)
       }
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '補完に失敗しました。')
+      setError(err instanceof Error ? err.message : t.home.makeupFailed)
     } finally {
       setPendingKey(null)
     }
@@ -50,12 +64,12 @@ export function HomeWeekHeatmap({
 
   return (
     <section
-      aria-label="今週の記録"
+      aria-label={t.home.weekAriaLabel}
       className="grid gap-3 rounded-card border border-ink-line bg-paper p-5"
     >
       <div className="flex items-center justify-between">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          今週の記録
+          {t.home.weekTitle}
         </h2>
         <span className="font-mono text-xs tabular-nums text-ink-muted">{keptCount} / 7</span>
       </div>
@@ -79,13 +93,13 @@ export function HomeWeekHeatmap({
           const label = (
             <>
               <span className="font-mono text-[10px] font-semibold tracking-wider">
-                {d.weekdayLabel}
+                {t.home[WEEKDAY_LABEL_KEYS[d.weekdayKey]]}
               </span>
               <span className="text-base leading-none">
                 {d.active
                   ? '●'
                   : d.madeup
-                    ? '補'
+                    ? t.home.makeupMark
                     : d.makeupEligible
                       ? isPending
                         ? '…'
@@ -104,7 +118,9 @@ export function HomeWeekHeatmap({
                   type="button"
                   onClick={() => handleMakeup(d.dateKey)}
                   disabled={isPending || Boolean(pendingKey)}
-                  aria-label={`${d.weekdayLabel}曜日 未練習 — タップして補完`}
+                  aria-label={format(t.home.makeupDayAria, {
+                    weekday: t.home[WEEKDAY_LABEL_KEYS[d.weekdayKey]],
+                  })}
                   className={`${baseCell} cursor-pointer border-2 border-dashed border-accent/60 bg-accent-faint text-accent-deep hover:bg-accent-faint/60 disabled:cursor-wait${todayRing}`}
                 >
                   {label}
@@ -116,9 +132,15 @@ export function HomeWeekHeatmap({
           return (
             <li
               key={d.dateKey}
-              aria-label={`${d.weekdayLabel}曜日 ${
-                d.active || d.madeup ? '練習済' : d.isFuture ? '未来' : '未練習'
-              }`}
+              aria-label={format(t.home.dayStateAria, {
+                weekday: t.home[WEEKDAY_LABEL_KEYS[d.weekdayKey]],
+                state:
+                  d.active || d.madeup
+                    ? t.home.statePracticed
+                    : d.isFuture
+                      ? t.home.stateFuture
+                      : t.home.stateNotPracticed,
+              })}
               className={`${baseCell} ${stateClass}${todayRing}`}
             >
               {label}
@@ -130,8 +152,8 @@ export function HomeWeekHeatmap({
       {hasEligible && makeupRemaining > 0 ? (
         <p className="text-[11px] leading-relaxed text-ink-muted">
           {makeupSourceAvailable
-            ? `＋の日をタップで補完できます（残り ${makeupRemaining} 日）。`
-            : '今日フルセグメント（5ステージ）を完了すると、＋の日を補完できます。'}
+            ? format(t.home.makeupHintRemaining, { days: makeupRemaining })
+            : t.home.makeupHintLocked}
         </p>
       ) : null}
 

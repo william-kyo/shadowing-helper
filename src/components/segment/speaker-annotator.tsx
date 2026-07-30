@@ -11,6 +11,9 @@
 
 import { useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
 import type { Speaker } from '@/lib/sentence-split'
 
 export type SpeakerChunk = {
@@ -24,10 +27,14 @@ export type SpeakerChunk = {
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-const SPEAKER_CHOICES: { value: Speaker | null; label: string; hint: string }[] = [
-  { value: 'A', label: 'A', hint: '話者A' },
-  { value: 'B', label: 'B', hint: '話者B' },
-  { value: null, label: '—', hint: '未設定' },
+const SPEAKER_CHOICES: {
+  value: Speaker | null
+  label: string
+  hintKey: keyof Dictionary['speakers']
+}[] = [
+  { value: 'A', label: 'A', hintKey: 'speakerA' },
+  { value: 'B', label: 'B', hintKey: 'speakerB' },
+  { value: null, label: '—', hintKey: 'unset' },
 ]
 
 function getChoiceClasses(isActive: boolean, value: Speaker | null) {
@@ -51,6 +58,7 @@ type SpeakerAnnotatorProps = {
 }
 
 export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerAnnotatorProps) {
+  const t = useT()
   const [labels, setLabels] = useState<(Speaker | null)[]>(() =>
     chunks.map((chunk) => chunk.speaker ?? null),
   )
@@ -117,7 +125,7 @@ export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerA
     <div>
       <div className="mb-1 flex items-center justify-between">
         <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-          話者ラベル（A / B）
+          {t.speakers.sectionTitle}
         </label>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] text-ink-faint">
@@ -126,10 +134,10 @@ export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerA
           <button
             type="button"
             onClick={() => setIsVisible(!isVisible)}
-            aria-label={isVisible ? '話者ラベルを非表示' : '話者ラベルを表示'}
+            aria-label={isVisible ? t.speakers.hideLabels : t.speakers.showLabels}
             className="text-sm font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
           >
-            {isVisible ? '非表示' : '表示'}
+            {isVisible ? t.common.hide : t.common.show}
           </button>
         </div>
       </div>
@@ -137,7 +145,7 @@ export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerA
       {isVisible && (
         <div className="grid gap-2">
           <p className="text-xs leading-relaxed text-ink-muted">
-            ステージ5で片方の役だけをシャドーイングするために使います。自動推定を確認して、違うところを直してください。
+            {t.speakers.hint}
           </p>
 
           <div className="grid gap-1.5">
@@ -154,7 +162,10 @@ export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerA
                         key={choice.label}
                         type="button"
                         onClick={() => handleSelect(index, choice.value)}
-                        aria-label={`${index + 1}行目を${choice.hint}にする`}
+                        aria-label={format(t.speakers.setRowTo, {
+                          row: index + 1,
+                          hint: t.speakers[choice.hintKey],
+                        })}
                         aria-pressed={isActive}
                         className={`h-7 w-7 rounded-chip border font-mono text-xs font-semibold transition ${getChoiceClasses(isActive, choice.value)}`}
                       >
@@ -174,19 +185,19 @@ export function SpeakerAnnotator({ segmentId, chunks, onLabelsChange }: SpeakerA
               onClick={handleAlternateFill}
               className="rounded-chip border border-ink-line bg-paper px-3 py-1 text-xs font-medium text-ink-muted transition hover:border-accent hover:text-accent"
             >
-              未設定を交互に埋める
+              {t.speakers.fillAlternating}
             </button>
             {saveStatus === 'saving' && (
               <span className="flex items-center gap-1.5 text-ink-muted">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
-                保存中…
+                {t.common.saving}
               </span>
             )}
             {saveStatus === 'saved' && (
-              <span className="font-medium text-accent-deep">✓ 保存しました</span>
+              <span className="font-medium text-accent-deep">{t.common.saved}</span>
             )}
             {saveStatus === 'error' && (
-              <span className="font-medium text-accent-deep">保存に失敗しました</span>
+              <span className="font-medium text-accent-deep">{t.common.saveFailed}</span>
             )}
           </div>
         </div>

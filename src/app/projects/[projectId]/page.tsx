@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
+import { LanguagePicker } from '@/components/i18n/language-picker'
 import { ProjectSegmentWorkspace } from '@/components/project/project-segment-workspace'
 import { ScriptImageGallery } from '@/components/project/script-image-gallery'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { format } from '@/lib/i18n/format'
+import { getT } from '@/lib/i18n/server'
 import { measureStep, withPagePerf } from '@/lib/perf'
 
 type ProjectDetailPageProps = {
@@ -19,6 +22,7 @@ type ProjectDetailPageProps = {
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   return withPagePerf('/projects/[projectId]', async () => {
   const currentUser = await measureStep('auth.require_user', () => requireAppUser())
+  const t = await getT()
   const { projectId } = await measureStep('route.params', () => params)
   const project = await measureStep('db.project.find_detail', () =>
     db.project.findFirst({
@@ -51,12 +55,17 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   ).length
   const projectStatusLabel =
     totalSegments === 0
-      ? '未着手'
+      ? t.projects.statusNotStarted
       : completedSegments === totalSegments
-        ? '完了'
-        : '進行中'
+        ? t.projects.statusCompleted
+        : t.projects.statusInProgress
   const projectStatusDetail =
-    totalSegments === 0 ? 'セグメントなし' : `${completedSegments} / ${totalSegments} 完了`
+    totalSegments === 0
+      ? t.projects.statusNoSegments
+      : format(t.projects.completedOfTotal, {
+          done: completedSegments,
+          total: totalSegments,
+        })
 
   const [prevProject, nextProject] = await measureStep('db.project.find_adjacent', () =>
     Promise.all([
@@ -79,7 +88,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-              プロジェクト · 詳細
+              {t.projects.detailEyebrow}
             </p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
               {project.title}
@@ -93,14 +102,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
               href="/"
               className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
-              ホーム
+              {t.common.home}
             </Link>
             <Link
               href="/projects"
               className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 font-medium text-ink-muted transition hover:border-ink hover:text-ink"
             >
-              一覧へ戻る
+              {t.common.backToList}
             </Link>
+            <LanguagePicker />
             <LogoutButton />
           </div>
         </div>
@@ -124,12 +134,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
           <div>
-            <h2 className="font-display text-2xl font-semibold tracking-tight">台本画像</h2>
-            <p className="mt-2 text-sm text-ink-muted">アップロード順に表示しています。</p>
+            <h2 className="font-display text-2xl font-semibold tracking-tight">{t.projects.scriptImagesTitle}</h2>
+            <p className="mt-2 text-sm text-ink-muted">{t.projects.scriptImagesBody}</p>
           </div>
 
           {project.sourceImages.length === 0 ? (
-            <p className="text-sm text-ink-faint">画像はまだありません。</p>
+            <p className="text-sm text-ink-faint">{t.projects.scriptImagesEmpty}</p>
           ) : (
             <ScriptImageGallery
               projectId={project.id}
@@ -156,7 +166,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
               className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
               <span>＋</span>
-              <span>プロジェクトを追加</span>
+              <span>{t.common.addProject}</span>
             </Link>
           )}
           {nextProject ? (
@@ -172,7 +182,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
               href="/projects"
               className="flex items-center gap-2 rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-faint transition hover:border-ink hover:text-ink"
             >
-              <span>プロジェクトを追加</span>
+              <span>{t.common.addProject}</span>
               <span>＋</span>
             </Link>
           )}

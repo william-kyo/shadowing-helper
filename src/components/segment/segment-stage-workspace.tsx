@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { type SpeakerChunk } from '@/components/segment/speaker-annotator'
 import { buildSpeakerWindows, SpeakerCueProvider } from '@/components/segment/speaker-cue-context'
+import { useT } from '@/lib/i18n/client'
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
 import { Stage4Panel } from '@/components/segment/stage-4-panel'
 import { StageProgressTracker } from '@/components/segment/stage-progress-tracker'
@@ -83,6 +84,7 @@ export function SegmentStageWorkspace({
   bottomNav,
 }: SegmentStageWorkspaceProps) {
   const router = useRouter()
+  const t = useT()
   const [progress, setProgress] = useState<StageProgress[]>(initialProgress)
   // Mirror the latest progress in a ref so async/memoized callbacks (e.g. the
   // stage-4 panel's onComplete) read fresh state instead of a stale closure
@@ -246,10 +248,10 @@ export function SegmentStageWorkspace({
             </span>
             <div className="grid">
               <span className="font-display text-sm font-semibold tracking-tight text-ink">
-                セグメント完了
+                {t.segment.segmentComplete}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                {nextIncompleteHref ? '次のセグメントへ →' : 'すべて完了 →'}
+                {nextIncompleteHref ? t.segment.toNextSegment : t.segment.allComplete}
               </span>
             </div>
           </div>
@@ -258,7 +260,7 @@ export function SegmentStageWorkspace({
 
       <section className="overflow-hidden rounded-card border border-ink-line bg-paper px-3 py-4 sm:px-4">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">ステージ 1–5</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">{t.segment.stageRange}</h2>
           <StageProgressTracker
             progress={progress}
             selectedStage={selectedStage}

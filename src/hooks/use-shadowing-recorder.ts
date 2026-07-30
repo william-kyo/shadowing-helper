@@ -12,6 +12,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+
 const MAX_RECORDING_MS = 30_000
 const TICK_INTERVAL_MS = 100
 
@@ -39,29 +42,30 @@ function pickRecorderMime(): string {
   return ''
 }
 
-function describeMediaError(err: unknown): RecorderError {
+function describeMediaError(err: unknown, t: Dictionary): RecorderError {
   if (err && typeof err === 'object' && 'name' in err) {
     const name = (err as { name?: string }).name
     if (name === 'NotAllowedError' || name === 'SecurityError') {
       return {
         code: 'permission_denied',
-        message: 'マイクの使用が許可されていません。ブラウザの設定を確認してください。',
+        message: t.recorder.permissionDenied,
       }
     }
     if (name === 'NotFoundError' || name === 'OverconstrainedError') {
       return {
         code: 'no_microphone',
-        message: 'マイクが見つかりません。',
+        message: t.recorder.noMicrophone,
       }
     }
   }
   return {
     code: 'unknown',
-    message: err instanceof Error ? err.message : '録音の開始に失敗しました。',
+    message: err instanceof Error ? err.message : t.recorder.startFailed,
   }
 }
 
 export function useShadowingRecorder() {
+  const t = useT()
   const [state, setState] = useState<InternalState>({
     phase: 'idle',
     error: null,
@@ -123,7 +127,7 @@ export function useShadowingRecorder() {
     ) {
       setState({
         phase: 'idle',
-        error: { code: 'unsupported', message: 'このブラウザは録音に対応していません。' },
+        error: { code: 'unsupported', message: t.recorder.unsupported },
         elapsedMs: 0,
       })
       return false
@@ -135,10 +139,10 @@ export function useShadowingRecorder() {
       setState({ phase: 'ready', error: null, elapsedMs: 0 })
       return true
     } catch (err) {
-      setState({ phase: 'idle', error: describeMediaError(err), elapsedMs: 0 })
+      setState({ phase: 'idle', error: describeMediaError(err, t), elapsedMs: 0 })
       return false
     }
-  }, [state.phase])
+  }, [state.phase, t])
 
   // Start recording. Resolves when stopRecording finishes, returning the blob
   // + duration. Caller is expected to await start() before triggering any UI
@@ -152,7 +156,7 @@ export function useShadowingRecorder() {
         ...current,
         error: {
           code: 'recorder_failed',
-          message: 'マイクの準備ができていません。',
+          message: t.recorder.notReady,
         },
       }))
       return
@@ -162,7 +166,7 @@ export function useShadowingRecorder() {
     try {
       recorder = mimeType ? new MediaRecorder(streamRef.current, { mimeType }) : new MediaRecorder(streamRef.current)
     } catch (err) {
-      setState({ phase: 'ready', error: describeMediaError(err), elapsedMs: 0 })
+      setState({ phase: 'ready', error: describeMediaError(err, t), elapsedMs: 0 })
       return
     }
 
@@ -193,14 +197,14 @@ export function useShadowingRecorder() {
     })
 
     recorder.addEventListener('error', (event) => {
-      const message = (event as { error?: Error }).error?.message ?? '録音中にエラーが発生しました。'
+      const message = (event as { error?: Error }).error?.message ?? t.recorder.recordingError
       setState({ phase: 'ready', error: { code: 'recorder_failed', message }, elapsedMs: 0 })
     })
 
     try {
       recorder.start()
     } catch (err) {
-      setState({ phase: 'ready', error: describeMediaError(err), elapsedMs: 0 })
+      setState({ phase: 'ready', error: describeMediaError(err, t), elapsedMs: 0 })
       return
     }
 
@@ -217,7 +221,7 @@ export function useShadowingRecorder() {
     }, MAX_RECORDING_MS)
 
     return stopPromise
-  }, [clearTimers, finalize])
+  }, [clearTimers, finalize, t])
 
   const stopRecording = useCallback(() => {
     finalize()

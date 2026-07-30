@@ -10,6 +10,7 @@ import { punctuateText } from '@/lib/segment-analysis'
 import { measureStep, withApiPerf } from '@/lib/perf'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { downloadStorageObject } from '@/lib/storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -18,6 +19,8 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/transcribe', request, async () => {
   const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
   if (response || !user) {
@@ -47,7 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
   )
 
   if (!segment) {
-    return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.segmentNotFoundNoPeriod }, { status: 404 })
   }
 
   const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -81,6 +84,6 @@ export async function POST(request: Request, context: RouteContext) {
     }
   })()
 
-  return NextResponse.json({ success: true, message: '文字起こしを開始しました。ページを更新して結果を確認してください。' })
+  return NextResponse.json({ success: true, message: t.errors.transcribeStarted })
   })
 }

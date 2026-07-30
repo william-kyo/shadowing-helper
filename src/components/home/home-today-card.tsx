@@ -1,5 +1,8 @@
 import Link from 'next/link'
 
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+
 export type HomeTodaySegment = {
   id: string
   projectId: string
@@ -13,38 +16,42 @@ export type HomeTodaySegment = {
 type HomeTodayCardProps = {
   segment: HomeTodaySegment | null
   hasPracticedToday: boolean
+  t: Dictionary
 }
 
-export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps) {
+export function HomeTodayCard({ segment, hasPracticedToday, t }: HomeTodayCardProps) {
   if (!segment) {
     return (
       <section
-        aria-label="今日のおすすめ"
+        aria-label={t.home.todayAriaLabel}
         className="rounded-card border border-dashed border-ink-line bg-paper p-6 text-center"
       >
-        <p className="text-sm font-medium text-ink-muted">今日の課題はまだありません</p>
+        <p className="text-sm font-medium text-ink-muted">{t.home.noTaskTitle}</p>
         <p className="mt-2 text-xs text-ink-faint">
-          プロジェクトを追加して、最初のセグメントを練習しましょう
+          {t.home.noTaskBody}
         </p>
         <Link
           href="/projects"
           className="mt-4 inline-flex items-center justify-center rounded-chip bg-ink px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent"
         >
-          プロジェクトを追加 →
+          {t.home.noTaskCta}
         </Link>
       </section>
     )
   }
 
   const href = `/projects/${segment.projectId}/segments/${segment.id}`
-  const stageLabel = `ステージ${segment.currentStage} / ${segment.totalStages}`
-  const heading = hasPracticedToday ? '今日もう一本、いける？' : '今日の練習 · 5分から'
-  const ctaLabel = hasPracticedToday ? '続けて練習する' : '練習を始める'
+  const stageLabel = format(t.home.stageOfTotal, {
+    current: segment.currentStage,
+    total: segment.totalStages,
+  })
+  const heading = hasPracticedToday ? t.home.headingAnotherOne : t.home.headingFirstOne
+  const ctaLabel = hasPracticedToday ? t.home.ctaContinuePractice : t.home.ctaStartPractice
   const pct = Math.round((segment.completedStages / segment.totalStages) * 100)
 
   return (
     <section
-      aria-label="今日のおすすめ"
+      aria-label={t.home.todayAriaLabel}
       className="relative overflow-hidden rounded-card bg-paper-deep p-6 text-paper shadow-[0_18px_50px_-24px_rgba(29,27,24,0.6)]"
     >
       {/* corner mark — like a stamped seal */}
@@ -52,12 +59,12 @@ export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps
         aria-hidden
         className="pointer-events-none absolute -right-6 -top-6 grid h-24 w-24 place-items-center rounded-chip border border-accent/40 font-display text-[10px] uppercase tracking-[0.3em] text-accent/70"
       >
-        シャドウ
+        {t.home.shadowBadge}
       </span>
 
       <div className="flex items-center justify-between">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
-          {hasPracticedToday ? '✓ 今日完了' : '今日の続き'}
+          {hasPracticedToday ? t.home.doneToday : t.home.todayContinue}
         </p>
         <span className="rounded-chip border border-paper/15 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-paper/70">
           {stageLabel}
@@ -88,7 +95,7 @@ export function HomeTodayCard({ segment, hasPracticedToday }: HomeTodayCardProps
 
       <Link
         href={href}
-        aria-label={`${segment.segmentTitle} の練習を始める`}
+        aria-label={format(t.home.startPracticeAria, { title: segment.segmentTitle })}
         className="mt-5 flex items-center justify-center gap-2 rounded-chip bg-accent px-5 py-3.5 text-base font-semibold !text-paper transition hover:bg-accent-deep"
       >
         <span aria-hidden>▶</span>

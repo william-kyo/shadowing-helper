@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server'
 
 import { isSupabaseAuthCookieName } from '@/lib/auth-cookies'
 import { isCrossSiteRequest } from '@/lib/csrf'
+import { LOCALE_COOKIE, resolveLocale } from '@/lib/i18n/config'
+import { getDictionary } from '@/lib/i18n/dictionaries'
 
 // /auth/callback must stay public: it runs during the OAuth round-trip before a
 // session cookie exists, and it is where the PKCE code is exchanged for one.
@@ -33,6 +35,15 @@ function clearAuthCookies(response: NextResponse, request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
 
+  // The proxy runs before any page, so it resolves the locale from the raw
+  // request rather than through next/headers.
+  const t = getDictionary(
+    resolveLocale({
+      cookie: request.cookies.get(LOCALE_COOKIE)?.value,
+      acceptLanguage: request.headers.get('accept-language'),
+    }),
+  )
+
   if (isPublicPath(pathname)) {
     return NextResponse.next()
   }
@@ -49,7 +60,7 @@ export async function proxy(request: NextRequest) {
     })
   ) {
     return NextResponse.json(
-      { error: '不正なリクエスト元です。', code: 'cross_site_blocked' },
+      { error: t.errors.crossSiteBlocked, code: 'cross_site_blocked' },
       { status: 403 },
     )
   }
@@ -86,7 +97,7 @@ export async function proxy(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     const errorResponse = NextResponse.json(
-      { error: 'ログインしてください。', code: 'auth_required' },
+      { error: t.errors.authRequired, code: 'auth_required' },
       { status: 401 },
     )
     clearAuthCookies(errorResponse, request)

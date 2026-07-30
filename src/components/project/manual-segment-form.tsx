@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
+
 type ManualSegmentFormSubmitResult = {
   success?: boolean
   error?: string
@@ -18,6 +20,7 @@ function formatSeconds(value: number) {
 }
 
 export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: ManualSegmentFormProps) {
+  const t = useT()
   const [title, setTitle] = useState('')
   const [startSeconds, setStartSeconds] = useState<number | ''>('')
   const [endSeconds, setEndSeconds] = useState<number | ''>('')
@@ -39,17 +42,17 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
     setErrorMessage(null)
 
     if (!title.trim()) {
-      setErrorMessage('セグメント名を入力してください。')
+      setErrorMessage(t.segments.nameRequired)
       return
     }
 
     if (startSeconds === '' || endSeconds === '') {
-      setErrorMessage('開始秒と終了秒を入力してください。')
+      setErrorMessage(t.segments.rangeRequired)
       return
     }
 
     if (endSeconds <= startSeconds) {
-      setErrorMessage('終了秒は開始秒より後にしてください。')
+      setErrorMessage(t.segments.endAfterStart)
       return
     }
 
@@ -71,7 +74,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
       setStartSeconds('')
       setEndSeconds('')
     } catch {
-      setErrorMessage('セグメント保存に失敗しました。')
+      setErrorMessage(t.segments.saveFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -81,9 +84,9 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
     <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">手動でセグメントを追加</h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.segments.manualTitle}</h2>
           <p className="mt-2 text-sm text-ink-muted">
-            元音声を再生しながら開始位置と終了位置を決めて、1つずつセグメントを切り出します。
+            {t.segments.manualBody}
           </p>
         </div>
         {onCollapse ? (
@@ -92,14 +95,14 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
             onClick={onCollapse}
             className="rounded-chip border border-ink-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:border-ink hover:text-ink"
           >
-            閉じる
+            {t.common.close}
           </button>
         ) : null}
       </div>
 
       <div className="grid gap-2">
         <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-title">
-          セグメント名
+          {t.segments.manualNameLabel}
         </label>
         <input
           id="segment-title"
@@ -107,14 +110,14 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
-          placeholder="例: Intro / Paragraph 1"
+          placeholder={t.segments.manualNamePlaceholder}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-start-seconds">
-            開始秒
+            {t.segments.startSeconds}
           </label>
           <input
             id="segment-start-seconds"
@@ -129,13 +132,13 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
             onClick={() => setCurrentTime('start')}
             className="rounded-chip border border-ink-line bg-paper-soft px-4 py-3 text-sm font-medium text-ink transition hover:border-ink"
           >
-            現在位置を開始にセット
+            {t.segments.setStartToCurrent}
           </button>
         </div>
 
         <div className="grid gap-2">
           <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="segment-end-seconds">
-            終了秒
+            {t.segments.endSeconds}
           </label>
           <input
             id="segment-end-seconds"
@@ -150,7 +153,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
             onClick={() => setCurrentTime('end')}
             className="rounded-chip border border-ink-line bg-paper-soft px-4 py-3 text-sm font-medium text-ink transition hover:border-ink"
           >
-            現在位置を終了にセット
+            {t.segments.setEndToCurrent}
           </button>
         </div>
       </div>
@@ -169,7 +172,7 @@ export function ManualSegmentForm({ getCurrentTime, onSubmit, onCollapse }: Manu
         disabled={isSubmitting}
         className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? '保存中…' : 'セグメントを保存'}
+        {isSubmitting ? t.common.saving : t.segments.manualSubmit}
       </button>
     </section>
   )

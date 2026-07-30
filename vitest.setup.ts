@@ -1,4 +1,14 @@
 import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
+
+// Page tests render server components directly, outside Next's request scope,
+// where `cookies()`/`headers()` throw. Stub them empty so locale resolution
+// falls through to the default; `tests/lib/i18n.test.ts` covers the real
+// resolution logic against explicit inputs.
+vi.mock('next/headers', () => ({
+  cookies: async () => ({ get: () => undefined, getAll: () => [], set: () => {} }),
+  headers: async () => new Headers(),
+}))
 
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'file:./test.db'
 process.env.STORAGE_ROOT = process.env.STORAGE_ROOT ?? 'storage/projects'

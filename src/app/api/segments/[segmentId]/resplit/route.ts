@@ -26,6 +26,7 @@ import {
   uploadBufferToStorage,
 } from '@/lib/storage'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getRequestT } from '@/lib/i18n/server'
 
 // Smallest segment we allow after a manual re-split. Anything shorter is almost
 // certainly a fat-finger on the inputs rather than an intended clip.
@@ -43,6 +44,8 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/resplit', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -58,12 +61,12 @@ export async function POST(request: Request, context: RouteContext) {
       const json = await measureStep('request.json', () => request.json())
       const parsed = resplitSchema.safeParse(json)
       if (!parsed.success) {
-        return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.checkInput }, { status: 400 })
       }
 
       const { startMs, endMs } = parsed.data
       if (endMs - startMs < MIN_SEGMENT_MS) {
-        return NextResponse.json({ error: '終了時間は開始時間より後にしてください。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.endAfterStart }, { status: 400 })
       }
 
       const segment = await measureStep('db.segment.find_resplit_input', () =>
@@ -88,13 +91,13 @@ export async function POST(request: Request, context: RouteContext) {
       )
 
       if (!segment) {
-        return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
       }
       if (!segment.project.audioPath) {
-        return NextResponse.json({ error: '元の音声ファイルが見つかりません。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.sourceAudioNotFound }, { status: 400 })
       }
       if (segment.project.audioDurationMs && endMs > segment.project.audioDurationMs) {
-        return NextResponse.json({ error: '終了時間が音声の長さを超えています。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.endBeyondAudio }, { status: 400 })
       }
 
       const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -212,7 +215,7 @@ export async function POST(request: Request, context: RouteContext) {
       })
     } catch (error) {
       console.error('[resplit] failed:', error)
-      return NextResponse.json({ error: '再分割に失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.resplitFailed }, { status: 500 })
     }
   })
 }

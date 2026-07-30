@@ -8,6 +8,7 @@ import { db } from '@/lib/db'
 import { isPersistedWhisperSegments } from '@/lib/sentence-split'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { removeStorageObjects } from '@/lib/storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 const updateSchema = z.object({
   text: z.string().optional(),
@@ -21,6 +22,8 @@ type RouteContext = {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -31,7 +34,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const json = await request.json()
   const parsed = updateSchema.safeParse(json)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'リクエスト形式が正しくありません' }, { status: 400 })
+    return NextResponse.json({ error: t.errors.badRequestShape }, { status: 400 })
   }
 
   const segment = await db.segment.findFirst({
@@ -40,7 +43,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   })
 
   if (!segment) {
-    return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.segmentNotFoundNoPeriod }, { status: 404 })
   }
 
   // When the script changes and the segment has transcription chunks, re-derive
@@ -78,6 +81,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -90,7 +95,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   })
 
   if (!segment) {
-    return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.segmentNotFoundNoPeriod }, { status: 404 })
   }
 
   // Delete DB records (cascades to stageProgress, recordings)

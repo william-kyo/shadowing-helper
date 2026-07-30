@@ -8,6 +8,8 @@ import webpush from 'web-push'
 
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
+import { DEFAULT_LOCALE } from '@/lib/i18n/config'
+import { getDictionary } from '@/lib/i18n/dictionaries'
 import { DEFAULT_TIME_ZONE, toDateKey } from '@/lib/streak'
 
 let vapidConfigured = false
@@ -70,9 +72,13 @@ export type ReminderStats = {
   removed: number
 }
 
+// Reminders are sent from cron, which has no request and therefore no locale
+// cookie to read, so they go out in the default language. Following each user's
+// picker choice here would mean persisting it on the User row; until then the
+// copy at least lives in the dictionary with everything else.
 const REMINDER_PAYLOAD = JSON.stringify({
-  title: 'シャドーイングヘルパー',
-  body: '今日の練習がまだです。1セグメントだけでも続けましょう 🌱',
+  title: getDictionary(DEFAULT_LOCALE).push.reminderTitle,
+  body: getDictionary(DEFAULT_LOCALE).push.reminderBody,
   url: '/',
 })
 

@@ -11,16 +11,22 @@ import { transcribeAudio } from '@/lib/groq'
 import { punctuateText } from '@/lib/segment-analysis'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { getRequestT } from '@/lib/i18n/server'
 
-const createSegmentSchema = z.object({
-  title: z.string().trim().min(1, 'セグメント名を入力してください。'),
-  startSeconds: z.number().min(0, '開始秒は 0 以上にしてください。'),
-  endSeconds: z.number().min(0, '終了秒は 0 以上にしてください。'),
-  dialogue: z.boolean().default(true),
-}).refine((value) => value.endSeconds > value.startSeconds, {
-  message: '終了秒は開始秒より後にしてください。',
-  path: ['endSeconds'],
-})
+// Built per request so validation messages come back in the caller's language.
+const buildCreateSegmentSchema = (t: Dictionary) =>
+  z
+    .object({
+      title: z.string().trim().min(1, t.errors.segmentNameRequired),
+      startSeconds: z.number().min(0, t.errors.startAtLeastZero),
+      endSeconds: z.number().min(0, t.errors.endAtLeastZero),
+      dialogue: z.boolean().default(true),
+    })
+    .refine((value) => value.endSeconds > value.startSeconds, {
+      message: t.errors.endAfterStartSeconds,
+      path: ['endSeconds'],
+    })
 
 type RouteContext = {
   params: Promise<{
@@ -29,6 +35,8 @@ type RouteContext = {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/projects/[projectId]/segments', request, async () => {
   try {
     const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -38,10 +46,10 @@ export async function POST(request: Request, context: RouteContext) {
 
     const { projectId } = await measureStep('route.params', () => context.params)
     const json = await measureStep('request.json', () => request.json())
-    const parsed = await measureStep('validation.segment_create', async () => createSegmentSchema.safeParse(json))
+    const parsed = await measureStep('validation.segment_create', async () => buildCreateSegmentSchema(t).safeParse(json))
 
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? '入力内容を確認してください。' }, { status: 400 })
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? t.errors.checkInput }, { status: 400 })
     }
 
     addPerfAttrs({
@@ -61,13 +69,13 @@ export async function POST(request: Request, context: RouteContext) {
     )
 
     if (!project) {
-      return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
+      return NextResponse.json({ error: t.errors.projectNotFound }, { status: 404 })
     }
 
     // Reject ranges past the end of the source audio (when the duration is
     // known) instead of letting ffmpeg silently clamp to EOF.
     if (project.audioDurationMs && parsed.data.endSeconds * 1000 > project.audioDurationMs) {
-      return NextResponse.json({ error: '終了時間が音声の長さを超えています。' }, { status: 400 })
+      return NextResponse.json({ error: t.errors.endBeyondAudio }, { status: 400 })
     }
 
     const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -153,7 +161,7 @@ export async function POST(request: Request, context: RouteContext) {
     })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'セグメント保存に失敗しました。' }, { status: 500 })
+    return NextResponse.json({ error: t.errors.segmentSaveFailed }, { status: 500 })
   }
   })
 }

@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { getRequestT } from '@/lib/i18n/server'
 
 // Browser push-service endpoints are always HTTPS URLs.
 const endpointSchema = z
@@ -23,6 +24,8 @@ const unsubscribeSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
   const json = await request.json().catch(() => null)
   const parsed = subscribeSchema.safeParse(json)
   if (!parsed.success) {
-    return NextResponse.json({ error: '購読情報の形式が正しくありません。' }, { status: 400 })
+    return NextResponse.json({ error: t.errors.subscriptionShapeInvalid }, { status: 400 })
   }
 
   const { endpoint, keys } = parsed.data
@@ -49,6 +52,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -57,7 +62,7 @@ export async function DELETE(request: Request) {
   const json = await request.json().catch(() => null)
   const parsed = unsubscribeSchema.safeParse(json)
   if (!parsed.success) {
-    return NextResponse.json({ error: '購読情報の形式が正しくありません。' }, { status: 400 })
+    return NextResponse.json({ error: t.errors.subscriptionShapeInvalid }, { status: 400 })
   }
 
   await db.pushSubscription.deleteMany({

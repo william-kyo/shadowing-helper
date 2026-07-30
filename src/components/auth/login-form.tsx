@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { useT } from '@/lib/i18n/client'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export function LoginForm() {
   const router = useRouter()
+  const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -23,7 +25,7 @@ export function LoginForm() {
     setIsSubmitting(false)
 
     if (error) {
-      setErrorMessage(error.message || 'ログインに失敗しました。')
+      setErrorMessage(error.message || t.auth.signInFailed)
       return
     }
 
@@ -41,7 +43,7 @@ export function LoginForm() {
           htmlFor="email"
           className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
         >
-メールアドレス
+          {t.auth.email}
         </label>
         <input
           id="email"
@@ -60,7 +62,7 @@ export function LoginForm() {
           htmlFor="password"
           className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted"
         >
-パスワード
+          {t.auth.password}
         </label>
         <input
           id="password"
@@ -85,7 +87,7 @@ export function LoginForm() {
         disabled={isSubmitting}
         className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'ログイン中…' : 'ログイン →'}
+        {isSubmitting ? t.auth.signingIn : t.auth.signIn}
       </button>
     </form>
   )

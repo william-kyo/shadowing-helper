@@ -4,11 +4,14 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
+import { LanguagePicker } from '@/components/i18n/language-picker'
 import { HomeRecentList, type HomeRecentItem } from '@/components/home/home-recent-list'
 import { HomeStreakHero } from '@/components/home/home-streak-hero'
 import { HomeTodayCard, type HomeTodaySegment } from '@/components/home/home-today-card'
 import { HomeWeekHeatmap } from '@/components/home/home-week-heatmap'
 import { PushNotificationCard } from '@/components/push/push-notification-card'
+import { format } from '@/lib/i18n/format'
+import { getLocale, getT } from '@/lib/i18n/server'
 import { getCurrentAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withPagePerf } from '@/lib/perf'
@@ -18,6 +21,8 @@ import { findUnspentTodayFullSegment } from '@/lib/streak-server'
 
 export default async function HomePage() {
   const currentUser = await getCurrentAppUser()
+  const t = await getT()
+  const locale = await getLocale()
   if (!currentUser) {
     redirect('/login')
   }
@@ -123,7 +128,7 @@ export default async function HomePage() {
         id: s.id,
         projectId: s.project.id,
         projectTitle: s.project.title,
-        segmentTitle: s.title ?? `セグメント${s.index + 1}`,
+        segmentTitle: s.title ?? format(t.home.segmentFallbackTitle, { n: s.index + 1 }),
         currentStage,
         completedStages: completed,
         totalStages: TOTAL_STAGES,
@@ -169,7 +174,7 @@ export default async function HomePage() {
               id: nextInProject.id,
               projectId: project.id,
               projectTitle: project.title,
-              segmentTitle: nextInProject.title ?? `セグメント${nextInProject.index + 1}`,
+              segmentTitle: nextInProject.title ?? format(t.home.segmentFallbackTitle, { n: nextInProject.index + 1 }),
               currentStage,
               completedStages: completed,
               totalStages: TOTAL_STAGES,
@@ -209,7 +214,7 @@ export default async function HomePage() {
             id: next.id,
             projectId: fallbackProject.id,
             projectTitle: fallbackProject.title,
-            segmentTitle: next.title ?? `セグメント${next.index + 1}`,
+            segmentTitle: next.title ?? format(t.home.segmentFallbackTitle, { n: next.index + 1 }),
             currentStage,
             completedStages: completed,
             totalStages: TOTAL_STAGES,
@@ -224,7 +229,7 @@ export default async function HomePage() {
         id: s.id,
         projectId: s.project.id,
         projectTitle: s.project.title,
-        segmentTitle: s.title ?? `セグメント${s.index + 1}`,
+        segmentTitle: s.title ?? format(t.home.segmentFallbackTitle, { n: s.index + 1 }),
         completedStages: completed,
         totalStages: TOTAL_STAGES,
         lastPracticedAt: lastPracticedBySegment.get(s.id) ?? new Date(),
@@ -256,13 +261,16 @@ export default async function HomePage() {
           <header className="flex items-end justify-between gap-3 border-b border-ink-line/70 pb-4">
             <div className="min-w-0">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-                影 · シャドーイング
+                {t.home.brand}
               </p>
               <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight">
                 {currentUser.email}
               </h1>
             </div>
-            <LogoutButton />
+            <div className="flex shrink-0 items-center gap-2">
+              <LanguagePicker />
+              <LogoutButton />
+            </div>
           </header>
 
           <HomeStreakHero
@@ -272,9 +280,13 @@ export default async function HomePage() {
             habitAchieved={habitAchieved}
           />
 
-          <HomeTodayCard segment={todaySegment} hasPracticedToday={hasPracticedToday} />
+          <HomeTodayCard
+            segment={todaySegment}
+            hasPracticedToday={hasPracticedToday}
+            t={t}
+          />
 
-          <HomeRecentList items={recentItems} />
+          <HomeRecentList items={recentItems} t={t} locale={locale} />
 
           <HomeWeekHeatmap
             days={heatmap}
@@ -289,7 +301,7 @@ export default async function HomePage() {
               href="/projects"
               className="rounded-chip border border-ink-line bg-paper px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper"
             >
-              プロジェクト一覧へ
+              {t.home.toProjects}
             </Link>
           </div>
         </div>

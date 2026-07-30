@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { getRequestT } from '@/lib/i18n/server'
 
 const progressSchema = z.object({
   stage: z.number().int().min(1).max(5),
@@ -16,6 +17,8 @@ type RouteContext = {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -26,7 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const json = await request.json()
   const parsed = progressSchema.safeParse(json)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'リクエスト形式が正しくありません' }, { status: 400 })
+    return NextResponse.json({ error: t.errors.badRequestShape }, { status: 400 })
   }
 
   const segment = await db.segment.findFirst({
@@ -34,7 +37,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   })
 
   if (!segment) {
-    return NextResponse.json({ error: 'セグメントが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.segmentNotFoundNoPeriod }, { status: 404 })
   }
 
   const { stage, status } = parsed.data

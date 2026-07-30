@@ -7,6 +7,7 @@ import { measureStep, withApiPerf } from '@/lib/perf'
 import { STAGE4_STAGE_NUMBER, recordingContentTypeFromKey } from '@/lib/recording-storage'
 import { downloadStorageObject } from '@/lib/storage'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -18,6 +19,8 @@ type RouteContext = {
 // Stream back the learner's most recent stage 4 recording for a sentence so the
 // panel can play it next to the reference for self-comparison.
 export async function GET(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf(
     '/api/segments/[segmentId]/stage4/recordings/[index]/audio',
     request,
@@ -33,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
         const { segmentId, index } = await measureStep('route.params', () => context.params)
         const sentenceIndex = Number.parseInt(index, 10)
         if (!Number.isInteger(sentenceIndex) || sentenceIndex < 0) {
-          return NextResponse.json({ error: '文のインデックスが不正です。' }, { status: 400 })
+          return NextResponse.json({ error: t.errors.sentenceIndexOutOfRange }, { status: 400 })
         }
 
         // Ownership check: only the segment owner may fetch its recordings.
@@ -44,7 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
           }),
         )
         if (!segment) {
-          return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+          return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
         }
 
         const recording = await measureStep('db.recording.find_latest_for_sentence', () =>
@@ -59,7 +62,7 @@ export async function GET(request: Request, context: RouteContext) {
           }),
         )
         if (!recording) {
-          return NextResponse.json({ error: '録音が見つかりません。' }, { status: 404 })
+          return NextResponse.json({ error: t.errors.recordingNotFound }, { status: 404 })
         }
 
         const supabase = await measureStep('supabase.create_server_client', () =>
@@ -72,7 +75,7 @@ export async function GET(request: Request, context: RouteContext) {
             downloadStorageObject({ client: supabase, objectKey: recording.filePath }),
           )
         } catch {
-          return NextResponse.json({ error: '録音が見つかりません。' }, { status: 404 })
+          return NextResponse.json({ error: t.errors.recordingNotFound }, { status: 404 })
         }
 
         return createFileResponse({
@@ -85,7 +88,7 @@ export async function GET(request: Request, context: RouteContext) {
         })
       } catch (error) {
         console.error('[stage4/recordings/audio] failed:', error)
-        return NextResponse.json({ error: '録音の取得に失敗しました。' }, { status: 500 })
+        return NextResponse.json({ error: t.errors.recordingFetchFailed }, { status: 500 })
       }
     },
   )

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 import { findSpeakerAt, isLearnerTurn, useSpeakerCue } from '@/components/segment/speaker-cue-context'
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
 
 type SegmentAudioPlayerProps = {
   src: string
@@ -57,6 +59,7 @@ function computeWaveformPeaks(audioBuffer: AudioBuffer, count: number): number[]
 }
 
 export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments }: SegmentAudioPlayerProps) {
+  const t = useT()
   const audioRef = useRef<HTMLAudioElement>(null)
   const speedMenuRef = useRef<HTMLDivElement>(null)
   const tocMenuRef = useRef<HTMLDivElement>(null)
@@ -311,7 +314,9 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
             }`}
           />
           <span className={isMyTurn ? 'text-accent' : 'text-ink-faint'}>
-            {isMyTurn ? `${activeSpeaker}の番 · 音声オフ` : '相手の番'}
+            {isMyTurn
+              ? format(t.segment.myTurnMuted, { speaker: activeSpeaker })
+              : t.segment.partnerTurn}
           </span>
         </div>
       )}
@@ -345,7 +350,9 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           step={100}
           value={Math.min(currentTime, duration || currentTime)}
           onChange={handleProgressChange}
-          aria-label={`${title || 'セグメント'}の再生位置`}
+          aria-label={format(t.segment.playerPositionAria, {
+            title: title || t.segment.playerFallbackTitle,
+          })}
           className="waveform-input absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </div>
@@ -357,7 +364,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           <button
             onClick={() => { setShowSpeedMenu(!showSpeedMenu); setShowTocMenu(false) }}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"
-            title="再生速度"
+            title={t.segment.playbackSpeed}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 14 4-4" />
@@ -384,7 +391,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           <button
             onClick={() => seek(-3)}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"
-            title="3秒戻る (j)"
+            title={t.segment.rewind3}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" overflow="visible">
               <g transform="rotate(45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -406,7 +413,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           <button
             onClick={togglePlay}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-paper shadow-[0_4px_16px_rgba(60,122,85,0.3)] transition hover:bg-accent-deep active:scale-95"
-            title={playing ? '一時停止 (Space)' : '再生 (Space)'}
+            title={playing ? t.segment.pause : t.segment.play}
           >
             {playing ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -424,7 +431,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           <button
             onClick={() => seek(3)}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"
-            title="3秒進む (k)"
+            title={t.segment.forward3}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" overflow="visible">
               <g transform="rotate(-45 12 12)" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -441,7 +448,7 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           <button
             onClick={() => { setShowTocMenu(!showTocMenu); setShowSpeedMenu(false) }}
             className="flex items-center justify-center rounded-inset border border-ink-line bg-paper/60 p-2.5 text-ink-muted transition hover:border-ink hover:text-ink"
-            title="目次"
+            title={t.segment.tableOfContents}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 12h.01" />
@@ -454,7 +461,9 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
           </button>
           {showTocMenu && (
             <div className="absolute bottom-full right-0 mb-2 w-64 rounded-inset border border-ink-line bg-paper py-1 shadow-lg">
-              <div className="border-b border-ink-line/50 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">目次</div>
+              <div className="border-b border-ink-line/50 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+                {t.segment.tableOfContents}
+              </div>
               {segments.map((seg) => (
                 <Link
                   key={seg.id}
@@ -465,7 +474,9 @@ export function SegmentAudioPlayer({ src, title, projectId, segmentId, segments 
                   {seg.id === segmentId && (
                     <span className="flex h-2 w-2 shrink-0 rounded-full bg-accent" />
                   )}
-                  <span className="truncate">{seg.title ?? `セグメント${seg.index + 1}`}</span>
+                  <span className="truncate">
+                    {seg.title ?? format(t.home.segmentFallbackTitle, { n: seg.index + 1 })}
+                  </span>
                 </Link>
               ))}
             </div>

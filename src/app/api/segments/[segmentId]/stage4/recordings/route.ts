@@ -23,6 +23,7 @@ import { uploadBufferToStorage } from '@/lib/storage'
 import { createStoredFileName, sanitizeExtension, sanitizeFileExtension } from '@/lib/storage-paths'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { acceptedAudioMimeTypes } from '@/lib/validations/project'
+import { getRequestT } from '@/lib/i18n/server'
 
 const RECORDING_MIME_FALLBACK = 'audio/webm'
 const RECORDING_EXT_FALLBACK = '.webm'
@@ -48,6 +49,8 @@ function pickRecordingExtension(file: File): string {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/stage4/recordings', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -66,7 +69,7 @@ export async function POST(request: Request, context: RouteContext) {
       const audioEntry = formData.get('audio')
 
       if (typeof sentenceIndexRaw !== 'string') {
-        return NextResponse.json({ error: 'sentenceIndex が必要です。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.sentenceIndexRequired }, { status: 400 })
       }
       // Duck-typed file check (works across Node / jsdom realms where
       // `instanceof File` may be a different constructor). Once the guard
@@ -80,16 +83,16 @@ export async function POST(request: Request, context: RouteContext) {
           ? (audioEntry as unknown as File)
           : null
       if (!audioFile) {
-        return NextResponse.json({ error: '音声ファイルが必要です。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.audioRequired }, { status: 400 })
       }
 
       if (audioFile.size > MAX_RECORDING_BYTES) {
-        return NextResponse.json({ error: '録音ファイルは10MB以下にしてください。' }, { status: 413 })
+        return NextResponse.json({ error: t.errors.recordingTooLarge }, { status: 413 })
       }
 
       if (audioFile.size < MIN_RECORDING_BYTES) {
         return NextResponse.json(
-          { error: '録音が短すぎるため採点できません。もう一度録音してください。' },
+          { error: t.errors.recordingTooShortToScore },
           { status: 400 },
         )
       }
@@ -104,12 +107,12 @@ export async function POST(request: Request, context: RouteContext) {
         baseMimeType &&
         !acceptedAudioMimeTypes.includes(baseMimeType as (typeof acceptedAudioMimeTypes)[number])
       ) {
-        return NextResponse.json({ error: '対応していない音声形式です。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.unsupportedAudioType }, { status: 400 })
       }
 
       const sentenceIndex = Number.parseInt(sentenceIndexRaw, 10)
       if (!Number.isInteger(sentenceIndex) || sentenceIndex < 0) {
-        return NextResponse.json({ error: 'sentenceIndex が不正です。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.sentenceIndexInvalid }, { status: 400 })
       }
 
       const segment = await measureStep('db.segment.find_stage4_recordings', () =>
@@ -133,7 +136,7 @@ export async function POST(request: Request, context: RouteContext) {
       )
 
       if (!segment) {
-        return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
       }
 
       const persisted = isPersistedWhisperSegments(segment.whisperSegments)
@@ -148,7 +151,7 @@ export async function POST(request: Request, context: RouteContext) {
         })
       }
       if (sentenceIndex >= units.length) {
-        return NextResponse.json({ error: '文が見つかりません。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.sentenceNotFound }, { status: 400 })
       }
 
       const expectedText = units[sentenceIndex]?.text ?? ''
@@ -275,12 +278,12 @@ export async function POST(request: Request, context: RouteContext) {
       if (error instanceof GroqTranscriptionError && error.status === 400) {
         console.warn('[stage4/recordings] transcription rejected:', error.message)
         return NextResponse.json(
-          { error: '録音を解析できませんでした。録音が短すぎる可能性があります。もう一度録音してください。' },
+          { error: t.errors.recordingUnreadable },
           { status: 422 },
         )
       }
       console.error('[stage4/recordings] failed:', error)
-      return NextResponse.json({ error: '録音の採点に失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.recordingScoreFailed }, { status: 500 })
     }
   })
 }

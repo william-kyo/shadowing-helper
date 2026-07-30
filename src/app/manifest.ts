@@ -1,11 +1,16 @@
 import type { MetadataRoute } from 'next'
 
-export default function manifest(): MetadataRoute.Manifest {
+import { getLocale, getT } from '@/lib/i18n/server'
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const [locale, t] = await Promise.all([getLocale(), getT()])
+
   return {
-    name: 'シャドーイングヘルパー',
-    short_name: 'シャドーイング',
-    description: 'ステージベースのシャドーイング練習',
-    // Launch to ホーム (home) — the installed PWA / home-screen icon opens this.
+    name: t.meta.appTitle,
+    short_name: t.meta.appShortTitle,
+    description: t.meta.manifestDescription,
+    lang: locale,
+    // Launch to the home screen — the installed PWA / home-screen icon opens this.
     start_url: '/',
     display: 'standalone',
     // Bamboo-calm brand surface (cool greige page background)

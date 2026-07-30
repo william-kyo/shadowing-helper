@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { createProjectSchema } from '@/lib/validations/project'
+import ja from '@/lib/i18n/dictionaries/ja'
+import { buildCreateProjectSchema } from '@/lib/validations/project'
+
+const createProjectSchema = buildCreateProjectSchema(ja)
 
 describe('createProjectSchema', () => {
   it('accepts a title with 1 to 120 characters', () => {

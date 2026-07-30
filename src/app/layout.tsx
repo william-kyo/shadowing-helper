@@ -4,6 +4,8 @@ import { Fraunces, Geist_Mono, Noto_Sans_JP } from 'next/font/google'
 import { AuthFetchInterceptor } from '@/components/auth/auth-fetch-interceptor'
 import { BottomNav } from '@/components/nav/bottom-nav'
 import { WebVitals } from '@/components/perf/web-vitals'
+import { I18nProvider } from '@/lib/i18n/client'
+import { getLocale, getT } from '@/lib/i18n/server'
 
 import './globals.css'
 
@@ -26,31 +28,38 @@ const geistMono = Geist_Mono({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: 'シャドーイングヘルパー',
-  description: 'ローカルファーストのシャドーイング練習アプリ。音声、スクリプト、ステージベースの学習に。',
-  appleWebApp: {
-    capable: true,
-    title: 'シャドーイング',
-    statusBarStyle: 'default',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT()
+  return {
+    title: t.meta.appTitle,
+    description: t.meta.appDescription,
+    appleWebApp: {
+      capable: true,
+      title: t.meta.appShortTitle,
+      statusBarStyle: 'default',
+    },
+  }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+
   return (
     <html
-      lang="ja"
+      lang={locale}
       className={`${notoJp.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-hidden bg-surface text-ink">
-        <WebVitals />
-        <AuthFetchInterceptor />
-        {children}
-        <BottomNav />
+        <I18nProvider locale={locale}>
+          <WebVitals />
+          <AuthFetchInterceptor />
+          {children}
+          <BottomNav />
+        </I18nProvider>
       </body>
     </html>
   )

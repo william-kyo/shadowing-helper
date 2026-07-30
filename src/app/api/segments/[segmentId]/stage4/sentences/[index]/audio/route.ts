@@ -14,6 +14,7 @@ import {
 } from '@/lib/sentence-split'
 import { downloadStorageObject } from '@/lib/storage'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -23,6 +24,8 @@ type RouteContext = {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/stage4/sentences/[index]/audio', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -33,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
       const { segmentId, index } = await measureStep('route.params', () => context.params)
       const sentenceIndex = Number.parseInt(index, 10)
       if (!Number.isInteger(sentenceIndex) || sentenceIndex < 0) {
-        return NextResponse.json({ error: '文のインデックスが不正です。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.sentenceIndexOutOfRange }, { status: 400 })
       }
 
       const segment = await measureStep('db.segment.find_stage4_audio', () =>
@@ -54,7 +57,7 @@ export async function GET(request: Request, context: RouteContext) {
       )
 
       if (!segment) {
-        return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
       }
 
       const persisted = isPersistedWhisperSegments(segment.whisperSegments)
@@ -70,7 +73,7 @@ export async function GET(request: Request, context: RouteContext) {
         })
       }
       if (sentenceIndex >= units.length) {
-        return NextResponse.json({ error: '文が見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.sentenceNotFound }, { status: 404 })
       }
 
       const ext = path.extname(segment.audioPath)
@@ -91,7 +94,7 @@ export async function GET(request: Request, context: RouteContext) {
           downloadStorageObject({ client: supabase, objectKey }),
         )
       } catch {
-        return NextResponse.json({ error: 'お手本が見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.referenceNotFound }, { status: 404 })
       }
 
       return createFileResponse({
@@ -104,7 +107,7 @@ export async function GET(request: Request, context: RouteContext) {
       })
     } catch (error) {
       console.error('[stage4/sentences/audio] failed:', error)
-      return NextResponse.json({ error: 'お手本の取得に失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.referenceFetchFailed }, { status: 500 })
     }
   })
 }

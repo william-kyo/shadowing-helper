@@ -25,7 +25,9 @@ import type React from 'react'
 
 import { useShadowingRecorder, type RecordingResult } from '@/hooks/use-shadowing-recorder'
 import { WaveformCompare } from '@/components/segment/waveform-compare'
-import { STAGE_META } from '@/lib/stage-meta'
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
+import { getStageMeta } from '@/lib/stage-meta'
 import type { Stage4Metadata, SentenceScore } from '@/lib/stage-4-completion'
 
 type Sentence = {
@@ -116,6 +118,8 @@ export function Stage4Panel({
   isStatusUpdating,
   audioAvailable = true,
 }: Stage4PanelProps) {
+  const t = useT()
+  const stageMeta = getStageMeta(t)
   const recorder = useShadowingRecorder()
   const refAudioRef = useRef<HTMLAudioElement | null>(null)
   // Separate element for playing back the learner's own recording, so it never
@@ -212,7 +216,7 @@ export function Stage4Panel({
       })
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? '採点に失敗しました。')
+        throw new Error(data.error ?? t.stage4.scoreFailed)
       }
       const data = (await res.json()) as ResultPayload
       setResult(data)
@@ -245,7 +249,7 @@ export function Stage4Panel({
         setPhase('result')
       }
     },
-    [sentenceIndex, segmentId, onComplete],
+    [sentenceIndex, segmentId, onComplete, t],
   )
 
   const handleStop = useCallback(async () => {
@@ -253,28 +257,28 @@ export function Stage4Panel({
     recorder.stopRecording()
     const stopPromise = stopRecordingPromiseRef.current
     if (!stopPromise) {
-      setError('録音を停止できませんでした。')
+      setError(t.stage4.stopFailed)
       return
     }
     setPhase('uploading')
     try {
       const result = await stopPromise
       if (!result) {
-        setError('録音を保存できませんでした。')
+        setError(t.stage4.saveRecordingFailed)
         setPhase('ready')
         return
       }
       if (result.durationMs < MIN_TAKE_DURATION_MS || result.blob.size === 0) {
-        setError('録音が短すぎます。文を読み終えてから停止してください。')
+        setError(t.stage4.recordingTooShort)
         setPhase('ready')
         return
       }
       await submitRecording(result)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '採点に失敗しました。')
+      setError(err instanceof Error ? err.message : t.stage4.scoreFailed)
       setPhase('ready')
     }
-  }, [phase, recorder, submitRecording])
+  }, [phase, recorder, submitRecording, t])
 
   const advanceToNext = useCallback(() => {
     if (sentenceIndex + 1 >= totalSentences) {
@@ -307,14 +311,14 @@ export function Stage4Panel({
       const res = await fetch(`/api/segments/${segmentId}/stage4/complete`, { method: 'POST' })
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? 'スキップに失敗しました。')
+        throw new Error(data.error ?? t.stage4.skipFailed)
       }
       setPhase('completed')
       onComplete()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'スキップに失敗しました。')
+      setError(err instanceof Error ? err.message : t.stage4.skipFailed)
     }
-  }, [segmentId, onComplete])
+  }, [segmentId, onComplete, t])
 
   // Navigate to the previous sentence (ready / result phases only).
   const handlePrev = useCallback(() => {
@@ -511,10 +515,10 @@ export function Stage4Panel({
     return (
       <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
+          <span className="text-accent">{format(t.stages.stageN, { n: 4 })}</span> — {stageMeta[4]?.label}
         </h3>
         <p className="mt-3 text-sm text-ink-muted">
-          音声ファイルが見つからないため、お手本を再生できません。音声をアップロードし直してから再度お試しください。
+          {t.stage4.audioMissing}
         </p>
       </div>
     )
@@ -524,10 +528,10 @@ export function Stage4Panel({
     return (
       <div className="rounded-card border border-ink-line bg-paper p-4 sm:p-5">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
+          <span className="text-accent">{format(t.stages.stageN, { n: 4 })}</span> — {stageMeta[4]?.label}
         </h3>
         <p className="mt-3 text-sm text-ink-muted">
-          このセグメントには文が見つかりませんでした。文字起こしを実行してから再度お試しください。
+          {t.stage4.noSentences}
         </p>
       </div>
     )
@@ -567,14 +571,14 @@ export function Stage4Panel({
       {/* header — sentence counter with prev/next chevrons */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-          <span className="text-accent">ステージ4</span> — {STAGE_META[4]?.label}
+          <span className="text-accent">{format(t.stages.stageN, { n: 4 })}</span> — {stageMeta[4]?.label}
         </h3>
         <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={handlePrev}
             disabled={sentenceIndex === 0 || !canNavigate}
-            aria-label="前の文へ"
+            aria-label={t.stage4.prevSentenceAria}
             className="rounded p-1.5 text-ink-faint transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-25"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
@@ -582,13 +586,16 @@ export function Stage4Panel({
             </svg>
           </button>
           <span className="min-w-[4.5rem] text-center font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-            文 {sentenceIndex + 1} / {totalSentences}
+            {format(t.stage4.sentenceCounter, {
+              current: sentenceIndex + 1,
+              total: totalSentences,
+            })}
           </span>
           <button
             type="button"
             onClick={handleNavNext}
             disabled={sentenceIndex + 1 >= totalSentences || !canNavigate}
-            aria-label="次の文へ"
+            aria-label={t.stage4.nextSentenceAria}
             className="rounded p-1.5 text-ink-faint transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-25"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
@@ -612,7 +619,7 @@ export function Stage4Panel({
         onTouchStart={handleCardTouchStart}
         onTouchEnd={handleCardTouchEnd}
         role={isCardInteractive ? 'button' : undefined}
-        aria-label={isCardInteractive ? 'タップしてお手本を再生' : undefined}
+        aria-label={isCardInteractive ? t.stage4.tapToPlayAria : undefined}
         tabIndex={isCardInteractive ? 0 : undefined}
       >
         {isCardInteractive && (
@@ -625,8 +632,12 @@ export function Stage4Panel({
         </p>
         {sentenceSummary.get(currentSentence.index) ? (
           <p className="mt-2 text-center text-xs text-ink-muted">
-            最高スコア {Math.round((sentenceSummary.get(currentSentence.index)?.bestScore ?? 0) * 100)}%
-            {sentenceSummary.get(currentSentence.index)?.passedAt ? ' · ✓ 合格済み' : ''}
+            {format(t.stage4.bestScore, {
+              score: Math.round(
+                (sentenceSummary.get(currentSentence.index)?.bestScore ?? 0) * 100,
+              ),
+            })}
+            {sentenceSummary.get(currentSentence.index)?.passedAt ? t.stage4.passedSuffix : ''}
           </p>
         ) : null}
       </div>
@@ -662,7 +673,7 @@ export function Stage4Panel({
       {showCompareBar && (
         <div className="mt-4 rounded-inset border border-ink-line bg-paper-soft px-3 py-2">
           <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-            聴き比べ
+            {t.stage4.compareTitle}
           </p>
           {/* Stacked waveforms on a shared time axis — tap a row to play it and
               watch the playhead. Lets the learner see rhythm / length gaps the
@@ -683,7 +694,7 @@ export function Stage4Panel({
               onClick={handlePlayRefOnly}
               className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
             >
-              🔊 お手本
+              {t.stage4.compareReference}
               <KeyHint label="1" tone="dark" />
             </button>
             <button
@@ -691,7 +702,7 @@ export function Stage4Panel({
               onClick={handlePlaySelf}
               className="rounded-chip border border-ink-line bg-paper px-3.5 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
             >
-              🎙 自分の声
+              {t.stage4.compareYourVoice}
               <KeyHint label="2" tone="dark" />
             </button>
           </div>
@@ -711,7 +722,7 @@ export function Stage4Panel({
                 onClick={handlePlayRefOnly}
                 className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
               >
-                🔊 お手本
+                {t.stage4.compareReference}
                 <KeyHint label="R" tone="dark" />
               </button>
             )}
@@ -721,7 +732,7 @@ export function Stage4Panel({
               disabled={isStatusUpdating}
               className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"
             >
-              🎤 録音開始
+              {t.stage4.recordButton}
               <KeyHint label="Space" />
             </button>
           </>
@@ -733,7 +744,7 @@ export function Stage4Panel({
             onClick={handleStop}
             className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
           >
-            ⏹ 停止 ({formatMs(recorder.elapsedMs)})
+            {format(t.stage4.stopButton, { elapsed: formatMs(recorder.elapsedMs) })}
             <KeyHint label="Space" />
           </button>
         )}
@@ -741,7 +752,7 @@ export function Stage4Panel({
         {phase === 'uploading' && (
           <div className="flex items-center gap-2 text-sm text-ink-muted">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
-            採点中…
+            {t.stage4.scoring}
           </div>
         )}
 
@@ -759,7 +770,7 @@ export function Stage4Panel({
                   : 'rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep'
               }
             >
-              🔁 もう一度
+              {t.stage4.retryButton}
               <KeyHint label="R" tone={result.pass ? 'dark' : 'light'} />
             </button>
             {result.pass ? (
@@ -768,7 +779,7 @@ export function Stage4Panel({
                 onClick={handleNext}
                 className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep"
               >
-                {sentenceIndex + 1 >= totalSentences ? '✓ 完了' : '次の文へ →'}
+                {sentenceIndex + 1 >= totalSentences ? t.stage4.finish : t.stage4.nextSentence}
                 <KeyHint label="Space" />
               </button>
             ) : (
@@ -777,7 +788,7 @@ export function Stage4Panel({
                 onClick={handleNext}
                 className="rounded-chip border border-ink-line bg-paper px-4 py-2 text-sm font-medium text-ink-muted transition hover:border-accent hover:text-accent"
               >
-                スキップ →
+                {t.stage4.skipSentence}
                 <KeyHint label="Space" tone="dark" />
               </button>
             )}
@@ -786,7 +797,7 @@ export function Stage4Panel({
 
         {phase === 'completed' && (
           <div className="flex items-center gap-2 text-sm font-semibold text-accent-deep">
-            ✓ ステージ4完了 — 次のセグメントへ
+            {t.stage4.stageComplete}
           </div>
         )}
       </div>
@@ -803,26 +814,29 @@ export function Stage4Panel({
                   : 'border border-accent-soft bg-accent-faint text-accent-deep',
               ].join(' ')}
             >
-              {result.pass ? '✓ 合格' : 'もう一度'} {Math.round(result.score * 100)}%
+              {result.pass ? t.stage4.passed : t.stage4.tryAgain} {Math.round(result.score * 100)}%
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-              合格基準 {Math.round(result.threshold * 100)}%
+              {format(t.stage4.threshold, { score: Math.round(result.threshold * 100) })}
             </span>
           </div>
           {result.transcript ? (
             <div className="mt-2 grid gap-1.5 text-xs">
               <p>
-                <span className="font-semibold text-ink-muted">あなた: </span>
+                <span className="font-semibold text-ink-muted">{t.stage4.yourReading}</span>
                 <span className="text-ink">{result.transcript}</span>
               </p>
               <p>
-                <span className="font-semibold text-ink-muted">正解: </span>
+                <span className="font-semibold text-ink-muted">{t.stage4.correctReading}</span>
                 <span className="text-ink">{result.expected}</span>
               </p>
             </div>
           ) : null}
           <p className="mt-2 text-xs text-ink-muted">
-            合格 {result.passingSentences} / {result.totalSentences} 文
+            {format(t.stage4.passedCount, {
+              passed: result.passingSentences,
+              total: result.totalSentences,
+            })}
           </p>
         </div>
       )}
@@ -842,9 +856,9 @@ export function Stage4Panel({
             type="button"
             onClick={handleSkip}
             className="text-xs text-ink-faint underline underline-offset-2 transition hover:text-accent"
-            title="採点をスキップしてステージ4を完了します"
+            title={t.stage4.skipStageTitle}
           >
-            このステージをスキップ
+            {t.stage4.skipStage}
           </button>
         </div>
       ) : null}

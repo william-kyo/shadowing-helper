@@ -8,6 +8,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
+
 type SegmentRangeEditorProps = {
   segmentId: string
   startMs: number | null
@@ -33,6 +36,7 @@ export function SegmentRangeEditor({
   audioDurationMs,
 }: SegmentRangeEditorProps) {
   const router = useRouter()
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [start, setStart] = useState(() => toSecondsInput(startMs))
   const [end, setEnd] = useState(() => toSecondsInput(endMs))
@@ -65,13 +69,13 @@ export function SegmentRangeEditor({
       })
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? '再分割に失敗しました。')
+        throw new Error(data.error ?? t.segment.resplitFailed)
       }
       // Server replaced the audio + script; pull the fresh server render.
       router.refresh()
       setOpen(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '再分割に失敗しました。')
+      setError(e instanceof Error ? e.message : t.segment.resplitFailed)
     } finally {
       setSubmitting(false)
     }
@@ -87,7 +91,7 @@ export function SegmentRangeEditor({
       >
         <span className="flex items-center gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-            音声範囲を調整
+            {t.segment.rangeEditorTitle}
           </span>
           <span className="font-mono text-[10px] text-ink-faint">
             {formatSeconds((startMs ?? 0) / 1000)} – {formatSeconds((endMs ?? 0) / 1000)}
@@ -99,14 +103,15 @@ export function SegmentRangeEditor({
       {open ? (
         <div className="grid gap-4 border-t border-ink-line/70 px-4 py-4">
           <p className="text-xs text-ink-muted">
-            開始・終了を秒で指定して音声を切り直します。スクリプトは新しい範囲から再生成され、
-            <span className="text-ink">ステージ4の採点はリセット</span>されます。
+            {t.segment.rangeEditorBody1}
+            <span className="text-ink">{t.segment.rangeEditorBodyEmphasis}</span>
+            {t.segment.rangeEditorBody2}
           </p>
 
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1">
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-                開始 (秒)
+                {t.segment.rangeStart}
               </span>
               <input
                 type="number"
@@ -121,7 +126,7 @@ export function SegmentRangeEditor({
             <span className="pb-2 text-ink-faint">–</span>
             <label className="grid gap-1">
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-                終了 (秒)
+                {t.segment.rangeEnd}
               </span>
               <input
                 type="number"
@@ -135,14 +140,14 @@ export function SegmentRangeEditor({
             </label>
             {Number.isFinite(startNum) && Number.isFinite(endNum) && endNum > startNum ? (
               <span className="pb-2 font-mono text-[10px] text-ink-faint">
-                長さ {formatSeconds(endNum - startNum)}
+                {format(t.segment.rangeLength, { value: formatSeconds(endNum - startNum) })}
               </span>
             ) : null}
           </div>
 
           {durationSeconds != null ? (
             <p className="font-mono text-[10px] text-ink-faint">
-              元音声の長さ: {formatSeconds(durationSeconds)}
+              {format(t.segment.sourceLength, { value: formatSeconds(durationSeconds) })}
             </p>
           ) : null}
 
@@ -159,11 +164,11 @@ export function SegmentRangeEditor({
               disabled={!valid || submitting}
               className="rounded-chip bg-accent px-4 py-2 text-sm font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"
             >
-              {submitting ? '再分割中…' : '再分割して再生成'}
+              {submitting ? t.segment.resplitRunning : t.segment.resplitButton}
             </button>
             {submitting ? (
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
-                音声切り出し + 文字起こし中
+                {t.segment.resplitProgress}
               </span>
             ) : null}
           </div>

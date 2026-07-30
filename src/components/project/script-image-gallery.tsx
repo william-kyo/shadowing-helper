@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
+
 type ScriptImage = {
   id: string
   originalName: string
@@ -20,6 +23,7 @@ type ScriptImageGalleryProps = {
  * tap-to-close.
  */
 export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProps) {
+  const t = useT()
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const isOpen = openIndex !== null
 
@@ -64,7 +68,7 @@ export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProp
             key={image.id}
             type="button"
             onClick={() => setOpenIndex(index)}
-            aria-label={`${image.originalName} を拡大表示`}
+            aria-label={format(t.projects.zoomImageAria, { name: image.originalName })}
             className="group flex flex-col items-center gap-2 text-center"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -83,7 +87,7 @@ export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProp
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="台本画像ビューア"
+          aria-label={t.projects.viewerAriaLabel}
           onClick={close}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-paper-deep/92 p-4 backdrop-blur-sm sm:p-8"
           style={{
@@ -95,7 +99,7 @@ export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProp
           <button
             type="button"
             onClick={close}
-            aria-label="閉じる"
+            aria-label={t.common.close}
             className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-chip border border-paper/20 bg-paper/10 text-paper transition hover:bg-paper/20"
             style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}
           >
@@ -122,7 +126,7 @@ export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProp
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); step(-1) }}
-              aria-label="前の画像"
+              aria-label={t.projects.prevImageAria}
               className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-chip border border-paper/20 bg-paper/10 text-paper transition hover:bg-paper/20 sm:left-6"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,7 +138,7 @@ export function ScriptImageGallery({ projectId, images }: ScriptImageGalleryProp
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); step(1) }}
-              aria-label="次の画像"
+              aria-label={t.projects.nextImageAria}
               className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-chip border border-paper/20 bg-paper/10 text-paper transition hover:bg-paper/20 sm:right-6"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

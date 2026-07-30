@@ -14,6 +14,10 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type React from 'react'
 
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+
 // Horizontal resolution of the waveform. Bars are time-aligned across the two
 // tracks, so a fixed bars-per-second keeps the same x pointing at the same
 // timestamp in both rows.
@@ -109,8 +113,8 @@ function useDecodedAudio(url: string): { data: Decoded | null; error: boolean } 
   return { data: state.data, error: state.error }
 }
 
-function formatSeconds(sec: number): string {
-  return `${sec.toFixed(1)}秒`
+function formatSeconds(sec: number, t: Dictionary): string {
+  return format(t.common.seconds, { value: sec.toFixed(1) })
 }
 
 // One waveform row. `widthFraction` is the track's length relative to the
@@ -126,6 +130,7 @@ function WaveformRow({
   playheadFraction,
   isPlaying,
   onSeek,
+  t,
 }: {
   label: string
   color: 'reference' | 'self'
@@ -134,6 +139,7 @@ function WaveformRow({
   globalPeak: number
   durationSec: number
   playheadFraction: number | null
+  t: Dictionary
   isPlaying: boolean
   onSeek: (fraction: number) => void
 }) {
@@ -165,7 +171,7 @@ function WaveformRow({
         <div
           role="button"
           tabIndex={0}
-          aria-label={`${label}を再生`}
+          aria-label={format(t.stage4.playLabelAria, { label })}
           onClick={handlePointer}
           className="absolute inset-y-0 left-0 flex cursor-pointer items-center gap-[1px] overflow-hidden rounded-sm"
           style={{ width: `${Math.max(2, widthFraction * 100)}%` }}
@@ -191,7 +197,7 @@ function WaveformRow({
           )}
         </div>
         <span className="absolute -bottom-0.5 right-0 font-mono text-[9px] text-ink-faint">
-          {formatSeconds(durationSec)}
+          {formatSeconds(durationSec, t)}
         </span>
       </div>
     </div>
@@ -204,6 +210,7 @@ export function WaveformCompare({
   referenceAudioRef,
   selfAudioRef,
 }: WaveformCompareProps) {
+  const t = useT()
   const reference = useDecodedAudio(referenceUrl)
   const self = useDecodedAudio(recordingUrl)
 
@@ -291,7 +298,7 @@ export function WaveformCompare({
   if (reference.error || self.error) {
     return (
       <p className="text-center text-[11px] text-ink-faint">
-        波形を読み込めませんでした。
+        {t.stage4.waveformFailed}
       </p>
     )
   }
@@ -300,7 +307,7 @@ export function WaveformCompare({
     return (
       <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-ink-faint">
         <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
-        波形を生成中…
+        {t.stage4.waveformLoading}
       </div>
     )
   }
@@ -315,7 +322,8 @@ export function WaveformCompare({
   return (
     <div className="space-y-2">
       <WaveformRow
-        label="お手本"
+        label={t.stage4.referenceLabel}
+        t={t}
         color="reference"
         peaks={reference.data.peaks}
         widthFraction={reference.data.durationSec / maxDuration}
@@ -328,7 +336,8 @@ export function WaveformCompare({
         onSeek={(f) => seek('reference', f)}
       />
       <WaveformRow
-        label="自分の声"
+        label={t.stage4.yourVoiceLabel}
+        t={t}
         color="self"
         peaks={self.data.peaks}
         widthFraction={self.data.durationSec / maxDuration}

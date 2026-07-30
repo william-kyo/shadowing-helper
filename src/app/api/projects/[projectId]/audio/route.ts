@@ -6,6 +6,7 @@ import { createFileResponse } from '@/lib/file-response'
 import { measureStep, withApiPerf } from '@/lib/perf'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { downloadStorageObject } from '@/lib/storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -14,6 +15,8 @@ type RouteContext = {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/projects/[projectId]/audio', request, async () => {
   const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
   if (response || !user) {
@@ -33,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
   )
 
   if (!project?.audioPath) {
-    return NextResponse.json({ error: '音声が見つかりません。' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.audioNotFound }, { status: 404 })
   }
 
   const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -45,7 +48,7 @@ export async function GET(request: Request, context: RouteContext) {
       objectKey: project.audioPath,
     })
   } catch {
-    return NextResponse.json({ error: 'ファイルが見つかりません。' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.fileNotFound }, { status: 404 })
   }
 
   return createFileResponse({

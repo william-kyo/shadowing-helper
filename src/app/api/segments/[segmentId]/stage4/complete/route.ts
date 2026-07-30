@@ -4,6 +4,7 @@ import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { measureStep, withApiPerf } from '@/lib/perf'
 import { STAGE4_STAGE_NUMBER } from '@/lib/recording-storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -16,6 +17,8 @@ type RouteContext = {
 // when the learner can't get a clean take (background noise, mic issues) and
 // chooses to move on.
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/segments/[segmentId]/stage4/complete', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -33,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
       )
 
       if (!segment) {
-        return NextResponse.json({ error: 'セグメントが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.segmentNotFound }, { status: 404 })
       }
 
       const stageProgress = await measureStep('db.stage_progress.upsert_complete', () =>
@@ -62,7 +65,7 @@ export async function POST(request: Request, context: RouteContext) {
       })
     } catch (error) {
       console.error('[stage4/complete] failed:', error)
-      return NextResponse.json({ error: 'ステージ4の完了に失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.stage4CompleteFailed }, { status: 500 })
     }
   })
 }

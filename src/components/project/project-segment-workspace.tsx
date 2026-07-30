@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 
 import { ManualSegmentForm } from '@/components/project/manual-segment-form'
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
 import { computeCurrentStage, type StageProgress } from '@/lib/stage-progress'
 
 type SegmentListItem = {
@@ -35,6 +37,7 @@ export function ProjectSegmentWorkspace({
   initialSegments,
 }: ProjectSegmentWorkspaceProps) {
   const router = useRouter()
+  const t = useT()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [segments, setSegments] = useState(initialSegments)
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(initialSegments.length === 0)
@@ -45,7 +48,10 @@ export function ProjectSegmentWorkspace({
   function handleDeleteSegment(segmentId: string) {
     const position = segments.findIndex((s) => s.id === segmentId)
     const seg = segments[position]
-    if (!seg || !confirm(`セグメント「${seg.title ?? position + 1}」を削除しますか？`)) {
+    if (
+      !seg ||
+      !confirm(format(t.segments.deleteConfirm, { title: seg.title ?? position + 1 }))
+    ) {
       return
     }
     fetch(`/api/segments/${segmentId}`, { method: 'DELETE' })
@@ -58,11 +64,11 @@ export function ProjectSegmentWorkspace({
           router.refresh()
         }
       })
-      .catch(() => alert('削除に失敗しました。'))
+      .catch(() => alert(t.segments.deleteFailed))
   }
 
   function handleAutoSegment() {
-    if (!confirm('AI が音声を自動分割します。既存のセグメントは削除されません。続行しますか？')) {
+    if (!confirm(t.segments.autoSplitConfirm)) {
       return
     }
     setIsAutoSegmenting(true)
@@ -76,12 +82,15 @@ export function ProjectSegmentWorkspace({
         if (data.error) {
           alert(data.error)
         } else {
-          alert(data.message ?? `${data.segments?.length ?? 0}件のセグメントを作成しました`)
+          alert(
+            data.message ??
+              format(t.segments.autoSplitCreated, { count: data.segments?.length ?? 0 }),
+          )
           setSegments(data.segments)
           router.refresh()
         }
       })
-      .catch(() => alert('自動分割に失敗しました。'))
+      .catch(() => alert(t.segments.autoSplitFailed))
       .finally(() => setIsAutoSegmenting(false))
   }
 
@@ -104,7 +113,7 @@ export function ProjectSegmentWorkspace({
         }
 
         if (!response.ok || !result.segment) {
-          return { error: result.error ?? 'セグメント保存に失敗しました。' }
+          return { error: result.error ?? t.segments.saveFailed }
         }
 
         const createdSegment = result.segment
@@ -121,7 +130,7 @@ export function ProjectSegmentWorkspace({
         onClick={() => setIsCreateFormOpen(true)}
         className="inline-flex items-center justify-center rounded-chip bg-ink px-6 py-3 text-sm font-semibold text-paper transition hover:bg-accent"
       >
-        セグメントを追加
+        {t.segments.addButton}
       </button>
     </div>
   )
@@ -129,12 +138,12 @@ export function ProjectSegmentWorkspace({
   const segmentListSection = (
     <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
       <div>
-        <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">セグメント一覧</h2>
-        <p className="mt-2 text-sm text-ink-muted">切り出した学習単位をここに並べます。</p>
+        <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.segments.listTitle}</h2>
+        <p className="mt-2 text-sm text-ink-muted">{t.segments.listBody}</p>
       </div>
 
       {segments.length === 0 ? (
-        <p className="text-sm text-ink-faint">まだセグメントはありません。上のフォームから追加してください。</p>
+        <p className="text-sm text-ink-faint">{t.segments.listEmpty}</p>
       ) : (
         <ul className="grid gap-3">
           {segments.map((segment, position) => {
@@ -147,16 +156,16 @@ export function ProjectSegmentWorkspace({
               >
                 <div className="flex items-center gap-2 font-medium text-ink">
                   <span>
-                    {position + 1}. {segment.title ?? '無題セグメント'}
+                    {position + 1}. {segment.title ?? t.segments.untitled}
                   </span>
                   {allCompleted ? (
                     <span className="inline-flex items-center gap-1 rounded-chip border border-ink bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
                       <span aria-hidden>✓</span>
-                      完了
+                      {t.segments.completed}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-chip border border-accent-soft bg-accent-faint px-2 py-0.5 text-xs font-semibold text-accent-deep">
-                      ステージ{currentStage} 進行中
+                      {format(t.segments.stageInProgress, { stage: currentStage })}
                     </span>
                   )}
                 </div>
@@ -168,7 +177,7 @@ export function ProjectSegmentWorkspace({
                 onClick={() => handleDeleteSegment(segment.id)}
                 className="shrink-0 rounded-chip border border-accent-soft bg-paper px-3 py-1.5 text-sm font-medium text-accent transition hover:border-accent hover:bg-accent-faint"
               >
-                削除
+                {t.common.delete}
               </button>
             </li>
             )
@@ -182,7 +191,7 @@ export function ProjectSegmentWorkspace({
     <section className="grid gap-6">
       <section className="grid gap-4 rounded-card border border-ink-line bg-paper p-6">
         <div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">元音声</h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{t.segments.sourceAudioTitle}</h2>
           <p className="mt-1 text-sm text-ink-faint">{audioOriginalName}</p>
         </div>
 
@@ -190,7 +199,7 @@ export function ProjectSegmentWorkspace({
           ref={audioRef}
           controls
           preload="metadata"
-          aria-label="元音声プレイヤー"
+          aria-label={t.segments.sourceAudioAria}
           className="w-full"
         >
           <source src={audioSrc} type={audioMimeType} />
@@ -208,7 +217,7 @@ export function ProjectSegmentWorkspace({
             onChange={(event) => setDialogueMode(event.target.checked)}
             className="h-4 w-4 accent-accent"
           />
-          対話モード（話者ごとに A: / B: で改行）
+          {t.segments.dialogueMode}
         </label>
         <button
           type="button"
@@ -219,10 +228,10 @@ export function ProjectSegmentWorkspace({
           {isAutoSegmenting || projectStatus === 'segmenting' ? (
             <>
               <span className="mr-2 inline-block animate-spin">⟳</span>
-              分割中...
+              {t.segments.autoSplitRunning}
             </>
           ) : (
-            'AI で自動分割'
+            t.segments.autoSplitButton
           )}
         </button>
       </div>

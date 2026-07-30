@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
 import { provisionExampleProject } from '@/lib/example-project'
+import { getT } from '@/lib/i18n/server'
 import { addPerfAttrs, measureStep } from '@/lib/perf'
 
 // Cached in memory for the lifetime of the serverless function instance.
@@ -184,7 +185,7 @@ export async function requireAppUserForApi() {
   if (!user) {
     return {
       user: null,
-      response: NextResponse.json({ error: 'ログインしてください。' }, { status: 401 }),
+      response: NextResponse.json({ error: (await getT()).errors.authRequired }, { status: 401 }),
     }
   }
 

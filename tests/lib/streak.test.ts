@@ -110,10 +110,10 @@ describe('buildWeekHeatmap', () => {
     const today = jstDate('2026-05-09T10:00:00+09:00') // Saturday
     const days = buildWeekHeatmap([], today)
     expect(days).toHaveLength(7)
-    expect(days[0].weekdayLabel).toBe('月')
-    expect(days[6].weekdayLabel).toBe('日')
+    expect(days[0].weekdayKey).toBe('mon')
+    expect(days[6].weekdayKey).toBe('sun')
     const todayCell = days.find((d) => d.isToday)
-    expect(todayCell?.weekdayLabel).toBe('土')
+    expect(todayCell?.weekdayKey).toBe('sat')
     expect(todayCell?.isFuture).toBe(false)
     expect(days[6].isFuture).toBe(true)
   })
@@ -227,11 +227,11 @@ describe('summarizeStreak', () => {
 
 describe('growthStage and isHabitFormed', () => {
   it('progresses through growth labels', () => {
-    expect(growthStage(0).label).toBe('スタート')
-    expect(growthStage(3).label).toBe('種まき')
-    expect(growthStage(7).label).toBe('芽生え')
-    expect(growthStage(14).label).toBe('成長中')
-    expect(growthStage(21).label).toBe('習慣')
+    expect(growthStage(0).labelKey).toBe('start')
+    expect(growthStage(3).labelKey).toBe('seed')
+    expect(growthStage(7).labelKey).toBe('sprout')
+    expect(growthStage(14).labelKey).toBe('growing')
+    expect(growthStage(21).labelKey).toBe('habit')
   })
 
   it('flags habit formed once 21 days reached', () => {

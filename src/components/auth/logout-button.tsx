@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { useT } from '@/lib/i18n/client'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export function LogoutButton() {
   const router = useRouter()
+  const t = useT()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleLogout() {
@@ -25,7 +27,7 @@ export function LogoutButton() {
       disabled={isSubmitting}
       className="rounded-chip border border-ink-line bg-paper px-4 py-2.5 text-xs font-medium tracking-wide text-ink-muted transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {isSubmitting ? 'ログアウト中…' : 'ログアウト'}
+      {isSubmitting ? t.auth.signingOut : t.auth.signOut}
     </button>
   )
 }

@@ -3,9 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+
 type TabDef = {
   href: string
-  label: string
+  label: (t: Dictionary) => string
   reading: string
   isActive: (pathname: string) => boolean
   icon: (active: boolean) => React.ReactNode
@@ -14,7 +17,7 @@ type TabDef = {
 const TABS: TabDef[] = [
   {
     href: '/',
-    label: 'ホーム',
+    label: (t) => t.nav.home,
     reading: 'home',
     isActive: (p) => p === '/',
     icon: (active) => (
@@ -26,7 +29,7 @@ const TABS: TabDef[] = [
   },
   {
     href: '/projects',
-    label: 'プロジェクト',
+    label: (t) => t.nav.projects,
     reading: 'projects',
     isActive: (p) => p.startsWith('/projects'),
     icon: (active) => (
@@ -46,13 +49,14 @@ const TABS: TabDef[] = [
  */
 export function BottomNav() {
   const pathname = usePathname()
+  const t = useT()
 
   if (pathname === '/login') return null
   if (/^\/projects\/[^/]+\/segments\//.test(pathname)) return null
 
   return (
     <nav
-      aria-label="メインナビゲーション"
+      aria-label={t.nav.ariaLabel}
       className="glass-player fixed inset-x-0 bottom-0 z-30 border-t border-ink-line/60 shadow-[0_-4px_24px_rgba(29,27,24,0.06)]"
     >
       <ul
@@ -78,7 +82,7 @@ export function BottomNav() {
                   {tab.icon(active)}
                 </span>
                 <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
-                  {tab.label}
+                  {tab.label(t)}
                 </span>
               </Link>
             </li>

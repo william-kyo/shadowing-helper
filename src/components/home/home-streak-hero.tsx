@@ -2,7 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { HABIT_GOAL_DAYS, growthStage } from '@/lib/streak'
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+import { HABIT_GOAL_DAYS, growthStage, type GrowthStageKey } from '@/lib/streak'
+
+const GROWTH_LABEL_KEYS: Record<GrowthStageKey, keyof Dictionary['home']> = {
+  habit: 'badgeHabit',
+  growing: 'badgeGrowing',
+  sprout: 'badgeSprout',
+  seed: 'badgeSeed',
+  start: 'badgeStart',
+}
 
 type HomeStreakHeroProps = {
   currentStreak: number
@@ -59,12 +70,14 @@ export function HomeStreakHero({
   hasPracticedToday,
   habitAchieved,
 }: HomeStreakHeroProps) {
-  const { emoji, label } = growthStage(currentStreak)
+  const t = useT()
+  const { emoji, labelKey } = growthStage(currentStreak)
+  const label = t.home[GROWTH_LABEL_KEYS[labelKey]]
 
   if (habitAchieved) {
     return (
       <section
-        aria-label="現在の継続日数"
+        aria-label={t.home.streakAriaLabel}
         className={`rounded-card p-6 shadow-[0_1px_0_rgba(29,27,24,0.04),0_18px_40px_-30px_rgba(29,27,24,0.4)] ${
           hasPracticedToday
             ? 'bg-paper-soft ring-2 ring-spark'
@@ -74,25 +87,25 @@ export function HomeStreakHero({
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-              継続中
+              {t.home.streakActive}
             </p>
             <p className="mt-2 flex items-baseline gap-2">
               <span className="animate-streak-in font-display text-6xl font-semibold leading-none tracking-tighter text-accent sm:text-7xl">
                 <AnimatedNumber value={currentStreak} />
               </span>
-              <span className="text-base font-medium text-ink-muted">日連続</span>
+              <span className="text-base font-medium text-ink-muted">{t.home.daysInARow}</span>
             </p>
             <p className="mt-2 text-sm text-ink-muted">
-              最長 {longestStreak} 日 · {label} {emoji}
+              {format(t.home.longestWithBadge, { days: longestStreak, label, emoji })}
             </p>
           </div>
           {hasPracticedToday ? (
             <span className="shrink-0 rounded-chip bg-spark px-3 py-1 text-xs font-semibold text-paper">
-              ✓ 今日完了
+              {t.home.doneToday}
             </span>
           ) : (
             <span className="shrink-0 rounded-chip bg-paper px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent-soft">
-              今日まだ
+              {t.home.notYetToday}
             </span>
           )}
         </div>
@@ -107,7 +120,7 @@ export function HomeStreakHero({
 
   return (
     <section
-      aria-label="習慣化チャレンジ"
+      aria-label={t.home.challengeAriaLabel}
       className={`rounded-card p-6 shadow-[0_1px_0_rgba(29,27,24,0.04),0_18px_40px_-30px_rgba(29,27,24,0.4)] ${
         hasPracticedToday
           ? 'bg-paper-soft ring-2 ring-accent'
@@ -117,25 +130,28 @@ export function HomeStreakHero({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-            21日チャレンジ
+            {t.home.challengeTitle}
           </p>
           <p className="mt-2 flex items-baseline gap-2">
             <span className="animate-streak-in font-display text-5xl font-semibold leading-none tracking-tighter text-ink sm:text-6xl">
-              <AnimatedNumber value={completed} />日目
+              <AnimatedNumber value={completed} />
+              {t.home.challengeDayCount}
             </span>
             <span className="text-base font-medium text-ink-faint">/ {goal}</span>
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            {remaining > 0 ? `あと ${remaining} 日で習慣化 ${emoji}` : `習慣達成おめでとう ${emoji}`}
+            {remaining > 0
+              ? format(t.home.challengeRemaining, { days: remaining, emoji })
+              : format(t.home.challengeAchieved, { emoji })}
           </p>
         </div>
         {hasPracticedToday ? (
           <span className="shrink-0 rounded-chip bg-accent px-3 py-1 text-xs font-semibold text-paper">
-            ✓ 今日完了
+            {t.home.doneToday}
           </span>
         ) : (
           <span className="shrink-0 rounded-chip bg-paper px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent-soft">
-            今日まだ
+            {t.home.notYetToday}
           </span>
         )}
       </div>
@@ -146,7 +162,7 @@ export function HomeStreakHero({
           aria-valuenow={completed}
           aria-valuemin={0}
           aria-valuemax={goal}
-          aria-label={`${completed} / ${goal} 日達成`}
+          aria-label={format(t.home.challengeProgressAria, { completed, goal })}
           className="h-2 w-full overflow-hidden rounded-chip bg-paper-soft ring-1 ring-ink-line/60"
         >
           <div
@@ -155,10 +171,10 @@ export function HomeStreakHero({
           />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
-          <span>1日</span>
-          <span>7日</span>
-          <span>14日</span>
-          <span>21日</span>
+          <span>{t.home.dayMark1}</span>
+          <span>{t.home.dayMark7}</span>
+          <span>{t.home.dayMark14}</span>
+          <span>{t.home.dayMark21}</span>
         </div>
       </div>
     </section>

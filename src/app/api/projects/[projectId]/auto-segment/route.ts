@@ -12,6 +12,8 @@ import { analyzeSegments } from '@/lib/segment-analysis'
 import { extractAudioSegmentFromBuffer } from '@/lib/segment-audio'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
+import { format } from '@/lib/i18n/format'
+import { getRequestT } from '@/lib/i18n/server'
 
 const autoSegmentSchema = z.object({
   minDurationSeconds: z.number().min(1).max(300).default(5),
@@ -30,6 +32,8 @@ type RouteContext = {
 export const maxDuration = 300
 
 export async function POST(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/projects/[projectId]/auto-segment', request, async () => {
     try {
       const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -46,7 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
       const parsed = await measureStep('validation.auto_segment', async () => autoSegmentSchema.safeParse(json))
 
       if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error.issues[0]?.message ?? '入力内容を確認してください。' }, { status: 400 })
+        return NextResponse.json({ error: parsed.error.issues[0]?.message ?? t.errors.checkInput }, { status: 400 })
       }
 
       const project = await measureStep('db.project.find_with_segments', () =>
@@ -62,15 +66,15 @@ export async function POST(request: Request, context: RouteContext) {
       )
 
       if (!project) {
-        return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
+        return NextResponse.json({ error: t.errors.projectNotFound }, { status: 404 })
       }
 
       if (project.status === 'segmenting') {
-        return NextResponse.json({ error: '自動分割中は重复実行できません。' }, { status: 409 })
+        return NextResponse.json({ error: t.errors.autoSplitInProgress }, { status: 409 })
       }
 
       if (!project.audioPath) {
-        return NextResponse.json({ error: '音声ファイルが見つかりません。' }, { status: 400 })
+        return NextResponse.json({ error: t.errors.audioFileNotFound }, { status: 400 })
       }
 
       const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -172,7 +176,7 @@ export async function POST(request: Request, context: RouteContext) {
 
       return NextResponse.json({
         success: true,
-        message: `${createdSegments.length}件のセグメントを作成しました。`,
+        message: format(t.segments.autoSplitCreated, { count: createdSegments.length }),
         segments: createdSegments.map((seg) => ({
           id: seg.id,
           index: seg.index,
@@ -185,7 +189,7 @@ export async function POST(request: Request, context: RouteContext) {
       })
     } catch (error) {
       console.error('[auto-segment] Error:', error)
-      return NextResponse.json({ error: '自動分割に失敗しました。' }, { status: 500 })
+      return NextResponse.json({ error: t.errors.autoSplitFailed }, { status: 500 })
     }
   })
 }

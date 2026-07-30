@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useRef, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 
+import { useT } from '@/lib/i18n/client'
+import { format } from '@/lib/i18n/format'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { buildStorageObjectKey, createStoredFileName, getProjectStoragePaths } from '@/lib/storage-paths'
 import {
@@ -31,6 +33,7 @@ type CreateProjectResponse = {
 
 export function ProjectCreateForm() {
   const router = useRouter()
+  const t = useT()
   const {
     control,
     register,
@@ -60,17 +63,17 @@ export function ProjectCreateForm() {
       const imageFiles = values.images ? Array.from(values.images) : []
 
       if (!audioFile) {
-        setErrorMessage('音声ファイルを選択してください。')
+        setErrorMessage(t.projects.audioRequired)
         return
       }
 
       if (audioFile.size > 100 * 1024 * 1024) {
-        setErrorMessage('音声ファイルは100MB以下にしてください。')
+        setErrorMessage(t.projects.audioTooLarge)
         return
       }
 
       if (imageFiles.some((image) => image.size > 10 * 1024 * 1024)) {
-        setErrorMessage('画像ファイルは1枚10MB以下にしてください。')
+        setErrorMessage(t.projects.imageTooLarge)
         return
       }
 
@@ -79,7 +82,7 @@ export function ProjectCreateForm() {
         const { data: userResult, error: userError } = await supabase.auth.getUser()
 
         if (userError || !userResult.user) {
-          setErrorMessage('ログイン状態を確認できませんでした。再度ログインしてください。')
+          setErrorMessage(t.projects.sessionExpired)
           return
         }
 
@@ -105,7 +108,7 @@ export function ProjectCreateForm() {
         })
 
         if (audioUploadError) {
-          setErrorMessage(audioUploadError.message || '音声アップロードに失敗しました。')
+          setErrorMessage(audioUploadError.message || t.projects.audioUploadFailed)
           return
         }
 
@@ -129,7 +132,7 @@ export function ProjectCreateForm() {
               audioPath,
               ...sourceImages.map((uploadedImage) => uploadedImage.imagePath),
             ])
-            setErrorMessage(imageUploadError.message || '画像アップロードに失敗しました。')
+            setErrorMessage(imageUploadError.message || t.projects.imageUploadFailed)
             return
           }
 
@@ -162,22 +165,25 @@ export function ProjectCreateForm() {
             audioPath,
             ...sourceImages.map((image) => image.imagePath),
           ])
-          setErrorMessage(result.error ?? 'プロジェクト作成に失敗しました。')
+          setErrorMessage(result.error ?? t.projects.createFailed)
           return
         }
 
         setSuccessMessage(
-          `「${result.project.title}」を作成しました。画像 ${result.project.imageCount} 枚を受け付けました。`,
+          format(t.projects.createdMessage, {
+            title: result.project.title,
+            count: result.project.imageCount,
+          }),
         )
         reset()
         router.push('/projects')
       } catch {
-        setErrorMessage('通信に失敗しました。時間をおいて再度お試しください。')
+        setErrorMessage(t.projects.networkFailed)
       }
     },
     () => {
       setSuccessMessage(null)
-      setErrorMessage('入力内容を確認してください。')
+      setErrorMessage(t.projects.checkInput)
     },
   )
 
@@ -189,12 +195,12 @@ export function ProjectCreateForm() {
     >
       <div className="grid gap-2">
         <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="title">
-          プロジェクト名
+          {t.projects.nameLabel}
         </label>
         <input
           id="title"
           type="text"
-          placeholder="例: NHK ニュース shadowing 01"
+          placeholder={t.projects.namePlaceholder}
           aria-invalid={errors.title ? 'true' : 'false'}
           className="rounded-inset border border-ink-line bg-paper px-4 py-3 text-ink placeholder:text-ink-faint outline-none transition focus:border-ink focus:ring-2 focus:ring-accent/25"
           {...register('title')}
@@ -206,7 +212,7 @@ export function ProjectCreateForm() {
 
       <div className="grid gap-2">
         <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="audio">
-          音声ファイル
+          {t.projects.audioLabel}
         </label>
         <input
           id="audio"
@@ -214,9 +220,9 @@ export function ProjectCreateForm() {
           accept={acceptedAudio}
           aria-invalid={errors.audio ? 'true' : 'false'}
           className="sr-only"
-          {...register('audio', { required: '音声ファイルを選択してください。' })}
+          {...register('audio', { required: t.projects.audioRequired })}
           ref={(el) => {
-            register('audio', { required: '音声ファイルを選択してください。' }).ref(el)
+            register('audio', { required: t.projects.audioRequired }).ref(el)
             audioRef.current = el
           }}
         />
@@ -232,17 +238,17 @@ export function ProjectCreateForm() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-faint">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-ink-faint">ファイルを選択</span>
+              <span className="text-ink-faint">{t.projects.chooseFile}</span>
             </>
           )}
         </button>
-        <p className="text-xs text-ink-muted">mp3 / wav / m4a / webm / ogg を想定。まずはローカル保存のみ行います。</p>
+        <p className="text-xs text-ink-muted">{t.projects.audioHint}</p>
         {errors.audio ? <p className="text-sm text-accent-deep">{errors.audio.message as string}</p> : null}
       </div>
 
       <div className="grid gap-2">
         <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted" htmlFor="images">
-          台本画像（任意）
+          {t.projects.imagesLabel}
         </label>
         <input
           id="images"
@@ -263,17 +269,17 @@ export function ProjectCreateForm() {
           className="flex items-center gap-3 rounded-inset border border-dashed border-ink-line bg-paper-soft px-4 py-4 text-sm transition hover:border-ink hover:bg-paper"
         >
           {imageFileNames.length > 0 ? (
-            <span className="truncate text-ink">{imageFileNames.join('、')}</span>
+            <span className="truncate text-ink">{imageFileNames.join(t.projects.imageNameSeparator)}</span>
           ) : (
             <>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-faint">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-ink-faint">ファイルを選択（複数可）</span>
+              <span className="text-ink-faint">{t.projects.chooseFiles}</span>
             </>
           )}
         </button>
-        <p className="text-xs text-ink-muted">png / jpg / webp / heic を受け付けます（任意）。順番どおりに選ぶとその順で保存します。</p>
+        <p className="text-xs text-ink-muted">{t.projects.imagesHint}</p>
         {errors.images ? <p className="text-sm text-accent-deep">{errors.images.message as string}</p> : null}
       </div>
 
@@ -297,7 +303,7 @@ export function ProjectCreateForm() {
         disabled={isSubmitting}
         className="inline-flex items-center justify-center rounded-chip bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? '保存中…' : 'プロジェクトを作成'}
+        {isSubmitting ? t.common.saving : t.projects.submitCreate}
       </button>
     </form>
   )

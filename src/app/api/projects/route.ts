@@ -11,10 +11,11 @@ import { computePcmHash } from '@/lib/audio-fingerprint'
 import {
   acceptedAudioMimeTypes,
   acceptedImageMimeTypes,
-  createProjectUploadSchema,
+  buildCreateProjectUploadSchema,
 } from '@/lib/validations/project'
 import { buildStorageObjectKey, createStoredFileName, downloadStorageObject, getProjectStoragePaths, uploadBufferToStorage } from '@/lib/storage'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getRequestT } from '@/lib/i18n/server'
 import path from 'node:path'
 
 // Segmentation (Whisper + LLM + per-segment ffmpeg + uploads) runs in an
@@ -23,6 +24,8 @@ import path from 'node:path'
 export const maxDuration = 300
 
 export async function POST(request: Request) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/projects', request, async () => {
   try {
     const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
@@ -35,12 +38,12 @@ export async function POST(request: Request) {
     if (limited) return limited
 
     const json = await measureStep('request.json', () => request.json())
-    const titleResult = await measureStep('validation.project_create', async () => createProjectUploadSchema.safeParse(json))
+    const titleResult = await measureStep('validation.project_create', async () => buildCreateProjectUploadSchema(t).safeParse(json))
 
     if (!titleResult.success) {
       return NextResponse.json(
         {
-          error: titleResult.error.issues[0]?.message ?? '入力内容を確認してください。',
+          error: titleResult.error.issues[0]?.message ?? t.errors.checkInput,
         },
         { status: 400 },
       )
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
 
     if (!acceptedAudioMimeTypes.includes(titleResult.data.audioMimeType as (typeof acceptedAudioMimeTypes)[number])) {
       return NextResponse.json(
-        { error: '対応していない音声形式です。' },
+        { error: t.errors.unsupportedAudioType },
         { status: 400 },
       )
     }
@@ -56,7 +59,7 @@ export async function POST(request: Request) {
     for (const image of titleResult.data.sourceImages) {
       if (!acceptedImageMimeTypes.includes(image.mimeType as (typeof acceptedImageMimeTypes)[number])) {
         return NextResponse.json(
-          { error: '対応していない画像形式が含まれています。' },
+          { error: t.errors.unsupportedImageType },
           { status: 400 },
         )
       }
@@ -64,11 +67,11 @@ export async function POST(request: Request) {
 
     const expectedPrefix = `${user.supabaseUserId}/projects/${titleResult.data.projectId}/`
     if (!titleResult.data.audioPath.startsWith(expectedPrefix)) {
-      return NextResponse.json({ error: '音声アップロード先が不正です。' }, { status: 400 })
+      return NextResponse.json({ error: t.errors.audioUploadPathInvalid }, { status: 400 })
     }
 
     if (!titleResult.data.sourceImages.every((image) => image.imagePath.startsWith(expectedPrefix))) {
-      return NextResponse.json({ error: '画像アップロード先が不正です。' }, { status: 400 })
+      return NextResponse.json({ error: t.errors.imageUploadPathInvalid }, { status: 400 })
     }
 
     addPerfAttrs({ 'project.source_image_count': titleResult.data.sourceImages.length })
@@ -273,7 +276,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error(error)
     return NextResponse.json(
-      { error: 'プロジェクト作成に失敗しました。' },
+      { error: t.errors.projectCreateFailed },
       { status: 500 },
     )
   }

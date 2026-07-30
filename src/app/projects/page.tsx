@@ -4,12 +4,15 @@ import { LogoutButton } from '@/components/auth/logout-button'
 import { ProjectCreateSection } from '@/components/project/project-create-section'
 import { db } from '@/lib/db'
 import { requireAppUser } from '@/lib/auth'
+import { LanguagePicker } from '@/components/i18n/language-picker'
 import { ProjectList } from '@/components/project/project-list'
+import { getT } from '@/lib/i18n/server'
 import { measureStep, withPagePerf } from '@/lib/perf'
 
 export default async function ProjectsPage() {
   return withPagePerf('/projects', async () => {
   const currentUser = await measureStep('auth.require_user', () => requireAppUser())
+  const t = await getT()
 
   const projects = await measureStep('db.project.find_many_with_images', () =>
     db.project.findMany({
@@ -33,14 +36,17 @@ export default async function ProjectsPage() {
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line/70 pb-6">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-              プロジェクトダッシュボード
+              {t.projects.dashboardEyebrow}
             </p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
-              プロジェクト一覧
+              {t.projects.listTitle}
             </h1>
             <p className="mt-2 text-sm text-ink-muted">{currentUser.email}</p>
           </div>
-          <LogoutButton />
+          <div className="flex shrink-0 items-center gap-2">
+            <LanguagePicker />
+            <LogoutButton />
+          </div>
         </div>
 
         {projects.length === 0 ? <ProjectCreateSection /> : null}

@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { SpeakerAnnotator, type SpeakerChunk } from '@/components/segment/speaker-annotator'
 import type { Speaker } from '@/lib/sentence-split'
-import { STAGE_META } from '@/lib/stage-meta'
+import { useT } from '@/lib/i18n/client'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+import { getStageMeta } from '@/lib/stage-meta'
 
 type StageStatus = 'not_started' | 'in_progress' | 'completed'
 type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error'
@@ -45,12 +48,12 @@ const nextStatus: Record<StageStatus, StageStatus> = {
   completed: 'not_started',
 }
 
-function getStatusLabel(status: StageStatus) {
+function getStatusLabel(status: StageStatus, t: Dictionary) {
   return status === 'completed'
-    ? '✔ 完了'
+    ? t.stageStatus.completed
     : status === 'in_progress'
-      ? '◐ 進行中'
-      : '○ 未着手'
+      ? t.stageStatus.inProgress
+      : t.stageStatus.notStarted
 }
 
 function getStatusChipClasses(status: StageStatus) {
@@ -79,6 +82,8 @@ export function Stage1Panel({
   practiceSpeaker = null,
   onPracticeSpeakerChange,
 }: Stage1Props) {
+  const t = useT()
+  const stageMeta = getStageMeta(t)
   const [text, setText] = useState(initialText)
   const [isScriptVisible, setIsScriptVisible] = useState(getDefaultScriptVisible(activeStage))
   const [isTranscribing, setIsTranscribing] = useState(false)
@@ -161,9 +166,9 @@ export function Stage1Panel({
       })
       const data = await res.json()
       if (res.ok) {
-        setTranscribeMsg(data.message ?? '文字起こしを開始しました。ページを更新して結果を確認してください。')
+        setTranscribeMsg(data.message ?? t.segment.transcribeStarted)
       } else {
-        setTranscribeMsg(data.error ?? '文字起こしに失敗しました。')
+        setTranscribeMsg(data.error ?? t.segment.transcribeFailed)
       }
     } finally {
       setIsTranscribing(false)
@@ -175,20 +180,21 @@ export function Stage1Panel({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="group relative">
           <h3 className="cursor-default font-display text-base font-semibold tracking-tight text-ink">
-            <span className="text-accent">ステージ{activeStage}</span> — {STAGE_META[activeStage]?.label}
+            <span className="text-accent">{format(t.stages.stageN, { n: activeStage })}</span> —{' '}
+            {stageMeta[activeStage]?.label}
           </h3>
           <div className="pointer-events-none absolute left-0 top-full z-10 mt-1.5 hidden w-72 rounded-inset border border-ink-line bg-paper-deep px-3 py-2.5 text-xs leading-relaxed text-paper/85 shadow-lg group-hover:block">
-            {STAGE_META[activeStage]?.description}
+            {stageMeta[activeStage]?.description}
           </div>
         </div>
         <button
           type="button"
           onClick={() => onStageStatusChange(nextStatus[stageStatus])}
           disabled={isStatusUpdating}
-          title="ステータスを更新 (s)"
+          title={t.stageStatus.updateTitle}
           className={`rounded-chip border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${getStatusChipClasses(stageStatus)}`}
         >
-          {isStatusUpdating ? '更新中…' : getStatusLabel(stageStatus)}
+          {isStatusUpdating ? t.stageStatus.updating : getStatusLabel(stageStatus, t)}
         </button>
       </div>
 
@@ -200,7 +206,7 @@ export function Stage1Panel({
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-                練習する役
+                {t.segment.practiceRoleLabel}
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -218,15 +224,15 @@ export function Stage1Panel({
                         : 'border-ink-line bg-paper text-ink-muted hover:border-accent hover:text-accent'
                     }`}
                   >
-                    {choice ? `${choice}の役だけ` : '両方'}
+                    {choice ? format(t.segment.roleOnly, { speaker: choice }) : t.segment.roleBoth}
                   </button>
                 )
               })}
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
               {practiceSpeaker
-                ? `${practiceSpeaker}のセリフは音声が消えます。相手のセリフだけを聞きながら、${practiceSpeaker}の番は自分で話してください。`
-                : '会話全体をシャドーイングします。難しいときは片方の役だけを選んでください。'}
+                ? format(t.segment.roleHintSingle, { speaker: practiceSpeaker })
+                : t.segment.roleHintBoth}
             </p>
           </div>
         )}
@@ -234,13 +240,13 @@ export function Stage1Panel({
         {/* script area */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">スクリプト</label>
+            <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">{t.segment.scriptLabel}</label>
             <button
               onClick={() => setIsScriptVisible(!isScriptVisible)}
-              aria-label={isScriptVisible ? 'スクリプトを非表示' : 'スクリプトを表示'}
+              aria-label={isScriptVisible ? t.segment.hideScript : t.segment.showScript}
               className="text-sm font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
             >
-              {isScriptVisible ? '非表示' : '表示'}
+              {isScriptVisible ? t.common.hide : t.common.show}
             </button>
           </div>
           {transcribeMsg && (
@@ -256,7 +262,7 @@ export function Stage1Panel({
                     disabled={isTranscribing}
                     className="rounded-chip bg-accent px-3 py-1.5 text-xs font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"
                   >
-                    {isTranscribing ? '文字起こし中…' : '自動生成'}
+                    {isTranscribing ? t.segment.transcribing : t.segment.transcribeButton}
                   </button>
                 </div>
               )}
@@ -265,7 +271,7 @@ export function Stage1Panel({
                 value={text}
                 onChange={(e) => { setText(e.target.value); setSaveStatus('unsaved') }}
                 rows={6}
-                placeholder="スクリプトがここに表示されます。編集して上書き保存できます。"
+                placeholder={t.segment.scriptPlaceholder}
                 className="w-full overflow-hidden rounded-inset border border-ink-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
               />
             </>
@@ -288,16 +294,16 @@ export function Stage1Panel({
           {saveStatus === 'saving' && (
             <span className="flex items-center gap-1.5 text-ink-muted">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
-              保存中…
+              {t.common.saving}
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="font-medium text-accent-deep">✓ 自動保存しました</span>
+            <span className="font-medium text-accent-deep">{t.common.autosaved}</span>
           )}
           {saveStatus === 'unsaved' && (
             <span className="flex items-center gap-1.5 text-ink-faint">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              未保存の変更
+              {t.common.unsavedChanges}
             </span>
           )}
           {saveStatus === 'error' && (
@@ -306,7 +312,7 @@ export function Stage1Panel({
               onClick={() => void persist(text)}
               className="rounded-chip border border-accent-soft bg-accent-faint px-3 py-1 text-xs font-medium text-accent-deep transition hover:border-accent hover:bg-accent-soft"
             >
-              保存に失敗 · 再試行
+              {t.common.saveFailedRetry}
             </button>
           )}
         </div>

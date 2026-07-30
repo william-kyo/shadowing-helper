@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation'
 
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { LoginForm } from '@/components/auth/login-form'
+import { LanguagePicker } from '@/components/i18n/language-picker'
 import { getCurrentAppUser } from '@/lib/auth'
+import { getT } from '@/lib/i18n/server'
 
 export default async function LoginPage({
   searchParams,
@@ -17,6 +19,7 @@ export default async function LoginPage({
     redirect('/')
   }
 
+  const t = await getT()
   const { error } = await searchParams
   const showOAuthError = error === 'oauth'
 
@@ -27,23 +30,29 @@ export default async function LoginPage({
         aria-hidden
         className="pointer-events-none absolute -left-12 top-1/4 hidden font-display text-[28rem] font-semibold leading-none tracking-tighter text-accent/[0.08] lg:block"
       >
-        影
+        {t.auth.brandMark}
       </span>
+
+      {/* Reachable before sign-in on purpose: someone who cannot read the
+          default language needs to switch the app before they can log in. */}
+      <div className="relative mx-auto flex w-full max-w-5xl justify-end px-2 sm:px-4">
+        <LanguagePicker />
+      </div>
 
       <div className="relative mx-auto grid w-full max-w-5xl flex-1 items-center gap-8 lg:gap-12 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="grid gap-4 px-2 sm:gap-6 sm:px-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-chip border border-accent-soft bg-accent-faint px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-accent-deep">
             <span className="h-1.5 w-1.5 rounded-chip bg-accent" />
-            内部アクセスのみ
+            {t.auth.internalOnly}
           </div>
           <div className="grid gap-4 sm:gap-5">
             <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              シャドーイング
+              {t.auth.brandLine1}
               <br />
-              <span className="text-accent">ヘルパー.</span>
+              <span className="text-accent">{t.auth.brandLine2}</span>
             </h1>
             <p className="max-w-xl text-sm leading-7 text-ink-muted sm:text-base sm:leading-8">
-              社内で発行したメールアドレス、またはGoogleアカウントでログインすると、自分のプロジェクト一覧と学習ワークスペースに入れます。Googleで初めてログインすると、アカウントが自動的に作成されます。
+              {t.auth.intro}
             </p>
           </div>
         </section>
@@ -52,7 +61,7 @@ export default async function LoginPage({
           <div className="grid gap-4">
             {showOAuthError ? (
               <p className="rounded-inset border border-accent-soft bg-accent-faint px-4 py-3 text-sm text-accent-deep">
-                Googleログインに失敗しました。もう一度お試しください。
+                {t.auth.googleCallbackFailed}
               </p>
             ) : null}
 
@@ -61,7 +70,7 @@ export default async function LoginPage({
             <div className="flex items-center gap-3" aria-hidden>
               <span className="h-px flex-1 bg-ink-line" />
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                または
+                {t.auth.or}
               </span>
               <span className="h-px flex-1 bg-ink-line" />
             </div>

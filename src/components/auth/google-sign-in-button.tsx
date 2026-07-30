@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 
+import { useT } from '@/lib/i18n/client'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export function GoogleSignInButton() {
+  const t = useT()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -31,7 +33,7 @@ export function GoogleSignInButton() {
     // On success the browser navigates to Google, so we only reach here on error.
     if (error) {
       setIsLoading(false)
-      setErrorMessage(error.message || 'Googleでのログインに失敗しました。')
+      setErrorMessage(error.message || t.auth.googleSignInFailed)
     }
   }
 
@@ -44,7 +46,7 @@ export function GoogleSignInButton() {
         className="inline-flex items-center justify-center gap-3 rounded-chip border border-ink-line bg-paper px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
       >
         <GoogleGlyph />
-        {isLoading ? 'Googleへ移動中…' : 'Googleでログイン'}
+        {isLoading ? t.auth.googleRedirecting : t.auth.googleSignIn}
       </button>
 
       {errorMessage ? (

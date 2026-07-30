@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
+import { getT } from '@/lib/i18n/server'
 
 // Per-user sliding-window rate limiting for the expensive endpoints (Groq STT +
 // ffmpeg). DB-backed (RateLimitHit table) so the limit holds across serverless
@@ -80,7 +81,7 @@ export async function rateLimitResponseOrNull(
   const result = await enforceRateLimit(userId, bucket)
   if (result.allowed) return null
   return NextResponse.json(
-    { error: '操作が多すぎます。しばらく待ってから再度お試しください。', code: 'rate_limited' },
+    { error: (await getT()).errors.rateLimited, code: 'rate_limited' },
     { status: 429, headers: { 'Retry-After': String(result.retryAfterSeconds) } },
   )
 }

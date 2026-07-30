@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { measureStep, withApiPerf } from '@/lib/perf'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { downloadStorageObject } from '@/lib/storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteParams = {
   params: Promise<{
@@ -14,6 +15,8 @@ type RouteParams = {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const t = getRequestT(request)
+
   return withApiPerf('/api/projects/[projectId]/images/[imageId]', request, async () => {
   const { user, response } = await measureStep('auth.require_api_user', () => requireAppUserForApi())
   if (response || !user) {
@@ -33,7 +36,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   )
 
   if (!sourceImage) {
-    return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.imageNotFound }, { status: 404 })
   }
 
   const supabase = await measureStep('supabase.create_server_client', () => createSupabaseServerClient())
@@ -45,7 +48,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       objectKey: sourceImage.imagePath,
     })
   } catch {
-    return NextResponse.json({ error: '画像ファイルが見つかりません' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.imageFileNotFound }, { status: 404 })
   }
 
   return new NextResponse(fileBuffer, {

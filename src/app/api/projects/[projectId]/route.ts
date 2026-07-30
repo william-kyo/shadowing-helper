@@ -4,6 +4,7 @@ import { requireAppUserForApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { removeStorageObjects } from '@/lib/storage'
+import { getRequestT } from '@/lib/i18n/server'
 
 type RouteContext = {
   params: Promise<{
@@ -12,6 +13,8 @@ type RouteContext = {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const t = getRequestT(request)
+
   const { user, response } = await requireAppUserForApi()
   if (response || !user) {
     return response
@@ -35,7 +38,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   })
 
   if (!project) {
-    return NextResponse.json({ error: 'プロジェクトが見つかりません。' }, { status: 404 })
+    return NextResponse.json({ error: t.errors.projectNotFound }, { status: 404 })
   }
 
   // Delete DB records (cascades to segments, sourceImages, stageProgresses, recordings)

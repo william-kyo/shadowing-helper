@@ -1,31 +1,20 @@
-export type StageMeta = {
-  label: string;
-  description: string;
-};
+import type { Dictionary } from '@/lib/i18n/dictionaries'
 
-export const STAGE_META: Record<number, StageMeta> = {
-  1: {
-    label: "テキスト確認",
-    description: "テキストの意味を確認し、脚注の言葉は章末の解説で確認します。",
-  },
-  2: {
-    label: "サイレント",
-    description:
-      "テキストを見ながら音を確認します。聞こえてくる音を声に出さずに頭の中で言う練習法です。",
-  },
-  3: {
-    label: "マンブリング",
-    description:
-      "テキストを見ないで口を動かします。聞こえてくる音をブツブツ小声でつぶやく練習法です。イントネーションの感覚をつかみましょう。",
-  },
-  4: {
-    label: "スクリプト付きシャドーイング",
-    description:
-      "テキストを見ながら、音声に続いて声に出しシャドーイングします。スクリプトを見ながら音声を聞き、すぐ後を復唱します。",
-  },
-  5: {
-    label: "フリーシャドーイング",
-    description:
-      "慣れてきたら、テキストを見ないでシャドーイングをします。◉プロソディ・シャドーイング：リズムやイントネーションに特に注意してシャドーイングする練習法です。例えば「あー」と「あ〜」のイントネーションが異なります。意識して練習しましょう。◉コンテンツ・シャドーイング：スクリプトの意味を理解し意識しながらシャドーイングする練習法です。実際のコミュニケーション場面で使うことを想像しながら練習をしてください。自然な日本語が身につき、日本語がスラスラと話せるようになります。",
-  },
-};
+export type StageMeta = {
+  label: string
+  description: string
+}
+
+export const STAGE_COUNT = 5
+
+// The five stages' copy now lives in the dictionaries, so callers derive it from
+// the active locale rather than importing a fixed Japanese table.
+export function getStageMeta(t: Dictionary): Record<number, StageMeta> {
+  return {
+    1: { label: t.stages.s1Label, description: t.stages.s1Description },
+    2: { label: t.stages.s2Label, description: t.stages.s2Description },
+    3: { label: t.stages.s3Label, description: t.stages.s3Description },
+    4: { label: t.stages.s4Label, description: t.stages.s4Description },
+    5: { label: t.stages.s5Label, description: t.stages.s5Description },
+  }
+}

@@ -103,7 +103,10 @@ export function computeLongestStreak(
   return longest
 }
 
-const WEEKDAY_LABELS_JA = ['月', '火', '水', '木', '金', '土', '日']
+// Locale-independent keys; the UI maps them onto the active locale's labels.
+export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+
+export type WeekdayKey = (typeof WEEKDAY_KEYS)[number]
 const WEEKDAY_INDEX_FROM_SHORT: Record<string, number> = {
   Mon: 0,
   Tue: 1,
@@ -126,7 +129,7 @@ function weekdayIndex(date: Date, tz: string): number {
 
 export type WeekHeatmapDay = {
   dateKey: string
-  weekdayLabel: string
+  weekdayKey: WeekdayKey
   active: boolean
   // Repaired via a make-up (補卡) — counts toward the streak but is rendered
   // distinctly from a normally-practiced day.
@@ -179,7 +182,7 @@ export function buildWeekHeatmap(
       makeupRemaining > 0 && isMakeupEligibleDay(dateKey, todayKey, active, madeup)
     result.push({
       dateKey,
-      weekdayLabel: WEEKDAY_LABELS_JA[i],
+      weekdayKey: WEEKDAY_KEYS[i],
       active,
       madeup,
       makeupEligible: eligible,
@@ -241,13 +244,17 @@ export function isHabitFormed(currentStreak: number, longestStreak: number): boo
   return currentStreak >= HABIT_GOAL_DAYS || longestStreak >= HABIT_GOAL_DAYS
 }
 
+// `labelKey` names the badge rather than spelling it, so the caller renders it
+// in the reader's language.
+export type GrowthStageKey = 'habit' | 'growing' | 'sprout' | 'seed' | 'start'
+
 export function growthStage(currentStreak: number): {
   emoji: string
-  label: string
+  labelKey: GrowthStageKey
 } {
-  if (currentStreak >= 21) return { emoji: '🌳', label: '習慣' }
-  if (currentStreak >= 14) return { emoji: '🌿', label: '成長中' }
-  if (currentStreak >= 7) return { emoji: '🌱', label: '芽生え' }
-  if (currentStreak >= 1) return { emoji: '🌰', label: '種まき' }
-  return { emoji: '✨', label: 'スタート' }
+  if (currentStreak >= 21) return { emoji: '🌳', labelKey: 'habit' }
+  if (currentStreak >= 14) return { emoji: '🌿', labelKey: 'growing' }
+  if (currentStreak >= 7) return { emoji: '🌱', labelKey: 'sprout' }
+  if (currentStreak >= 1) return { emoji: '🌰', labelKey: 'seed' }
+  return { emoji: '✨', labelKey: 'start' }
 }

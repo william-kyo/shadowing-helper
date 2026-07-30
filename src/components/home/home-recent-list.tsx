@@ -1,5 +1,9 @@
 import Link from 'next/link'
 
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { format } from '@/lib/i18n/format'
+
 export type HomeRecentItem = {
   id: string
   projectId: string
@@ -12,34 +16,44 @@ export type HomeRecentItem = {
 
 type HomeRecentListProps = {
   items: HomeRecentItem[]
+  t: Dictionary
+  locale: Locale
 }
 
-function formatRelative(date: Date, now: Date = new Date()): string {
+function formatRelative(
+  date: Date,
+  t: Dictionary,
+  locale: Locale,
+  now: Date = new Date(),
+): string {
   const diffMs = now.getTime() - date.getTime()
   const minutes = Math.floor(diffMs / (60 * 1000))
-  if (minutes < 1) return 'たった今'
-  if (minutes < 60) return `${minutes}分前`
+  if (minutes < 1) return t.home.justNow
+  if (minutes < 60) return format(t.home.minutesAgo, { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}時間前`
+  if (hours < 24) return format(t.home.hoursAgo, { n: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}日前`
-  return new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric' }).format(date)
+  if (days < 7) return format(t.home.daysAgo, { n: days })
+  return new Intl.DateTimeFormat(LOCALE_BCP47[locale], {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
-export function HomeRecentList({ items }: HomeRecentListProps) {
+export function HomeRecentList({ items, t, locale }: HomeRecentListProps) {
   if (items.length === 0) return null
 
   return (
-    <section aria-label="最近の練習" className="grid gap-3">
+    <section aria-label={t.home.recentAriaLabel} className="grid gap-3">
       <div className="flex items-center justify-between">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          最近の練習
+          {t.home.recentTitle}
         </h2>
         <Link
           href="/projects"
           className="text-xs font-medium text-accent transition hover:text-accent-deep"
         >
-          すべて見る →
+          {t.home.seeAll}
         </Link>
       </div>
       <ul className="divide-y divide-ink-line/60 overflow-hidden rounded-card border border-ink-line bg-paper">
@@ -62,7 +76,7 @@ export function HomeRecentList({ items }: HomeRecentListProps) {
                   <p className="truncate text-xs text-ink-muted">
                     {item.projectTitle} ·{' '}
                     <span suppressHydrationWarning>
-                      {formatRelative(item.lastPracticedAt)}
+                      {formatRelative(item.lastPracticedAt, t, locale)}
                     </span>
                   </p>
                 </div>
