@@ -405,6 +405,35 @@ const en: Dictionary = {
     reminderBody: "You haven't practised today. Even one segment counts 🌱",
   },
 
+  tour: {
+    gotIt: 'Got it',
+    skipAll: 'Skip the guide',
+    homeStartTitle: 'Start with the sample',
+    homeStartBody:
+      'A sample conversation is already waiting for you. Start here to get a feel for how the five stages work.',
+    stage1Title: 'Stage 1 · Read the text',
+    stage1Body:
+      'Read the script and make sure you follow the meaning. When you are done, press this button to mark the stage complete — every stage works the same way.',
+    stage2Title: 'Stage 2 · Silent',
+    stage2Body:
+      'Follow the text while you listen and say each line in your head. Mark the stage complete with the same button when you are done.',
+    stage3Title: 'Stage 3 · Mumbling',
+    stage3Body:
+      'Look away from the text and mutter along quietly with what you hear. Mark it complete when you are done.',
+    stage4Title: 'Stage 4 · Record and score',
+    stage4Body:
+      'This is the one stage that completes itself. Listen to the reference, record yourself, and each sentence gets scored. Pass them all and the stage finishes automatically.',
+    stage5Title: 'Stage 5 · Shadow without the script',
+    stage5Body:
+      'For a dialogue you can take just one role. Your role is muted, so you supply those lines yourself.',
+    uploadTitle: 'Practise with your own audio',
+    uploadBody:
+      'Once you have tried the sample, upload your own audio. Pick a file and the AI splits it into pieces that are comfortable to study.',
+    sampleProjectTitle: 'This one is a sample',
+    sampleProjectBody:
+      'To practise your own material, upload it as a new project. You can add one from the projects list.',
+  },
+
   errors: {
     authRequired: 'Please sign in.',
     crossSiteBlocked: 'That request came from an unexpected origin.',

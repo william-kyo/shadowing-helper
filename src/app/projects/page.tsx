@@ -5,7 +5,9 @@ import { ProjectCreateSection } from '@/components/project/project-create-sectio
 import { db } from '@/lib/db'
 import { requireAppUser } from '@/lib/auth'
 import { LanguagePicker } from '@/components/i18n/language-picker'
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
 import { ProjectList } from '@/components/project/project-list'
+import { isExampleProject } from '@/lib/example-project'
 import { getT } from '@/lib/i18n/server'
 import { measureStep, withPagePerf } from '@/lib/perf'
 
@@ -13,6 +15,7 @@ export default async function ProjectsPage() {
   return withPagePerf('/projects', async () => {
   const currentUser = await measureStep('auth.require_user', () => requireAppUser())
   const t = await getT()
+
 
   const projects = await measureStep('db.project.find_many_with_images', () =>
     db.project.findMany({
@@ -29,6 +32,12 @@ export default async function ProjectsPage() {
       },
     }),
   )
+
+  // Seeding the sample means `projects` is never empty, which used to bury the
+  // create form behind a collapsed panel at the foot of the page. A learner who
+  // owns nothing but the sample is still starting from scratch, so treat them the
+  // same as someone with no projects at all.
+  const hasOwnProject = projects.some((project) => !isExampleProject(project))
 
   return (
     <main className="min-h-screen bg-surface px-6 pt-10 pb-28 text-ink">
@@ -49,7 +58,7 @@ export default async function ProjectsPage() {
           </div>
         </div>
 
-        {projects.length === 0 ? <ProjectCreateSection /> : null}
+        {hasOwnProject ? null : <ProjectCreateSection />}
 
         <ProjectList
           projects={projects.map((p) => ({
@@ -65,7 +74,9 @@ export default async function ProjectsPage() {
           }))}
         />
 
-        {projects.length > 0 ? <ProjectCreateSection initiallyOpen={false} /> : null}
+        {hasOwnProject ? <ProjectCreateSection initiallyOpen={false} /> : null}
+
+        <OnboardingTour surface="projects" hasOwnProject={hasOwnProject} />
       </div>
     </main>
   )

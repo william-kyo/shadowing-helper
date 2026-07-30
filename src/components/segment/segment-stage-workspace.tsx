@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type 
 import { useRouter } from 'next/navigation'
 
 import { type SpeakerChunk } from '@/components/segment/speaker-annotator'
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
 import { buildSpeakerWindows, SpeakerCueProvider } from '@/components/segment/speaker-cue-context'
 import { useT } from '@/lib/i18n/client'
 import { Stage1Panel } from '@/components/segment/stage-1-panel'
@@ -60,6 +61,9 @@ type SegmentStageWorkspaceProps = {
   // Timed chunks the learner labels with A/B in stage 1, so stage 5 can cue one
   // role at a time. Empty when the segment has no persisted transcription.
   speakerChunks?: SpeakerChunk[]
+  // True on the seeded sample only, so the practice walk-through never nags over
+  // the learner's own material.
+  isSampleSegment?: boolean
   // Fixed bottom audio player, rendered here so it can be unmounted while Stage
   // 4 is active (Stage 4 owns the Space shortcut; the player's would collide).
   bottomDock?: ReactNode
@@ -80,6 +84,7 @@ export function SegmentStageWorkspace({
   stage4InitialMetadata = null,
   audioAvailable = true,
   speakerChunks = [],
+  isSampleSegment = false,
   bottomDock,
   bottomNav,
 }: SegmentStageWorkspaceProps) {
@@ -236,6 +241,17 @@ export function SegmentStageWorkspace({
   return (
     <SpeakerCueProvider value={speakerCue}>
     <div className="grid gap-6">
+      {/* Mounted here rather than on the page because the hint depends on which
+          stage is selected, which only this component knows. Suppressed while the
+          segment-complete toast is animating out and the router is navigating. */}
+      {!isCompleting && (
+        <OnboardingTour
+          surface="segment"
+          isSampleSegment={isSampleSegment}
+          stage={selectedStage}
+          stageCompleted={getStatus(selectedStage) === 'completed'}
+        />
+      )}
       {isCompleting ? (
         <div
           role="status"

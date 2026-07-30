@@ -33,6 +33,9 @@ vi.mock('@/lib/db', () => ({
         ],
         segments: [],
       }),
+      // The page checks whether the learner owns anything beyond the seeded
+      // sample, to decide on the upload nudge.
+      count: vi.fn().mockResolvedValue(1),
     },
   },
 }))

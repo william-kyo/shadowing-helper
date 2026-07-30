@@ -6,9 +6,12 @@ import { notFound } from 'next/navigation'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { LanguagePicker } from '@/components/i18n/language-picker'
 import { ProjectSegmentWorkspace } from '@/components/project/project-segment-workspace'
+import { SampleProjectBanner } from '@/components/project/sample-project-banner'
 import { ScriptImageGallery } from '@/components/project/script-image-gallery'
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
 import { requireAppUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { EXAMPLE_AUDIO_OBJECT_KEY, isExampleProject } from '@/lib/example-project'
 import { format } from '@/lib/i18n/format'
 import { getT } from '@/lib/i18n/server'
 import { measureStep, withPagePerf } from '@/lib/perf'
@@ -67,6 +70,16 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           total: totalSegments,
         })
 
+  const isSampleProject = isExampleProject(project)
+  // Cheap existence check rather than loading the list: all we need to know is
+  // whether the learner has graduated from the sample.
+  const ownProjectCount = await measureStep('db.project.count_own', () =>
+    db.project.count({
+      where: { userId: currentUser.id, audioPath: { not: EXAMPLE_AUDIO_OBJECT_KEY } },
+    }),
+  )
+  const hasOwnProject = ownProjectCount > 0
+
   const [prevProject, nextProject] = await measureStep('db.project.find_adjacent', () =>
     Promise.all([
       db.project.findFirst({
@@ -114,6 +127,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             <LogoutButton />
           </div>
         </div>
+
+        {isSampleProject && !hasOwnProject ? <SampleProjectBanner t={t} /> : null}
 
         <ProjectSegmentWorkspace
           projectId={project.id}
@@ -187,6 +202,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             </Link>
           )}
         </nav>
+        <OnboardingTour
+          surface="project-detail"
+          hasOwnProject={hasOwnProject}
+          isSampleProject={isSampleProject}
+        />
       </div>
     </main>
   )

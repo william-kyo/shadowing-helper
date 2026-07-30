@@ -96,6 +96,7 @@ export function HomeTodayCard({ segment, hasPracticedToday, t }: HomeTodayCardPr
       <Link
         href={href}
         aria-label={format(t.home.startPracticeAria, { title: segment.segmentTitle })}
+        data-tour="today-cta"
         className="mt-5 flex items-center justify-center gap-2 rounded-chip bg-accent px-5 py-3.5 text-base font-semibold !text-paper transition hover:bg-accent-deep"
       >
         <span aria-hidden>▶</span>

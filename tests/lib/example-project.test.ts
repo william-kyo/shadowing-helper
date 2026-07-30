@@ -8,7 +8,11 @@ const { projectCreate } = vi.hoisted(() => ({ projectCreate: vi.fn() }))
 vi.mock('@/lib/db', () => ({ db: { project: { create: projectCreate } } }))
 
 import { EXAMPLE_PROJECT } from '@/lib/example-project.data'
-import { EXAMPLE_AUDIO_OBJECT_KEY, provisionExampleProject } from '@/lib/example-project'
+import {
+  EXAMPLE_AUDIO_OBJECT_KEY,
+  isExampleProject,
+  provisionExampleProject,
+} from '@/lib/example-project'
 import { buildSentenceUnits } from '@/lib/sentence-split'
 
 describe('provisionExampleProject', () => {
@@ -100,5 +104,18 @@ describe('example project fixture', () => {
     expect(units.length).toBeGreaterThan(0)
     expect(units.every((unit) => unit.text.length > 0)).toBe(true)
     expect(units.every((unit) => unit.speaker === 'A' || unit.speaker === 'B')).toBe(true)
+  })
+})
+
+describe('isExampleProject', () => {
+  it('recognises the seeded sample by its shared audio key', () => {
+    expect(isExampleProject({ audioPath: EXAMPLE_AUDIO_OBJECT_KEY })).toBe(true)
+  })
+
+  it('treats anything the learner uploaded as their own', () => {
+    // Uploads always land under the owner's own prefix — nothing else can write
+    // to examples/ — so the key is a reliable marker.
+    expect(isExampleProject({ audioPath: 'uid-1/projects/p1/audio/lesson.mp3' })).toBe(false)
+    expect(isExampleProject({ audioPath: 'examples/other/thing.mp3' })).toBe(false)
   })
 })

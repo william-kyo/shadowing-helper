@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { LanguagePicker } from '@/components/i18n/language-picker'
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
 import { HomeRecentList, type HomeRecentItem } from '@/components/home/home-recent-list'
 import { HomeStreakHero } from '@/components/home/home-streak-hero'
 import { HomeTodayCard, type HomeTodaySegment } from '@/components/home/home-today-card'
@@ -295,6 +296,10 @@ export default async function HomePage() {
           />
 
           <PushNotificationCard />
+
+          {/* Points at the sample card so a brand-new account has an obvious
+              first move. Renders nothing once acknowledged. */}
+          <OnboardingTour surface="home" />
 
           <div className="flex justify-center pt-2">
             <Link

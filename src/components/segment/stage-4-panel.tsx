@@ -728,6 +728,7 @@ export function Stage4Panel({
             )}
             <button
               type="button"
+              data-tour="stage4-record"
               onClick={handleRecordDirect}
               disabled={isStatusUpdating}
               className="rounded-chip bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-accent-deep disabled:opacity-50"

@@ -386,6 +386,35 @@ const zh: Dictionary = {
     reminderBody: '今天还没练习。哪怕只练一个片段也好 🌱',
   },
 
+  tour: {
+    gotIt: '知道了',
+    skipAll: '关闭引导',
+    homeStartTitle: '先用示例试一遍',
+    homeStartBody:
+      '我们已经为你准备好一段示例对话。从这里开始练习，先熟悉五个阶段的流程。',
+    stage1Title: '阶段1 · 确认文本',
+    stage1Body:
+      '先读脚本，确认意思。读完后点这个按钮把这个阶段标记为完成 —— 每个阶段都是同样的做法。',
+    stage2Title: '阶段2 · 不出声',
+    stage2Body:
+      '看着文本听音频，在心里跟着说。做完后用同一个按钮标记完成。',
+    stage3Title: '阶段3 · 小声跟读',
+    stage3Body:
+      '不看文本，把听到的声音小声跟出来。做完后标记完成。',
+    stage4Title: '阶段4 · 录音评分',
+    stage4Body:
+      '只有这个阶段会自动完成。先听示范再录音，每句话都会评分。全部通过后阶段会自动结束。',
+    stage5Title: '阶段5 · 脱稿跟读',
+    stage5Body:
+      '如果是对话，你可以只练其中一个角色。你选的角色台词会静音，需要你自己说出来。',
+    uploadTitle: '用自己的音频练习',
+    uploadBody:
+      '试过示例之后，就可以上传自己的音频了。选好文件后，AI 会把它切成适合学习的长度。',
+    sampleProjectTitle: '这是一个示例',
+    sampleProjectBody:
+      '想练自己的材料，请把音频作为新项目上传。可以在项目列表页添加。',
+  },
+
   errors: {
     authRequired: '请先登录。',
     crossSiteBlocked: '请求来源不合法。',

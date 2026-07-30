@@ -9,6 +9,7 @@ import { SegmentStageWorkspace } from '@/components/segment/segment-stage-worksp
 import { SegmentRangeEditor } from '@/components/segment/segment-range-editor'
 import { SegmentAudioPlayer } from '@/components/segment/segment-audio-player'
 import { requireAppUser } from '@/lib/auth'
+import { isExampleProject } from '@/lib/example-project'
 import { db } from '@/lib/db'
 import { format } from '@/lib/i18n/format'
 import { getT } from '@/lib/i18n/server'
@@ -33,7 +34,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
   const project = await measureStep('db.project.find_segment_page', () =>
     db.project.findFirst({
       where: { id: projectId, userId: currentUser.id },
-      select: { id: true, title: true, createdAt: true, audioDurationMs: true },
+      select: { id: true, title: true, createdAt: true, audioDurationMs: true, audioPath: true },
     }),
   )
 
@@ -228,6 +229,7 @@ export default async function SegmentDetailPage({ params }: SegmentDetailPagePro
             ).currentStage
           }
           nextIncompleteHref={nextIncompleteHref}
+          isSampleSegment={isExampleProject(project)}
           stage4Sentences={stage4Setup?.sentences ?? []}
           stage4InitialMetadata={stage4Setup?.initialMetadata ?? null}
           audioAvailable={audioAvailable}

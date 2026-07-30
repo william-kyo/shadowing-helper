@@ -15,6 +15,13 @@ export const EXAMPLE_AUDIO_OBJECT_KEY = 'examples/dialogue-v1/dialogue_example.m
 
 const STAGE_COUNT = 5
 
+// Whether a project is the seeded sample rather than something the learner
+// uploaded. The shared audio key is the marker — nothing else can point at it,
+// since the examples/ prefix is read-only for every account.
+export function isExampleProject(project: { audioPath: string }): boolean {
+  return project.audioPath === EXAMPLE_AUDIO_OBJECT_KEY
+}
+
 // Seed a new account's sample project. Deliberately nothing but inserts: the
 // transcription, punctuation and A/B labels were all resolved once by
 // scripts/generate-example-fixture.ts, so no Whisper, LLM, ffmpeg or upload runs

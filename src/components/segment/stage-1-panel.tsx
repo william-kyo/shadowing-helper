@@ -192,6 +192,7 @@ export function Stage1Panel({
           onClick={() => onStageStatusChange(nextStatus[stageStatus])}
           disabled={isStatusUpdating}
           title={t.stageStatus.updateTitle}
+          data-tour="stage-status"
           className={`rounded-chip border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${getStatusChipClasses(stageStatus)}`}
         >
           {isStatusUpdating ? t.stageStatus.updating : getStatusLabel(stageStatus, t)}
@@ -203,7 +204,7 @@ export function Stage1Panel({
             so the learner can take one role per pass; the audio still plays in
             full and the waveform marks whose turn it is. */}
         {activeStage === 5 && labeledSpeakers.length > 1 && (
-          <div>
+          <div data-tour="stage-role-picker">
             <div className="mb-1 flex items-center justify-between">
               <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
                 {t.segment.practiceRoleLabel}
