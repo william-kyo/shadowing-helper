@@ -86,14 +86,15 @@ function matchedPairs(a: string, b: string): [number, number][] {
   return pairs
 }
 
-// Raw-text offset at which `count` non-ignored characters have been consumed.
-function rawOffsetAt(text: string, count: number): number {
-  if (count <= 0) return 0
+// Raw-text index of the `n`th (0-based) non-ignored character. Cutting on the
+// *start* of the following piece rather than the end of this one keeps the
+// punctuation between them — it belongs to the sentence it closes.
+function rawIndexOfContentChar(text: string, n: number): number {
   let seen = 0
   for (let i = 0; i < text.length; i += 1) {
     if (!normalize(text[i])) continue
+    if (seen === n) return i
     seen += 1
-    if (seen === count) return i + 1
   }
   return text.length
 }
@@ -169,13 +170,20 @@ export function alignSpeakersToScript(
     let cursor = chunk.startMs
     const pieceEnds = [...cuts, length]
     pieceEnds.forEach((pieceEnd, index) => {
-      const text = raw.slice(rawOffsetAt(raw, pieceStart), rawOffsetAt(raw, pieceEnd)).trim()
+      const isLast = index === pieceEnds.length - 1
+      // Run each piece up to where the next one's first real character starts,
+      // so trailing punctuation stays attached instead of being trimmed off.
+      const text = raw
+        .slice(
+          rawIndexOfContentChar(raw, pieceStart),
+          isLast ? raw.length : rawIndexOfContentChar(raw, pieceEnd),
+        )
+        .trim()
       // Pin the final piece to the chunk's own end so adjacent reference cuts
       // stay gapless despite the proportional rounding.
-      const endMs =
-        index === pieceEnds.length - 1
-          ? chunk.endMs
-          : cursor + Math.round((durationMs * (pieceEnd - pieceStart)) / length)
+      const endMs = isLast
+        ? chunk.endMs
+        : cursor + Math.round((durationMs * (pieceEnd - pieceStart)) / length)
       if (text) {
         out.push({
           text,

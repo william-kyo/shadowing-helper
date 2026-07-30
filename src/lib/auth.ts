@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { env } from '@/lib/env'
+import { provisionExampleProject } from '@/lib/example-project'
 import { addPerfAttrs, measureStep } from '@/lib/perf'
 
 // Cached in memory for the lifetime of the serverless function instance.
@@ -98,30 +99,75 @@ async function getAuthenticatedSupabaseUser() {
   }
 }
 
+const APP_USER_SELECT = {
+  id: true,
+  supabaseUserId: true,
+  email: true,
+  habitAchievedAt: true,
+} as const
+
 export async function getCurrentAppUser() {
   const supabaseUser = await getAuthenticatedSupabaseUser()
   if (!supabaseUser) return null
 
   addPerfAttrs({ 'auth.user_found': true })
 
-  const appUser = await measureStep('db.user.upsert', () =>
-    db.user.upsert({
+  // Read before writing rather than upserting: knowing whether this is the
+  // account's first request is what tells us to seed the sample project, and it
+  // keeps the hot path (every authenticated request) to one indexed lookup.
+  const existing = await measureStep('db.user.find', () =>
+    db.user.findUnique({
       where: { supabaseUserId: supabaseUser.id },
-      update: { email: supabaseUser.email },
-      create: {
-        supabaseUserId: supabaseUser.id,
-        email: supabaseUser.email,
-      },
-      select: {
-        id: true,
-        supabaseUserId: true,
-        email: true,
-        habitAchievedAt: true,
-      },
+      select: APP_USER_SELECT,
     }),
   )
 
-  return appUser
+  if (existing) {
+    if (existing.email === supabaseUser.email) return existing
+    return measureStep('db.user.update_email', () =>
+      db.user.update({
+        where: { supabaseUserId: supabaseUser.id },
+        data: { email: supabaseUser.email },
+        select: APP_USER_SELECT,
+      }),
+    )
+  }
+
+  try {
+    const created = await measureStep('db.user.create', () =>
+      db.user.create({
+        data: {
+          supabaseUserId: supabaseUser.id,
+          email: supabaseUser.email,
+        },
+        select: APP_USER_SELECT,
+      }),
+    )
+
+    // Brand-new account: seed the sample project so the first visit has
+    // something to practise. Awaited rather than deferred so it is already there
+    // when the dashboard renders, and swallowed on failure — a missing sample
+    // must never stop someone signing in. Runs once per account, so deleting the
+    // sample doesn't bring it back.
+    try {
+      await measureStep('db.example_project.provision', () =>
+        provisionExampleProject(created.id),
+      )
+    } catch (err) {
+      console.error('[example-project] failed to seed for user', created.id, err)
+    }
+
+    return created
+  } catch {
+    // Two concurrent first requests race to insert the row; the loser reads back
+    // the winner's.
+    return measureStep('db.user.find_after_race', () =>
+      db.user.findUnique({
+        where: { supabaseUserId: supabaseUser.id },
+        select: APP_USER_SELECT,
+      }),
+    )
+  }
 }
 
 export async function requireAppUser() {

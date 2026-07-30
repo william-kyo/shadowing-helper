@@ -85,6 +85,33 @@ describe('alignSpeakersToScript', () => {
     expect(aligned?.[3].endMs).toBe(16000)
   })
 
+  it('keeps punctuation that ends a chunk or a turn', () => {
+    // Regression: pieces used to be cut at the last *content* character, which
+    // silently ate the trailing 。and ？ off every chunk.
+    const chunks = [
+      { text: 'こんにちは。元気ですか？', startMs: 0, endMs: 2000 },
+      { text: 'はい、元気です。', startMs: 2000, endMs: 3000 },
+    ]
+
+    const aligned = alignSpeakersToScript(
+      chunks,
+      'A: こんにちは。元気ですか？\nB: はい、元気です。',
+    )
+
+    expect(aligned?.map((piece) => piece.text)).toEqual([
+      'こんにちは。元気ですか？',
+      'はい、元気です。',
+    ])
+  })
+
+  it('attaches punctuation at an in-chunk turn change to the turn it closes', () => {
+    const chunks = [{ text: 'こんにちは。やあ、元気？', startMs: 0, endMs: 2000 }]
+
+    const aligned = alignSpeakersToScript(chunks, 'A: こんにちは。\nB: やあ、元気？')
+
+    expect(aligned?.map((piece) => piece.text)).toEqual(['こんにちは。', 'やあ、元気？'])
+  })
+
   it('leaves chunks whole when they already match turn boundaries', () => {
     const chunks = [
       { text: 'こんにちは', startMs: 0, endMs: 1000 },
