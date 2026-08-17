@@ -824,12 +824,12 @@ export function Stage4Panel({
           {result.transcript ? (
             <div className="mt-2 grid gap-1.5 text-xs">
               <p>
-                <span className="font-semibold text-ink-muted">{t.stage4.yourReading}</span>
-                <span className="text-ink">{result.transcript}</span>
-              </p>
-              <p>
                 <span className="font-semibold text-ink-muted">{t.stage4.correctReading}</span>
                 <span className="text-ink">{result.expected}</span>
+              </p>
+              <p>
+                <span className="font-semibold text-ink-muted">{t.stage4.yourReading}</span>
+                <span className="text-ink">{result.transcript}</span>
               </p>
             </div>
           ) : null}

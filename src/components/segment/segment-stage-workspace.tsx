@@ -182,7 +182,9 @@ export function SegmentStageWorkspace({
           return
         }
         // Otherwise auto-advance to the next stage (unless already on stage 5).
-        if (stage < 5) {
+        // Stage 4 is excluded: it ends on the last sentence's own "completed"
+        // screen, and whether to move on to stage 5 is left to the learner.
+        if (stage < 5 && stage !== 4) {
           setSelectedStage(stage + 1)
         }
       }

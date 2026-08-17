@@ -235,6 +235,50 @@ describe('Stage4Panel', () => {
     expect(await screen.findByText(/次の文へ/)).toBeInTheDocument()
   })
 
+  it('shows the correct reading above the learner\'s own reading in the result panel', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        recordingId: 'rec-1',
+        score: 0.5,
+        pass: false,
+        transcript: 'こんちは',
+        expected: 'こんにちは',
+        distance: 1,
+        expectedLength: 5,
+        actualLength: 4,
+        threshold: 0.8,
+        stageComplete: false,
+        passingSentences: 0,
+        totalSentences: 2,
+      }),
+    } as Response)
+
+    const { container } = render(
+      <Stage4Panel
+        segmentId="seg-1"
+        sentences={SENTENCES}
+        initialMetadata={null}
+        isStatusUpdating={false}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '🎤 録音開始' }))
+    await waitFor(() => screen.getByRole('button', { name: /^⏹ 停止/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^⏹ 停止/ }))
+
+    await screen.findByText('こんちは')
+
+    // 正解 (correct reading) is listed before あなた (the learner's own take).
+    const html = container.innerHTML
+    const correctIndex = html.indexOf('正解')
+    const yourIndex = html.indexOf('あなた')
+    expect(correctIndex).toBeGreaterThan(-1)
+    expect(yourIndex).toBeGreaterThan(-1)
+    expect(correctIndex).toBeLessThan(yourIndex)
+  })
+
   it('refuses to submit a take stopped almost immediately and asks for a re-take', async () => {
     // Freeze the clock so start and stop land on the same timestamp, which
     // makes durationMs 0 — the shape of a real instant-stop take.

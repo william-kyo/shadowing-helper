@@ -220,6 +220,73 @@ describe("SegmentStageWorkspace", () => {
     expect(isCompleted(3)).toBe(true);
   });
 
+  it("stays on stage 4 after it completes instead of auto-advancing to stage 5", async () => {
+    // Regression: completing stage 4 used to auto-select stage 5 like every
+    // other stage. Stage 4 ends on its own "completed" screen (the last
+    // sentence's interaction page) and moving on to stage 5 is the learner's
+    // call, not automatic.
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+
+    render(
+      <SegmentStageWorkspace
+        segmentId="seg-1"
+        initialProgress={[
+          { stage: 1, status: "completed" },
+          { stage: 2, status: "completed" },
+          { stage: 3, status: "completed" },
+          { stage: 4, status: "in_progress" },
+        ]}
+        initialText="sample text"
+        initialNotes={null}
+        initialStage={4}
+        nextIncompleteHref={null}
+        stage4Sentences={[
+          {
+            index: 0,
+            text: "はい",
+            startMs: 0,
+            endMs: 500,
+            speaker: null,
+            refAudioUrl: "blob:ref-0",
+            userRecordingUrl: null,
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: /ステージ4 — スクリプト付きシャドーイング/,
+      }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "このステージをスキップ" }),
+    );
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/segments/seg-1/stage4/complete",
+        { method: "POST" },
+      ),
+    );
+
+    // Stage 4's own panel shows its completed state...
+    expect(await screen.findByText(/ステージ4完了/)).toBeInTheDocument();
+    // ...but the workspace itself is still on stage 4, not stage 5.
+    expect(
+      screen.getByRole("heading", {
+        name: /ステージ4 — スクリプト付きシャドーイング/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /ステージ5/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("falls back to home when nothing is left to complete", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({ ok: true } as Response);
 
