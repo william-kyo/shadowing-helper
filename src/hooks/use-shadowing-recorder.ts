@@ -9,11 +9,15 @@
 //   - getUserMedia + AudioContext resume must be triggered by a tap
 //   - MediaRecorder mime order: webm/opus → mp4 (Safari) → '' (let browser pick)
 //   - Streams are always released on unmount and on stopRecording
+//
+// macOS note: device choice is not left to the browser when a Continuity
+// (iPhone/iPad) input is on the list — see lib/microphone.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useT } from '@/lib/i18n/client'
 import type { Dictionary } from '@/lib/i18n/dictionaries'
+import { hasContinuityRisk, openMicrophoneStream } from '@/lib/microphone'
 
 const MAX_RECORDING_MS = 30_000
 const TICK_INTERVAL_MS = 100
@@ -134,7 +138,9 @@ export function useShadowingRecorder() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await openMicrophoneStream(navigator.mediaDevices, {
+        avoidContinuity: hasContinuityRisk(navigator),
+      })
       streamRef.current = stream
       setState({ phase: 'ready', error: null, elapsedMs: 0 })
       return true
